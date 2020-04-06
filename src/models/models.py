@@ -1,18 +1,19 @@
+import numpy as np
 import torch
 import torch.nn as nn
+from collections import OrderedDict
 
-# SEED EVERYTHING
-seed = 42
+latent_dim=100
+label_dim_input = 1
 
-torch.manual_seed(seed)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
+img_size=28
+channels=1
+
+img_shape = (channels, img_size, img_size)
 
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
-
-        self.label_emb = nn.Embedding(label_dim_input, label_dim_input)
 
         def block(in_feat, out_feat, normalize=True):
             layers = [nn.Linear(in_feat, out_feat)]
@@ -40,8 +41,6 @@ class Generator(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
-
-        self.label_embedding = nn.Embedding(label_dim_input, label_dim_input)
 
         self.model = nn.Sequential(
             nn.Linear(label_dim_input + int(np.prod(img_shape)), 512),

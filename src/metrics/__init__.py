@@ -1,1 +1,1 @@
-from .metrics import calculate_fid_given_paths
+from .metrics import calculate_fid_given_paths, mse
