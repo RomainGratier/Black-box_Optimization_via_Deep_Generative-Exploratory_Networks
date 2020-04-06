@@ -24,6 +24,8 @@ limitations under the License.
 """
 import os
 import pathlib
+import multiprocessing
+import cv2 
 
 import numpy as np
 import torch
@@ -38,6 +40,9 @@ except ImportError:
     # If not tqdm is not available, provide a mock version of it
     def tqdm(x): return x
 from collections import OrderedDict
+
+def mse(y_true, y_pred):
+    return np.square(np.subtract(y_true, y_pred))
 
 def get_activations(files, model, batch_size=50, dims=2048,
                     cuda=False, verbose=False):

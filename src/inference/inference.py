@@ -1,6 +1,8 @@
 from scipy.stats import truncnorm, norm
 import matplotlib.pyplot as plt
 import random
+import pandas as pd
+import numpy as np 
 
 def mse(y_true, y_pred):
     return np.square(np.subtract(y_true, y_pred))
@@ -54,15 +56,6 @@ def plots_results(target, forward_pred, forward_pred_train, morpho_pred, morpho_
         i+=1
     plt.suptitle(f'Target : {target} \ FID Value Gen : {np.round(fid_value_gen)} \ FID Value True : {np.round(fid_value_true)}', fontsize=10)
     plt.show()
-
-df_test = pd.DataFrame(np.around(testset.labels).tolist(), columns=['label'])
-real_dataset = deepcopy(testset.x_data)
-
-def compute_fid_monte_carlo(target, gen_imgs, sample_size=10):
-    real_dataset_index = df_test[df_test['label'] == target].index
-    random_id = random.sample(real_dataset_index.tolist(), sample_size)
-    real_imgs = real_dataset[random_id].squeeze(1).numpy()
-    return calculate_fid(real_imgs, gen_imgs, True, batch_size = sample_size)
 
 def compute_fid_mnist_monte_carlo(fake, target, sample_size):
     folder = 'save_data'

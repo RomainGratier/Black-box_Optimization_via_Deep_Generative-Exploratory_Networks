@@ -1,8 +1,36 @@
+import numpy as np
+import pandas as pd
+import os
+import random
+
+import multiprocessing
+from morphomnist.measure import measure_batch
+
+import torch
+from torch.autograd import Variable
+from torchvision.utils import save_image
+
+cuda = True if torch.cuda.is_available() else False
+
+FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
+
+latent_dim=100
+img_size=28
+
+from src.metrics import calculate_fid_given_paths, mse
+from src.models import LeNet5
+
+mnist_model = LeNet5()
+mnist_model.load_state_dict(torch.load('models/lenet.pth'))
+if cuda:
+    mnist_model.cuda()
+
 def save_numpy_arr(path, arr):
     np.save(path, arr)
     return path
 
-def generate_sample(minimum, maximum, sample_size):
+def generate_sample(minimum, maximum, sample_size, generator):
     # Sample noise
     z = Variable(FloatTensor(np.random.normal(0, 1, (sample_size, latent_dim))))
     # Get labels ranging from 0 to n_classes for n rows
@@ -10,9 +38,9 @@ def generate_sample(minimum, maximum, sample_size):
     labels = Variable(FloatTensor(labels))
     return generator(z, labels)
 
-def compute_fid_for_mnist(gen_imgs, n_row, img_size, in_distribution_index, out_distribution_index, sample_size):
-    gen_img_in_distribution = generate_sample(0, dataset.maximum, sample_size)
-    gen_img_out_distribution = generate_sample(dataset.maximum, 1, sample_size)
+def compute_fid_for_mnist(generator, n_row, img_size, dataset, real_dataset, index_in_distribution, index_out_distribution, sample_size):
+    gen_img_in_distribution = generate_sample(0, dataset.maximum, sample_size, generator)
+    gen_img_out_distribution = generate_sample(dataset.maximum, 1, sample_size, generator)
 
     random_id_in_distribution = random.sample(index_in_distribution.tolist(), sample_size)
     random_id_out_distribution = random.sample(index_out_distribution.tolist(), sample_size)
@@ -34,7 +62,7 @@ def compute_fid_for_mnist(gen_imgs, n_row, img_size, in_distribution_index, out_
 
     return fid_value_in_distribution, fid_value_out_distribution
 
-def sample_image(n_row, batches_done, in_distribution_index, out_distribution_index):
+def sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset):
     """Saves a grid of generated digits ranging from 0 to n_classes"""
 
     ## -------------- In distribution --------------
@@ -54,7 +82,7 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
     label_target = dataset.scaler.inverse_transform(np.array([num for num in np.arange(0, 1, 1/n_row)]).reshape(-1,1)).squeeze()
     mse_generator = mse(label_target, thickness)
 
-    fid_value_in_distribution, fid_value_out_distribution  = compute_fid_for_mnist(gen_imgs, n_row, img_size, in_distribution_index, out_distribution_index, 500)
+    fid_value_in_distribution, fid_value_out_distribution  = compute_fid_for_mnist(generator, n_row, img_size, dataset, real_dataset, index_in_distribution, index_out_distribution, 500)
 
     print()
     print(f"The thickness distribution =\n{dataset.scaler.transform(thickness.reshape(-1,1)).squeeze()}")
@@ -93,6 +121,12 @@ def check_memory_cuda():
     #print(f'used     : {info.used}')
 
 def train_loop():
+    # FID needs
+    df_test = pd.DataFrame(np.around(testset.y_data.numpy(),1), columns=['label'])
+    index_in_distribution = df_test[df_test['label']<=dataset.maximum].index
+    index_out_distribution = df_test[df_test['label']>dataset.maximum].index
+    real_dataset = deepcopy(testset.x_data)
+
     mse_gan_in_distribution = []
     mse_gan_out_distribution = []
     df_acc_gen = pd.DataFrame(columns=['mse_in', 'mse_out', 'fid_in', 'fid_out'])
@@ -175,7 +209,7 @@ def train_loop():
                 torch.cuda.empty_cache()
                 check_memory_cuda()
 
-                mse_gan, fid_in, fid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index)
+                mse_gan, fid_in, fid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset)
 
                 mean_in_mse = np.mean(mse_gan[in_distribution_index])
                 mean_out_mse = np.mean(mse_gan[out_distribution_index])
