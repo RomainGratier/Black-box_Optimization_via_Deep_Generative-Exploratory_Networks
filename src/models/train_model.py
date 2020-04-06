@@ -20,6 +20,7 @@ img_size=28
 
 from src.metrics import calculate_fid_given_paths, mse
 from src.models import LeNet5
+from src.models import ForwardModel, RMSELoss
 
 mnist_model = LeNet5()
 mnist_model.load_state_dict(torch.load('models/lenet.pth'))
@@ -120,17 +121,12 @@ def check_memory_cuda():
     print(f' --------------- MEMORY free     : {info.free} --------------- ')
     #print(f'used     : {info.used}')
 
-def train_loop():
-    # FID needs
-    df_test = pd.DataFrame(np.around(testset.y_data.numpy(),1), columns=['label'])
-    index_in_distribution = df_test[df_test['label']<=dataset.maximum].index
-    index_out_distribution = df_test[df_test['label']>dataset.maximum].index
-    real_dataset = deepcopy(testset.x_data)
-
+def train_gan_model():
     mse_gan_in_distribution = []
     mse_gan_out_distribution = []
     df_acc_gen = pd.DataFrame(columns=['mse_in', 'mse_out', 'fid_in', 'fid_out'])
 
+    path_generator = '/content/drive/My Drive/master_thesis/models/generative/'
     if os.path.exists(path_generator):
         df_check_in_distribution = load_obj_csv(os.path.join(path_generator, 'results_in_distribution'))
         df_check_out_distribution = load_obj_csv(os.path.join(path_generator, 'results_out_distribution'))
@@ -138,6 +134,40 @@ def train_loop():
         os.makedirs(path_generator)
         df_check_in_distribution = None
         df_check_out_distribution = None
+
+    # Loss functions
+    adversarial_loss = torch.nn.MSELoss()
+
+    # Initialize generator and discriminator
+    generator = Generator()
+    discriminator = Discriminator()
+
+
+    if cuda:
+        generator.cuda()
+        discriminator.cuda()
+        adversarial_loss.cuda()
+
+    # Optimizers
+    optimizer_G = torch.optim.Adam(generator.parameters(), lr=lr, betas=(b1, b2))
+    optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(b1, b2))
+
+    FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+    LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
+
+    if os.path.isdir("images"):
+        shutil.rmtree("images")
+    os.makedirs("images", exist_ok=True)
+
+    # FID needs
+    df_test = pd.DataFrame(np.around(testset.y_data.numpy(),1), columns=['label'])
+    index_in_distribution = df_test[df_test['label']<=dataset.maximum].index
+    index_out_distribution = df_test[df_test['label']>dataset.maximum].index
+    real_dataset = deepcopy(testset.x_data)
+
+    arr = np.array([num for num in np.arange(0, 1, 1/n_row)])
+    in_distribution_index = np.where(arr <= dataset.maximum)
+    out_distribution_index = np.where(arr > dataset.maximum)
 
     best_res_in = 100000
     best_res_out = 100000
@@ -204,10 +234,8 @@ def train_loop():
                 )
 
                 # Delete useless data from GPU
-                check_memory_cuda()
                 del valid; del fake; del real_imgs; del labels; del z; del gen_labels; del g_loss; del d_loss; del gen_imgs; del validity;
                 torch.cuda.empty_cache()
-                check_memory_cuda()
 
                 mse_gan, fid_in, fid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset)
 
@@ -229,3 +257,83 @@ def train_loop():
                 df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['mse_out'].values, best_res_out, df_acc_gen, path_generator)
 
     return mse_gan_in_distribution, mse_gan_out_distribution, df_acc_gen
+
+def train_forward_model():
+
+    forward = ForwardModel()
+    optimizer_F = torch.optim.Adam(forward.parameters(), lr=0.00001, betas=(0.1, 0.3))
+    forward_loss = RMSELoss() #nn.MSELoss()
+
+    FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+    DoubleTensor = torch.cuda.DoubleTensor if cuda else torch.DoubleTensor
+
+    if cuda:
+        forward.cuda()
+        forward_loss.cuda()
+
+    n_ep = 20
+
+    df_acc = pd.DataFrame(columns=['label_norm', 'forward', 'morpho'])
+
+    for epoch in range(n_ep):
+        for i, (imgs, labels) in enumerate(trainloader):
+            forward.train()
+            batch_size = imgs.shape[0]
+
+            x = Variable(imgs.type(FloatTensor))
+            y_labels = Variable(labels.type(FloatTensor))
+
+            # -----------------
+            #  Train forward model
+            # -----------------
+
+            optimizer_F.zero_grad()
+
+            # forward predictions
+            y_pred = forward(x.view(-1,28*28))
+
+            # Loss measures model's ability
+            f_loss = forward_loss(y_pred.squeeze(1), y_labels)
+            f_loss.backward()
+            optimizer_F.step()
+
+            batches_done = epoch * len(trainloader) + i
+            if batches_done % 100 == 0:
+                #forward.eval()
+                print(
+                  f"[Epoch {epoch}/{n_ep}] [Batch {i}/{len(trainloader)}] [F loss: {f_loss.item()}]"
+                )
+
+        if epoch == n_ep-1:
+            forward.eval()
+            acc = []
+
+            for j, (imgs, labels) in enumerate(testloader):
+            
+                if j > 20:
+                  continue
+    
+                x = Variable(imgs.type(FloatTensor))
+                y_labels = Variable(labels.type(FloatTensor))
+    
+                # forward predictions
+                y_pred = forward(x.view(-1,28*28))
+            
+                # accuracy measures model's ability
+                mse_model = mse(trainset.scaler.inverse_transform(y_pred.cpu().detach().numpy().reshape(-1,1)).squeeze(), trainset.scaler.inverse_transform(y_labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+    
+                # Measure morpho predictions
+                with multiprocessing.Pool() as pool:
+                    y_measure_morpho = measure_batch(x.squeeze(1).cpu().detach().numpy(), pool=pool)['thickness']
+
+                mse_morpho = mse(y_measure_morpho, trainset.scaler.inverse_transform(y_labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+    
+                df = pd.DataFrame(y_labels.cpu().detach().numpy(), columns=['label_norm'])
+                df['forward'] = mse_model
+                df['morpho'] = mse_morpho
+    
+                df_acc = df_acc.append(df, ignore_index=True)
+                print(
+                    f"[Epoch {epoch}] [Batch {j}/{len(testloader)}] [EVAL acc morpho: {df['morpho'].mean()}] [EVAL acc forward: {df['forward'].mean()}]"
+                  ) 
+    return forward, df_acc
