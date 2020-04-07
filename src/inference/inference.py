@@ -1,11 +1,25 @@
 from scipy.stats import truncnorm, norm
-import matplotlib.pyplot as plt
 import random
 import pandas as pd
 import numpy as np 
+import matplotlib.pyplot as plt
+import os 
 
-def mse(y_true, y_pred):
-    return np.square(np.subtract(y_true, y_pred))
+from src.metrics import mse, compute_thickness_ground_truth, calculate_fid_given_paths
+
+latent_dim = 100
+
+import torch 
+from torch.autograd import Variable
+
+cuda = True if torch.cuda.is_available() else False
+
+FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
+
+def save_numpy_arr(path, arr):
+    np.save(path, arr)
+    return path
 
 def get_truncated_normal(form, mean=0, sd=1, quant=0.8):
     upp = norm.ppf(quant, mean, sd)
@@ -13,9 +27,9 @@ def get_truncated_normal(form, mean=0, sd=1, quant=0.8):
     return truncnorm(
         (low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd).rvs(form)
 
-def generate_sample_from_GAN(target, z, sample_size, generator):
+def generate_sample_from_GAN(target, z, sample_size, generator, scaler):
     # Prepare labels
-    normalized_target = trainset.scaler.transform(np.array(target).reshape(-1,1))[0]
+    normalized_target = scaler.transform(np.array(target).reshape(-1,1))[0]
     z = Variable(FloatTensor(z))
     labels = Variable(FloatTensor(get_truncated_normal(sample_size, mean=normalized_target, sd=1, quant=0.6)))
     images_generated = generator(z, labels)
@@ -57,7 +71,7 @@ def plots_results(target, forward_pred, forward_pred_train, morpho_pred, morpho_
     plt.suptitle(f'Target : {target} \ FID Value Gen : {np.round(fid_value_gen)} \ FID Value True : {np.round(fid_value_true)}', fontsize=10)
     plt.show()
 
-def compute_fid_mnist_monte_carlo(fake, target, sample_size):
+def compute_fid_mnist_monte_carlo(fake, target, testset, sample_size):
     folder = 'save_data'
     os.makedirs(folder, exist_ok=True)
 
@@ -71,15 +85,15 @@ def compute_fid_mnist_monte_carlo(fake, target, sample_size):
     path_real = save_numpy_arr(os.path.join(folder, 'image_from_test.npy'), image_from_test)
 
     paths = [path_real, path_gen]
-    return calculate_fid_given_paths(paths, mnist_model)
+    return calculate_fid_given_paths(paths)
 
-def monte_carlo_inference(target, ncol = 4, nrow =2, sample_number = 100):
+def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 4, nrow =2, sample_number = 100):
 
     # ------------ Sample z from normal gaussian distribution with a bound ------------
     z = get_truncated_normal((sample_number, latent_dim), quant=0.8)
 
     # ------------ Generate sample from z and y target ------------
-    images_generated, labels = generate_sample_from_GAN(target, z, sample_number, generator)
+    images_generated, labels = generate_sample_from_GAN(target, z, sample_number, generator, trainset.scaler)
 
     # ------------ Compute the mse between the target and the forward model predictions ------------
     se_forward, forward_pred = se_between_target_and_prediction(target, images_generated, sample_number, forward, trainset)
@@ -89,8 +103,7 @@ def monte_carlo_inference(target, ncol = 4, nrow =2, sample_number = 100):
     labels = labels.cpu().detach().numpy()
 
     # ------------ Compare the forward model and the Measure from morphomnist ------------
-    with multiprocessing.Pool() as pool:
-        thickness = measure_batch(images_generated, pool=pool)['thickness']
+    thickness = compute_thickness_ground_truth(images_generated)
 
     # ------------ Compute the mse between the target and the morpho measure predictions ------------
     se_measure = mse(target, thickness.values)
@@ -102,9 +115,8 @@ def monte_carlo_inference(target, ncol = 4, nrow =2, sample_number = 100):
 
     # ------------ Compute the mse between the target and the forward model predictions ------------
     se_forward_train, forward_pred_train = se_between_target_and_prediction(target, Variable(testset.x_data[select_img_label_index].type(FloatTensor)), ncol, forward, trainset)
-
-    with multiprocessing.Pool() as pool:
-        thickness_train = measure_batch(image_from_test, pool=pool)['thickness']
+    
+    thickness_train = compute_thickness_ground_truth(image_from_test)
 
     se_train = mse(target, thickness_train.values)
     # ------------ EDA of the best x* generated ------------
@@ -130,8 +142,8 @@ def monte_carlo_inference(target, ncol = 4, nrow =2, sample_number = 100):
     image_from_test = testset.x_data.numpy()[select_img_label_index]
     
     # Compute FID values
-    fid_value_gen = compute_fid_mnist_monte_carlo(np.expand_dims(images_generated, 1), target, sample_number)[0]
-    fid_value_true = compute_fid_mnist_monte_carlo(image_from_test, target, sample_number)[0]
+    fid_value_gen = compute_fid_mnist_monte_carlo(np.expand_dims(images_generated, 1), target, testset, sample_number)[0]
+    fid_value_true = compute_fid_mnist_monte_carlo(image_from_test, target, testset, sample_number)[0]
 
     plots_results(target, model_pred, model_pred_train, thickness.values, thickness_train.values, se_forward, conditions, testset, images_generated, select_img_label_index, fid_value_gen, fid_value_true, nrow=2, ncol=4)
 

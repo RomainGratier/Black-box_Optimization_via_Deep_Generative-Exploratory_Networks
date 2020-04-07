@@ -1,1 +1,1 @@
-from .metrics import calculate_fid_given_paths, mse
+from .metrics import calculate_fid_given_paths, mse, compute_thickness_ground_truth

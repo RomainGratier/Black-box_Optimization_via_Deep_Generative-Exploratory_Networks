@@ -34,12 +34,28 @@ from scipy import linalg
 from imageio import imread
 from torch.nn.functional import adaptive_avg_pool2d
 
+cuda = True if torch.cuda.is_available() else False
+
 try:
     from tqdm import tqdm
 except ImportError:
     # If not tqdm is not available, provide a mock version of it
     def tqdm(x): return x
 from collections import OrderedDict
+
+from morphomnist.measure import measure_batch
+from src.models import LeNet5
+
+mnist_model = LeNet5()
+mnist_model.load_state_dict(torch.load('models/lenet.pth'))
+if cuda:
+    mnist_model.cuda()
+
+# ------------ Compare the forward model and the Measure from morphomnist ------------
+def compute_thickness_ground_truth(images_generated):
+    with multiprocessing.Pool() as pool:
+        thickness = measure_batch(images_generated, pool=pool)['thickness']
+    return thickness
 
 def mse(y_true, y_pred):
     return np.square(np.subtract(y_true, y_pred))
@@ -263,7 +279,7 @@ def extract_lenet_activation_features(imgs, net):
     return feats
 
 
-def calculate_fid_given_paths(paths, model, bootstrap=True, n_bootstraps=10):
+def calculate_fid_given_paths(paths, bootstrap=True, n_bootstraps=10):
     """Calculates the FID of two paths"""
     pths = []
     for p in paths:
@@ -277,13 +293,13 @@ def calculate_fid_given_paths(paths, model, bootstrap=True, n_bootstraps=10):
                 np_imgs = np_imgs[:50000]
             pths.append(np_imgs)
 
-    act_true = extract_lenet_activation_features(pths[0], model)
+    act_true = extract_lenet_activation_features(pths[0], mnist_model)
     n_bootstraps = n_bootstraps if bootstrap else 1
     pths = pths[1:]
     results = []
     for j, pth in enumerate(pths):
         print(paths[j+1])
-        actj = extract_lenet_activation_features(pth, model)
+        actj = extract_lenet_activation_features(pth, mnist_model)
         fid_values = np.zeros((n_bootstraps))
         with tqdm(range(n_bootstraps), desc='FID') as bar:
             for i in bar:
