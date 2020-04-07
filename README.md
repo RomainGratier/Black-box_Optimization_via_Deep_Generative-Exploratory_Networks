@@ -55,7 +55,7 @@ Deep neural networks have garnered tremendous excitement in recent years thanks 
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+If you want to use this project on your local machine, start by cloning this repository. Then be sure to have the prerequisites and follow the installation steps.
 
 ### Prerequisites
 
@@ -133,7 +133,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Acknowledgments
 
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
+Bravo to the work done on https://github.com/dccastro/Morpho-MNIST that allows us the find an interesting dataset and established groundtruth measure for our generated data
+
+Bravo also to https://github.com/eriklindernoren/PyTorch-GAN to share the pytorch implementation of usefull GANs
 
