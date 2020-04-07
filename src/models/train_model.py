@@ -18,14 +18,9 @@ LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 latent_dim=100
 img_size=28
 
-from src.metrics import calculate_fid_given_paths, mse
+from src.metrics import calculate_fid_given_paths, mse, compute_thickness_ground_truth
 from src.models import LeNet5
 from src.models import ForwardModel, RMSELoss
-
-mnist_model = LeNet5()
-mnist_model.load_state_dict(torch.load('models/lenet.pth'))
-if cuda:
-    mnist_model.cuda()
 
 def save_numpy_arr(path, arr):
     np.save(path, arr)
@@ -57,9 +52,9 @@ def compute_fid_for_mnist(generator, n_row, img_size, dataset, real_dataset, ind
     path_real_out = save_numpy_arr(os.path.join(folder, 'real_imgs_out_distribution.npy'), real_imgs_out_distribution)
 
     paths = [path_real_in, path_gen_in]
-    fid_value_in_distribution = calculate_fid_given_paths(paths, mnist_model)
+    fid_value_in_distribution = calculate_fid_given_paths(paths)
     paths = [path_real_out, path_gen_out]
-    fid_value_out_distribution = calculate_fid_given_paths(paths, mnist_model)
+    fid_value_out_distribution = calculate_fid_given_paths(paths)
 
     return fid_value_in_distribution, fid_value_out_distribution
 
@@ -75,10 +70,9 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
 
     gen_imgs = generator(z, labels)
     save_image(gen_imgs.data, "images/%d.png" % batches_done, nrow=n_row, normalize=True)
-
-    with multiprocessing.Pool() as pool:
-        measure = measure_batch(gen_imgs.squeeze(1).cpu().detach().numpy(), pool=pool)
-        thickness = measure['thickness'].values.reshape((n_row, n_row)).mean(axis=0)
+    
+    measure_batch = compute_thickness_ground_truth(gen_imgs.squeeze(1).cpu().detach().numpy())
+    thickness = measure_batch['thickness'].values.reshape((n_row, n_row)).mean(axis=0)
     
     label_target = dataset.scaler.inverse_transform(np.array([num for num in np.arange(0, 1, 1/n_row)]).reshape(-1,1)).squeeze()
     mse_generator = mse(label_target, thickness)
@@ -311,7 +305,7 @@ def train_forward_model():
             for j, (imgs, labels) in enumerate(testloader):
             
                 if j > 20:
-                  continue
+                      continue
     
                 x = Variable(imgs.type(FloatTensor))
                 y_labels = Variable(labels.type(FloatTensor))
@@ -323,8 +317,7 @@ def train_forward_model():
                 mse_model = mse(trainset.scaler.inverse_transform(y_pred.cpu().detach().numpy().reshape(-1,1)).squeeze(), trainset.scaler.inverse_transform(y_labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
     
                 # Measure morpho predictions
-                with multiprocessing.Pool() as pool:
-                    y_measure_morpho = measure_batch(x.squeeze(1).cpu().detach().numpy(), pool=pool)['thickness']
+                y_measure_morpho = compute_thickness_ground_truth(x.squeeze(1).cpu().detach().numpy())
 
                 mse_morpho = mse(y_measure_morpho, trainset.scaler.inverse_transform(y_labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
     
