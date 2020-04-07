@@ -51,6 +51,9 @@ Deep neural networks have garnered tremendous excitement in recent years thanks 
 
 If you want to use this project on your local machine, start by cloning this repository. Then be sure to have the prerequisites and follow the installation steps.
 
+If you have a google account by simple click on the following link you'll be able to run the experiment on Google Colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1YY8h7QpnO_MkO_DUpEC86ljhciSfANwK#scrollTo=I9ZlnYGeh80l]
+
+
 ### Prerequisites
 
 What things you need to install the software and how to install them
