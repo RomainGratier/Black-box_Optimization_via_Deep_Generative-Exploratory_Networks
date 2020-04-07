@@ -231,7 +231,7 @@ def train_gan_model():
                 del valid; del fake; del real_imgs; del labels; del z; del gen_labels; del g_loss; del d_loss; del gen_imgs; del validity;
                 torch.cuda.empty_cache()
 
-                mse_gan, fid_in, fid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset, 1000)
+                mse_gan, fid_in, fid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset, 700)
 
                 mean_in_mse = np.mean(mse_gan[in_distribution_index])
                 mean_out_mse = np.mean(mse_gan[out_distribution_index])
