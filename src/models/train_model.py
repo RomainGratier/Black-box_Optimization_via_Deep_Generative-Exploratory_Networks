@@ -58,7 +58,7 @@ def compute_fid_for_mnist(generator, n_row, img_size, dataset, real_dataset, ind
 
     return fid_value_in_distribution, fid_value_out_distribution
 
-def sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset):
+def sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset, sample_size):
     """Saves a grid of generated digits ranging from 0 to n_classes"""
 
     ## -------------- In distribution --------------
@@ -77,7 +77,7 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
     label_target = dataset.scaler.inverse_transform(np.array([num for num in np.arange(0, 1, 1/n_row)]).reshape(-1,1)).squeeze()
     mse_generator = mse(label_target, thickness)
 
-    fid_value_in_distribution, fid_value_out_distribution  = compute_fid_for_mnist(generator, n_row, img_size, dataset, real_dataset, index_in_distribution, index_out_distribution, 500)
+    fid_value_in_distribution, fid_value_out_distribution  = compute_fid_for_mnist(generator, n_row, img_size, dataset, real_dataset, index_in_distribution, index_out_distribution, sample_size)
 
     print()
     print(f"The thickness distribution =\n{dataset.scaler.transform(thickness.reshape(-1,1)).squeeze()}")
@@ -231,7 +231,7 @@ def train_gan_model():
                 del valid; del fake; del real_imgs; del labels; del z; del gen_labels; del g_loss; del d_loss; del gen_imgs; del validity;
                 torch.cuda.empty_cache()
 
-                mse_gan, fid_in, fid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset)
+                mse_gan, fid_in, fid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset, 1000)
 
                 mean_in_mse = np.mean(mse_gan[in_distribution_index])
                 mean_out_mse = np.mean(mse_gan[out_distribution_index])
