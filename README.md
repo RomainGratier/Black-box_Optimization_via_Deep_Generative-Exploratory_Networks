@@ -122,8 +122,9 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 
 ## Authors
 
-* **Romain Gratier de Saint-Louis** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
-* **Yuejiang Liu** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
+* **Romain Gratier de Saint-Louis** -- [PurpleBooth](https://github.com/RomainGratier)
+* **Yuejiang Liu** - *VITA Lab EPFL* - [PurpleBooth](https://github.com/YuejiangLIU)
+* **Alexandre Alahi** - *VITA Lab EPFL* -
 
 See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
 
