@@ -37,13 +37,40 @@ class MNISTDataset(Dataset):
     
             self.len = self.y_data.shape[0]
 
-        else:
+        if dataset == 'test':
+            
             img_file_tr, digit_file_tr, morpho_tr = self.__getdatasets__('train')
             img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test')
     
             # Get the labels
             labels_tr, minimum_tr, maximum_tr, index_tr = self.__getlabels__('train', morpho_tr, digit_file_tr, y_feature)
             labels_te, minimum_te, maximum_te, index_te = self.__getlabels__('test', morpho_te, digit_file_te, y_feature)
+    
+            labels_tr, scaler_tr = self.__get_scaler__(8, labels_tr, y_feature)
+            labels_te = self.__scale__(labels_te, y_feature, scaler_tr)
+    
+            print(labels_te.describe())
+            self.maximum = np.max(labels_te['normalized_label'])
+            self.minimum = np.min(labels_te['normalized_label'])
+    
+            # Read images from MNIST
+            images = self.__transform__(load_idx(img_file_te), 153)[index_te]
+    
+            # Select inputs
+            self.x_data = torch.from_numpy(images).unsqueeze(1)
+            self.y_data = torch.from_numpy(labels_te['normalized_label'].to_numpy())
+            self.labels = labels_te[y_feature]
+            self.scaler = scaler_tr
+    
+            self.len = self.y_data.shape[0]
+
+        if dataset == 'full':
+            
+            img_file_tr, digit_file_tr, morpho_tr = self.__getdatasets__('train')
+    
+            # Get the labels
+            labels_tr, minimum_tr, maximum_tr, index_tr = self.__getlabels__('train', morpho_tr, digit_file_tr, y_feature)
+            labels_te, minimum_te, maximum_te, index_te = self.__getlabels__('test', morpho_tr, digit_file_tr, y_feature)
     
             labels_tr, scaler_tr = self.__get_scaler__(8, labels_tr, y_feature)
             labels_te = self.__scale__(labels_te, y_feature, scaler_tr)
