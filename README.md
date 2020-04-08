@@ -69,7 +69,7 @@ Torch 1.4.0
 
 * If you are fine to use it with colab, you can open the link above and the various dependencies should be already satisfied.
 
-* If you want to be able to use the source code and deploy it on your local machine. You will need to clone the following github version (date : 8.04.2020)
+* If you want to be able to use the source code and deploy it on your local machine. You will need to clone the following github version (date : 08.04.2020)
 
 ```
 git clone https://github.com/dccastro/Morpho-MNIST.git
@@ -86,45 +86,42 @@ cp -r Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/src src
 
 Explain how to run the automated tests for this system
 
-### Break down into end to end tests
+### Create dataset
 
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
+You can load the morphomnist dataset as a pytorch dataset using the following commands
 
 ```
-Give an example
+from src.data import MNISTDataset
+dataset = MNISTDataset('train', 'thickness')
 ```
 
-## Deployment
+### Load models and their training loop
 
-Add additional notes about how to deploy this on a live system
+You can either load the models and play with them following the notebook or just load the training loop to train them.
 
-## Built With
+```
+from src.models import Generator, Discriminator, ForwardModel
+from src.models import train_forward_model(), train_gan_model()
+```
 
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
+### Inference experiments
+
+You can do inference experiments when the two models are trained
+
+```
+from src.inference import monte_carlo_inference
+inf_best_5, mean_sample_measure_5, fid_gen_5 = monte_carlo_inference(5, generator, forward, trainset, testset, sample_number = 800)
+```
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
+Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us. 
 
 ## Authors
 
-* **Romain Gratier de Saint-Louis** -- [PurpleBooth](https://github.com/RomainGratier)
+* **Romain Gratier de Saint-Louis** [PurpleBooth](https://github.com/RomainGratier)
 * **Yuejiang Liu** - *VITA Lab EPFL* - [PurpleBooth](https://github.com/YuejiangLIU)
-* **Alexandre Alahi** - *VITA Lab EPFL* -
+* **Alexandre Alahi** - *VITA Lab EPFL* 
 
 See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
 
