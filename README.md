@@ -60,31 +60,29 @@ If you have a google account by simple click on the following link you'll be abl
 
 ### Prerequisites
 
-What things you need to install the software and how to install them
-
 ```
-Give examples
+Python 3.6.9 and older
+Torch 1.4.0
 ```
 
 ### Installing
 
-A step by step series of examples that tell you how to get a development env running
+* If you are fine to use it with colab, you can open the link above and the various dependencies should be already satisfied.
 
-Say what the step will be
-
-```
-Give the example
-```
-
-And repeat
+* If you want to be able to use the source code and deploy it on your local machine. You will need to clone the following github version (date : 8.04.2020)
 
 ```
-until finished
+git clone https://github.com/dccastro/Morpho-MNIST.git
+cp -r Morpho-MNIST/morphomnist morphomnist
+
+git clone https://github.com/abdulfatir/gan-metrics-pytorch.git
+cp -r gan-metrics-pytorch/models models
+
+git clone https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks.git
+cp -r Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/src src
 ```
 
-End with an example of getting some data out of the system or using it for a little demo
-
-## Running the tests
+## Example of codes
 
 Explain how to run the automated tests for this system
 
