@@ -1,7 +1,11 @@
 Black-box Optimization via Deep Generative-Exploratory Networks
 ==============================
 
-Deep neural networks have garnered tremendous excitement in recent years thanks to their superior learning capacity in the presence of abundant data resources. However, collecting an exhaustive dataset covering all possible scenarios is often slow, expensive, and even impractical. The goal of this project is to devise a new learning framework that can learn from a finite dataset and noisy feedback of data properties to discover novel samples of particular interest. We will design and implement algorithms to interweave emerging deep generative modelling with classical Markov decision processes. We will evaluate our method in comparison to existing approaches through extensive experiments, including but not limited to visual semantic extrapolation and natural adversarial examples in the context of autonomous vehicles.
+Deep neural networks have garnered tremendous excitement in recent years thanks to their superior learning capacity in the presence of abundant data resources. However, collecting an exhaustive dataset covering all possible scenarios is often slow, expensive, and even impractical. 
+
+**The goal** of this project is to devise a new **learning framework** that can learn from a finite dataset and noisy feedback of data properties **to discover novel samples** of particular interest. We used generative adversarial networks to search through the dataset for new sample and a forward model to decide what sample is a potential candidate.
+
+We used well known metrics from the generative model community as the **FID** score to justify our results.
 
 ------------
 
@@ -120,7 +124,8 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 
 ## Authors
 
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
+* **Romain Gratier de Saint-Louis** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
+* **Yuejiang Liu** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
 
 See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
 
