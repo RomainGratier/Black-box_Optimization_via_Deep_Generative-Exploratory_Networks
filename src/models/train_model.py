@@ -115,7 +115,7 @@ def check_memory_cuda():
     print(f' --------------- MEMORY free     : {info.free} --------------- ')
     #print(f'used     : {info.used}')
 
-def train_gan_model():
+def train_gan_model(dataloader):
     mse_gan_in_distribution = []
     mse_gan_out_distribution = []
     df_acc_gen = pd.DataFrame(columns=['mse_in', 'mse_out', 'fid_in', 'fid_out'])
@@ -250,9 +250,9 @@ def train_gan_model():
                 df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['mse_in'].values, best_res_in, df_acc_gen, path_generator)
                 df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['mse_out'].values, best_res_out, df_acc_gen, path_generator)
 
-    return mse_gan_in_distribution, mse_gan_out_distribution, df_acc_gen
+    return mse_gan_in_distribution, mse_gan_out_distribution, df_acc_gen, generator
 
-def train_forward_model():
+def train_forward_model(trainloader, testloader):
 
     forward = ForwardModel()
     optimizer_F = torch.optim.Adam(forward.parameters(), lr=0.00001, betas=(0.1, 0.3))
