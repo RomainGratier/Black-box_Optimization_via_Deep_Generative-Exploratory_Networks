@@ -252,11 +252,42 @@ def train_gan_model(dataloader):
 
     return mse_gan_in_distribution, mse_gan_out_distribution, df_acc_gen, generator
 
-def train_forward_model(trainloader, testloader):
+def eval_forward(dist, df_check, mean_out, best_res, df_acc_gen, path_forward, model):
+    if df_check is not None:
+        if mean_out < df_check[f'mse_{dist}'].iloc[-1]:
+            print(f" ---------- Better Results {dist} distribution of : {df_check[f'mse_{dist}'].iloc[-1] - mean_out} ---------- ")
+            torch.save(model, os.path.join(path_forward, f"best_forward_{dist}_distribution.pth"))
+            save_obj_csv(df_acc_gen, os.path.join(path_forward, f"results_{dist}_distribution"))
+
+            best_res = mean_out
+            df_check = None
+
+    else:
+        if mean_out < best_res:
+            print(f" ---------- Model Improving {dist} distribution of : {best_res - mean_out}---------- ")
+            torch.save(model, os.path.join(path_forward, f"best_forward_{dist}_distribution.pth"))
+            save_obj_csv(df_acc_gen, os.path.join(path_forward, f"results_{dist}_distribution"))
+
+            best_res = mean_out
+
+    return df_check, best_res
+
+def train_forward_model():
+    import multiprocessing
+    from src.metrics import mse
+    from src.models import ForwardModel, RMSELoss
+    from morphomnist.measure import measure_batch
 
     forward = ForwardModel()
     optimizer_F = torch.optim.Adam(forward.parameters(), lr=0.00001, betas=(0.1, 0.3))
     forward_loss = RMSELoss() #nn.MSELoss()
+
+    path_forward = '/content/drive/My Drive/master_thesis/models/forward/'
+    if os.path.exists(path_forward):
+        df_check = load_obj_csv(os.path.join(path_forward, 'results'))
+    else:
+        os.makedirs(path_forward)
+        df_check = None
 
     FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
     DoubleTensor = torch.cuda.DoubleTensor if cuda else torch.DoubleTensor
@@ -266,8 +297,8 @@ def train_forward_model(trainloader, testloader):
         forward_loss.cuda()
 
     n_ep = 20
-
-    df_acc = pd.DataFrame(columns=['label_norm', 'forward', 'morpho'])
+    best_res = 10000
+    df_acc_final = pd.DataFrame(columns=['label_norm', 'forward', 'morpho'])
 
     for epoch in range(n_ep):
         for i, (imgs, labels) in enumerate(trainloader):
@@ -292,41 +323,51 @@ def train_forward_model(trainloader, testloader):
             optimizer_F.step()
 
             batches_done = epoch * len(trainloader) + i
-            if batches_done % 100 == 0:
-                #forward.eval()
+            if batches_done % 500 == 0:
                 print(
                   f"[Epoch {epoch}/{n_ep}] [Batch {i}/{len(trainloader)}] [F loss: {f_loss.item()}]"
                 )
 
-        if epoch == n_ep-1:
-            forward.eval()
-            acc = []
+                forward.eval()
+                df_acc_eval = pd.DataFrame(columns=['label_norm', 'forward', 'morpho'])
 
-            for j, (imgs, labels) in enumerate(testloader):
+                for j, (imgs, labels) in enumerate(testloader):
             
-                if j > 20:
-                      continue
+                    if j > 5:
+                        break
     
-                x = Variable(imgs.type(FloatTensor))
-                y_labels = Variable(labels.type(FloatTensor))
+                    x = Variable(imgs.type(FloatTensor))
+                    y_labels = Variable(labels.type(FloatTensor))
     
-                # forward predictions
-                y_pred = forward(x.view(-1,28*28))
-            
-                # accuracy measures model's ability
-                mse_model = mse(trainset.scaler.inverse_transform(y_pred.cpu().detach().numpy().reshape(-1,1)).squeeze(), trainset.scaler.inverse_transform(y_labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
-    
-                # Measure morpho predictions
-                y_measure_morpho = compute_thickness_ground_truth(x.squeeze(1).cpu().detach().numpy())
+                    # forward predictions
+                    y_pred = forward(x.view(-1,28*28))
 
-                mse_morpho = mse(y_measure_morpho, trainset.scaler.inverse_transform(y_labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+                    # accuracy measures model's ability
+                    mse_model = mse(trainset.scaler.inverse_transform(y_pred.cpu().detach().numpy().reshape(-1,1)).squeeze(), trainset.scaler.inverse_transform(y_labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+
+                    # Measure morpho predictions
+                    with multiprocessing.Pool() as pool:
+                          y_measure_morpho = measure_batch(x.squeeze(1).cpu().detach().numpy(), pool=pool)['thickness']
+
+                    mse_morpho = mse(y_measure_morpho, trainset.scaler.inverse_transform(y_labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
     
-                df = pd.DataFrame(y_labels.cpu().detach().numpy(), columns=['label_norm'])
-                df['forward'] = mse_model
-                df['morpho'] = mse_morpho
+                    df = pd.DataFrame(y_labels.cpu().detach().numpy(), columns=['label_norm'])
+                    df['forward'] = mse_model
+                    df['morpho'] = mse_morpho
     
-                df_acc = df_acc.append(df, ignore_index=True)
+                    df_acc_eval = df_acc_eval.append(df, ignore_index=True)
+                
                 print(
-                    f"[Epoch {epoch}] [Batch {j}/{len(testloader)}] [EVAL acc morpho: {df['morpho'].mean()}] [EVAL acc forward: {df['forward'].mean()}]"
-                  ) 
-    return forward, df_acc
+                        f"[Epoch {epoch}] [Batch {j}/{len(testloader)}] [EVAL acc morpho: {df_acc_eval['morpho'].mean()}] [EVAL acc forward: {df_acc_eval['forward'].mean()}]"
+                      )
+                
+                # Average of the accuracies
+                acc_res = pd.DataFrame([df_acc_eval.mean().tolist()], columns=['label_norm', 'forward', 'morpho'])
+                df_acc_final = df_acc_final.append(acc_res)
+
+                # Evaluate and save
+                df_check, best_res = eval_forward('all', df_check, acc_res['forward'].values, best_res, df_acc_final, path_forward, forward)
+
+    return forward, df_acc_final
+
+
