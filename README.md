@@ -55,7 +55,13 @@ We used well known metrics from the generative model community as the **FID** sc
 
 If you want to use this project on your local machine, start by cloning this repository. Then be sure to have the prerequisites and follow the installation steps.
 
-If you have a google account by simple click on the following link you'll be able to run the experiment on Google Colab ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)(https://colab.research.google.com/drive/1YY8h7QpnO_MkO_DUpEC86ljhciSfANwK#scrollTo=I9ZlnYGeh80l]
+If you have a google account by simple click on the following links you'll be able to run the experiments on Google Colab 
+
+Experiments :
+
+* The full model is presented here on Colab ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)(https://colab.research.google.com/drive/1YY8h7QpnO_MkO_DUpEC86ljhciSfANwK#scrollTo=I9ZlnYGeh80l)
+
+* The model without the importance sampling reweighting is available here on Colab ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)(https://colab.research.google.com/drive/10obGrN3I_gWZSZAY74FQhMomG3qKoRL6#scrollTo=I9ZlnYGeh80l)
 
 
 ### Prerequisites
@@ -131,9 +137,10 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Acknowledgments
 
+Special thanks the to writers of the paper available on arxiv : https://arxiv.org/pdf/1912.13464.pdf. Their contribution motivates this project.
+
 Bravo to the work done on https://github.com/dccastro/Morpho-MNIST that allows us to find an interesting dataset and established groundtruth measurements for our generated data
 
 Bravo also to https://github.com/eriklindernoren/PyTorch-GAN to share the pytorch implementation of usefull GANs
 
 And Bravo to https://github.com/abdulfatir/gan-metrics-pytorch.git that implemented a great FID score for MNIST dataset
-
