@@ -55,7 +55,13 @@ We used well known metrics from the generative model community as the **FID** sc
 
 If you want to use this project on your local machine, start by cloning this repository. Then be sure to have the prerequisites and follow the installation steps.
 
-If you have a google account by simple click on the following link you'll be able to run the experiment on Google Colab ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)(https://colab.research.google.com/drive/1YY8h7QpnO_MkO_DUpEC86ljhciSfANwK#scrollTo=I9ZlnYGeh80l]
+If you have a google account by simple click on the following links you'll be able to run the experiments on Google Colab 
+
+Experiments :
+
+* The full model is presented here : ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)(https://colab.research.google.com/drive/1YY8h7QpnO_MkO_DUpEC86ljhciSfANwK#scrollTo=I9ZlnYGeh80l)
+
+* The model without the importance sampling reweighting is available here : ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)(https://colab.research.google.com/drive/10obGrN3I_gWZSZAY74FQhMomG3qKoRL6#scrollTo=I9ZlnYGeh80l)
 
 
 ### Prerequisites
