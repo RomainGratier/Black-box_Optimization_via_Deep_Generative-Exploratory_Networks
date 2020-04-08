@@ -80,7 +80,7 @@ class MNISTDataset(Dataset):
             self.minimum = np.min(labels_te['normalized_label'])
     
             # Read images from MNIST
-            images = self.__transform__(load_idx(img_file_te), 153)[index_te]
+            images = self.__transform__(load_idx(img_file_tr), 153)[index_te]
     
             # Select inputs
             self.x_data = torch.from_numpy(images).unsqueeze(1)
