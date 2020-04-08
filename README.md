@@ -38,9 +38,9 @@ We used well known metrics from the generative model community as the **FID** sc
     │   ├── metrics        <- Source of different metrics  
     │   │   └── metrics.py
     │   │
-    │   ├── models         <- Scripts to train models and then use trained models to make
-    │   │   │                 predictions
-    │   │   ├── predict_model.py
+    │   ├── models         <- Scripts to train models and then use load models and trained them
+    │   │   │                 
+    │   │   ├── models.py
     │   │   └── train_model.py
     │   │
     │   └── Inference      <- Script to run the model inference
