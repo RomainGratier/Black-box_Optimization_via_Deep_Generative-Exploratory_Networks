@@ -68,7 +68,7 @@ def plots_results(target, forward_pred, forward_pred_train, morpho_pred, morpho_
                 col.set_title(f"Forward={np.round(float(forward_pred_train[j]),1)} / true={np.round(float(morpho_pred_train[j]),1)}", fontsize=6)
             j+=1
         i+=1
-    plt.suptitle(f'Target : {target} \ FID Value Gen : {np.round(fid_value_gen)} \ FID Value True : {np.round(fid_value_true)}', fontsize=10)
+    plt.suptitle(f"Target : {target} \ FID Value Gen : {np.round(fid_value_gen[0])} ± {np.round(fid_value_gen[1])} \ FID Value True : {np.round(fid_value_true[0])}  ± {np.round(fid_value_true[1])}", fontsize=9)
     plt.show()
 
 def compute_fid_mnist_monte_carlo(fake, target, testset, sample_size):
@@ -142,8 +142,8 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     image_from_test = testset.x_data.numpy()[select_img_label_index]
     
     # Compute FID values
-    fid_value_gen = compute_fid_mnist_monte_carlo(np.expand_dims(images_generated, 1), target, testset, sample_number)[0]
-    fid_value_true = compute_fid_mnist_monte_carlo(image_from_test, target, testset, sample_number)[0]
+    fid_value_gen = compute_fid_mnist_monte_carlo(np.expand_dims(images_generated, 1), target, testset, sample_number)
+    fid_value_true = compute_fid_mnist_monte_carlo(image_from_test, target, testset, sample_number)
 
     plots_results(target, model_pred, model_pred_train, thickness.values, thickness_train.values, se_forward, conditions, testset, images_generated, select_img_label_index, fid_value_gen, fid_value_true, nrow=2, ncol=4)
 
