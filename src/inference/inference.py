@@ -68,7 +68,7 @@ def plots_results(target, forward_pred, forward_pred_train, morpho_pred, morpho_
                 col.set_title(f"Forward={np.round(float(forward_pred_train[j]),1)} / true={np.round(float(morpho_pred_train[j]),1)}", fontsize=6)
             j+=1
         i+=1
-    plt.suptitle(f"Target : {target} \ FID Value : {np.round(fid_value_gen[0])} ± {np.round(fid_value_gen[1])} \ KID Value : {np.round(kid_value_gen[0])}  ± {np.round(kid_value_gen[1])}", fontsize=9)
+    plt.suptitle(f"Target : {target} \ FID Value : {np.round(fid_value_gen[0])} ± {np.round(fid_value_gen[1])} \ KID Value : {np.around(kid_value_gen[0], decimals=3)}  ± {np.around(kid_value_gen[1], decimals=3)}", fontsize=9)
     plt.show()
 
 def compute_fid_mnist_monte_carlo(fake, target, testset, sample_size):
@@ -148,7 +148,7 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     # Compute FID values
     fid_value_gen, kid_value_gen = compute_fid_mnist_monte_carlo(np.expand_dims(images_generated, 1), target, testset, sample_number)
 
-    plots_results(target, model_pred, model_pred_train, thickness.values, thickness_train.values, se_forward, conditions, testset, images_generated, select_img_label_index, fid_value_gen, kid_value_gen nrow=2, ncol=4)
+    plots_results(target, model_pred, model_pred_train, thickness.values, thickness_train.values, se_forward, conditions, testset, images_generated, select_img_label_index, fid_value_gen, kid_value_gen, nrow=2, ncol=4)
 
     #print()
     #index = np.argmin(se_measure)
