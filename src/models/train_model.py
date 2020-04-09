@@ -18,7 +18,7 @@ LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 latent_dim=100
 img_size=28
 
-from src.metrics import calculate_fid_given_paths, mse, compute_thickness_ground_truth
+from src.metrics import calculate_fid_given_paths, calculate_kid_given_paths, mse, compute_thickness_ground_truth
 from src.models import LeNet5
 from src.models import ForwardModel, RMSELoss
 
@@ -34,7 +34,7 @@ def generate_sample(minimum, maximum, sample_size, generator):
     labels = Variable(FloatTensor(labels))
     return generator(z, labels)
 
-def compute_fid_for_mnist(generator, n_row, img_size, dataset, real_dataset, index_in_distribution, index_out_distribution, sample_size):
+def compute_fid_kid_for_mnist(generator, n_row, img_size, dataset, real_dataset, index_in_distribution, index_out_distribution, sample_size):
     gen_img_in_distribution = generate_sample(0, dataset.maximum, sample_size, generator)
     gen_img_out_distribution = generate_sample(dataset.maximum, 1, sample_size, generator)
 
@@ -53,10 +53,13 @@ def compute_fid_for_mnist(generator, n_row, img_size, dataset, real_dataset, ind
 
     paths = [path_real_in, path_gen_in]
     fid_value_in_distribution = calculate_fid_given_paths(paths)
+    kid_value_in_distribution = calculate_kid_given_paths(paths)
+    
     paths = [path_real_out, path_gen_out]
     fid_value_out_distribution = calculate_fid_given_paths(paths)
+    kid_value_out_distribution = calculate_kid_given_paths(paths)
 
-    return fid_value_in_distribution, fid_value_out_distribution
+    return fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution
 
 def sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset, sample_size):
     """Saves a grid of generated digits ranging from 0 to n_classes"""
@@ -77,15 +80,19 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
     label_target = dataset.scaler.inverse_transform(np.array([num for num in np.arange(0, 1, 1/n_row)]).reshape(-1,1)).squeeze()
     mse_generator = mse(label_target, thickness)
 
-    fid_value_in_distribution, fid_value_out_distribution  = compute_fid_for_mnist(generator, n_row, img_size, dataset, real_dataset, index_in_distribution, index_out_distribution, sample_size)
+    fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, img_size, dataset, real_dataset, index_in_distribution, index_out_distribution, sample_size)
 
     print()
     print(f"The thickness distribution =\n{dataset.scaler.transform(thickness.reshape(-1,1)).squeeze()}")
     print(f"Average MSE In dist = {np.mean(mse_generator[in_distribution_index])} \ Average MSE Out dist = {np.mean(mse_generator[out_distribution_index])}")
+    print()
     print(f"FID score in distribution : mean = {np.around(fid_value_in_distribution[0], decimals=4)} \ std = {np.around(fid_value_in_distribution[1], decimals=4)}")
     print(f"FID score out distribution : mean = {np.around(fid_value_out_distribution[0], decimals=4)} \ std = {np.around(fid_value_out_distribution[1], decimals=4)}")
+    print()
+    print(f"KID score in distribution : mean = {np.around(kid_value_in_distribution[0], decimals=4)} \ std = {np.around(kid_value_in_distribution[1], decimals=4)}")
+    print(f"KID score out distribution : mean = {np.around(kid_value_out_distribution[0], decimals=4)} \ std = {np.around(kid_value_out_distribution[1], decimals=4)}")
 
-    return mse_generator, fid_value_in_distribution[0], fid_value_out_distribution[0]
+    return mse_generator, fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution
 
 def save_model_check(dist, df_check, mean_out, best_res, df_acc_gen, path_generator):
     if df_check is not None:
@@ -118,7 +125,7 @@ def check_memory_cuda():
 def train_gan_model(dataloader):
     mse_gan_in_distribution = []
     mse_gan_out_distribution = []
-    df_acc_gen = pd.DataFrame(columns=['mse_in', 'mse_out', 'fid_in', 'fid_out'])
+    df_acc_gen = pd.DataFrame(columns=['mse_in', 'mse_out', 'fid_in', 'fid_out', 'kid_in', 'kid_out'])
 
     path_generator = '/content/drive/My Drive/master_thesis/models/generative/'
     if os.path.exists(path_generator):
@@ -231,7 +238,7 @@ def train_gan_model(dataloader):
                 del valid; del fake; del real_imgs; del labels; del z; del gen_labels; del g_loss; del d_loss; del gen_imgs; del validity;
                 torch.cuda.empty_cache()
 
-                mse_gan, fid_in, fid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset, 700)
+                mse_gan, fid_in, kid_in, fid_out, kid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset, 700)
 
                 mean_in_mse = np.mean(mse_gan[in_distribution_index])
                 mean_out_mse = np.mean(mse_gan[out_distribution_index])
@@ -241,8 +248,10 @@ def train_gan_model(dataloader):
 
                 df = pd.DataFrame([mean_in_mse], columns=['mse_in'])
                 df['mse_out'] = mean_out_mse
-                df['fid_in'] = fid_in
-                df['fid_out'] = fid_out
+                df['fid_in'] = fid_in[0]
+                df['fid_out'] = fid_out[0]
+                df['kid_in'] = kid_in[0]
+                df['kid_out'] = kid_out[0]
 
                 df_acc_gen = df_acc_gen.append(df, ignore_index=True)
 
