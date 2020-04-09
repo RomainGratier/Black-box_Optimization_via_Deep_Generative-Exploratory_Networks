@@ -59,9 +59,9 @@ If you have a google account by simple click on the following links you'll be ab
 
 Experiments :
 
-* The full model is presented here on Colab ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)(https://colab.research.google.com/drive/1YY8h7QpnO_MkO_DUpEC86ljhciSfANwK#scrollTo=I9ZlnYGeh80l)
+* The full model is presented here on Colab ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)https://colab.research.google.com/drive/1YY8h7QpnO_MkO_DUpEC86ljhciSfANwK
 
-* The model without the importance sampling reweighting is available here on Colab ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)(https://colab.research.google.com/drive/10obGrN3I_gWZSZAY74FQhMomG3qKoRL6#scrollTo=I9ZlnYGeh80l)
+* The model without the importance sampling reweighting is available here on Colab ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)https://colab.research.google.com/drive/10obGrN3I_gWZSZAY74FQhMomG3qKoRL6
 
 
 ### Prerequisites
