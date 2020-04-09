@@ -119,14 +119,16 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     thickness_train = compute_thickness_ground_truth(image_from_test)
 
     se_train = mse(target, thickness_train.values)
+    
     # ------------ EDA of the best x* generated ------------
-    index = np.argmin(se_forward)
+    top_values = 10
+    index = np.argsort(se_forward)[:top_values]
     print()
     print(f" ------------ Best forward image ------------")
     #print(f'Label : {trainset.scaler.inverse_transform(labels[index].reshape(-1, 1)).squeeze()}')
     #print(f"Forward pred = {trainset.scaler.inverse_transform(forward_pred[index].reshape(-1, 1)).squeeze()}")
     #print(f"Morpho measure pred = {thickness.values[index]}")
-    print(f"MSE measure pred = {mse(target,thickness.values[index])}")
+    print(f"MSE measure pred = {np.mean(mse(target,thickness.values[index]))} ± {np.std(mse(target,thickness.values[index]))} ")
     print(f"MSE morpho on Generated data: {np.mean(se_measure)}")
     #print(f"MSE forward on Generate data: {np.mean(se_forward)}")
     #print(f"MSE Training data: {np.mean(se_train)}")
