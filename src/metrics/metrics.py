@@ -34,6 +34,7 @@ from scipy import linalg
 from imageio import imread
 from torch.nn.functional import adaptive_avg_pool2d
 from sklearn.metrics.pairwise import polynomial_kernel
+import sys
 
 cuda = True if torch.cuda.is_available() else False
 
@@ -407,7 +408,7 @@ def extract_lenet_features(imgs, net):
     feats = np.vstack(feats)
     return feats
 
-def calculate_kid_given_paths(paths, batch_size, cuda, dims):
+def calculate_kid_given_paths(paths):
     """Calculates the KID of two paths"""
     pths = []
     for p in paths:
