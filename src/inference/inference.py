@@ -123,13 +123,15 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     # ------------ EDA of the best x* generated ------------
     top_values = 10
     index = np.argsort(se_forward)[:top_values]
+    forward_mse_mean = np.mean(mse(target,thickness.values[index])); forward_mse_std = np.std(mse(target,thickness.values[index])); global_mean = np.mean(se_measure);
+    
     print()
     print(f" ------------ Best forward image ------------")
     #print(f'Label : {trainset.scaler.inverse_transform(labels[index].reshape(-1, 1)).squeeze()}')
     #print(f"Forward pred = {trainset.scaler.inverse_transform(forward_pred[index].reshape(-1, 1)).squeeze()}")
     #print(f"Morpho measure pred = {thickness.values[index]}")
-    print(f"MSE measure pred = {np.mean(mse(target,thickness.values[index]))} ± {np.std(mse(target,thickness.values[index]))} ")
-    print(f"MSE morpho on Generated data: {np.mean(se_measure)}")
+    print(f"MSE measure pred = {forward_mse_mean} ± {forward_mse_std} ")
+    print(f"MSE morpho on Generated data: {global_mean}")
     #print(f"MSE forward on Generate data: {np.mean(se_forward)}")
     #print(f"MSE Training data: {np.mean(se_train)}")
 
@@ -160,7 +162,7 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
 
     #plots_results(target, model_pred, model_pred_train, thickness.values, thickness_train.values, se_measure, conditions, testset, images_generated, select_img_label_index, fid_value_gen, fid_value_true, nrow=2, ncol=4)
     
-    return mse(target,thickness.values[index]), np.mean(se_measure), fid_value_gen
+    return [forward_mse_mean, forward_mse_std], global_mean, fid_value_gen
     
 def save_obj_csv(d, path):
     d.to_csv(path+'.csv', index=False)
