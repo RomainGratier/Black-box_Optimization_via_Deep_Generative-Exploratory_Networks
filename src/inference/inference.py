@@ -161,7 +161,7 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
 
     #plots_results(target, model_pred, model_pred_train, thickness.values, thickness_train.values, se_measure, conditions, testset, images_generated, select_img_label_index, fid_value_gen, fid_value_true, nrow=2, ncol=4)
     
-    return [forward_mse_mean, forward_mse_std], global_mean, fid_value_gen
+    return [forward_mse_mean, forward_mse_std], global_mean, fid_value_gen, kid_value_gen
     
 def save_obj_csv(d, path):
     d.to_csv(path+'.csv', index=False)
