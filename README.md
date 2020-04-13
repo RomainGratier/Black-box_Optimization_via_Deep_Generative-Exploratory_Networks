@@ -5,7 +5,7 @@ Deep neural networks have garnered tremendous excitement in recent years thanks 
 
 **The goal** of this project is to devise a new **learning framework** that can learn from a finite dataset and noisy feedback of data properties **to discover novel samples** of particular interest. We used generative adversarial networks to search through the dataset for new sample and a forward model to decide what sample is a potential candidate.
 
-We used well known metrics from the generative model community as the **FID** score to justify our results.
+We used well known metrics from the generative model community as the **FID**(Fréchet Inception Distance), **KID**(Kernel Inception Distance) and **MSE**(mean squared error) scores to justify our results.
 
 ------------
 
