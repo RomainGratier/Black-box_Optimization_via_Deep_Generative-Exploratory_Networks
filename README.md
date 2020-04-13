@@ -61,7 +61,7 @@ Experiments :
 
 * The full model is presented here on Colab ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)https://colab.research.google.com/drive/1YY8h7QpnO_MkO_DUpEC86ljhciSfANwK
 
-* The model without the importance sampling reweighting is available here on Colab ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)https://colab.research.google.com/drive/10obGrN3I_gWZSZAY74FQhMomG3qKoRL6
+* The model without IS (importance sampling) reweighting is available here on Colab ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)https://colab.research.google.com/drive/10obGrN3I_gWZSZAY74FQhMomG3qKoRL6
 
 
 ### Prerequisites
