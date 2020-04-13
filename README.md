@@ -71,6 +71,19 @@ Here you can find the main findings of the experiment with qualitative and quant
 
 ![Out-of-Distribution examples : thickness = 6 pxl](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/out-of-distribution6.png)
 
+### Main Findings:
+
+Table of quantitative results using FID, KID scores and MSE:
+
+| FID (In) | KID(In) | Acc. Thick (In) | FID (Ext)| KID(Ext) | Acc. Thick (Ext) |
+| -------- | -------- | -------- | -------- | -------- | -------- |
+| Naive generator | 15.0 ± 0.6 | 0.38 ± 0.02 | 1.27 | 28.5 ± 1.7 | **0.91 ± 0.11** | 11.8 |
+| w/o IS | 15.0 ± 0.6 | 0.38 ± 0.02 | **0.31 ± 0.20** | 28.5 ± 1.7 | **0.91 ± 0.11** | 8.8 ± 2.6 |
+| w/o inference | **13.9 ± 0.7** | **0.33 ± 0.02** | 1.33 | **27.3 ± 1.8** | 0.91 ± 0.13 | 10.7 |
+| Full model | **13.9 ± 0.7** | **0.33 ± 0.02** | 0.41 ± 0.39 | **27.3 ± 1.8** | 0.91 ± 0.13 | 4.9 ± 2.7 |
+
+
+
 ## Getting Started
 
 If you want to use this project on your local machine, start by cloning this repository. Then be sure to have the prerequisites and follow the installation steps.
