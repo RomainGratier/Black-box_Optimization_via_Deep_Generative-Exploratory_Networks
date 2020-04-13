@@ -51,6 +51,12 @@ We used well known metrics from the generative model community as the **FID** sc
 
 --------
 
+## Experiment
+
+We wanted to assess the out-of-distribution generative power of a simple fully connected conditional GAN model. To do so we used the MNIST dataset and train the GAN on digit with thickness between 1-6 pixels. With our framework we experiment the GAN out-of-distribution quality by generating images with thickness between 6-9 pixels. 
+
+Here you can find the main findings of the experiment with qualitative and quantitative assessments:
+
 ## Getting Started
 
 If you want to use this project on your local machine, start by cloning this repository. Then be sure to have the prerequisites and follow the installation steps.
