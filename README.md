@@ -55,11 +55,21 @@ We used well known metrics from the generative model community as the **FID** sc
 
 We wanted to assess the out-of-distribution generative power of a simple fully connected conditional GAN model. To do so we used the MNIST dataset and train the GAN on digit with thickness between 1-6 pixels. With our framework we experiment the GAN out-of-distribution quality by generating images with thickness between 6-9 pixels. 
 
-Here you can find the main findings of the experiment with qualitative and quantitative assessments:
+Here you can find the main findings of the experiment with qualitative and quantitative assessments. Keep in mind that the **upper images** are **generated images** and the **lower images** are **real images**.
 
 ### In distribution quality:
 
-![In Distribution examples](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/in-distribution4.png)
+![In Distribution examples : thickness = 4 pxl](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/in-distribution4.png)
+
+### Out-of-distribution quality:
+
+![Out-of-Distribution examples : thickness = 9 pxl](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/out-of-distribution9.png)
+
+![Out-of-Distribution examples : thickness = 8 pxl](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/out-of-distribution8.png)
+
+![Out-of-Distribution examples : thickness = 7 pxl](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/out-of-distribution7.png)
+
+![Out-of-Distribution examples : thickness = 6 pxl](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/out-of-distribution6.png)
 
 ## Getting Started
 
