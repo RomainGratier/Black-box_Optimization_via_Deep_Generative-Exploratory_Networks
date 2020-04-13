@@ -57,6 +57,10 @@ We wanted to assess the out-of-distribution generative power of a simple fully c
 
 Here you can find the main findings of the experiment with qualitative and quantitative assessments:
 
+### In distribution quality:
+
+![In Distribution examples](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/in-distribution4.png)
+
 ## Getting Started
 
 If you want to use this project on your local machine, start by cloning this repository. Then be sure to have the prerequisites and follow the installation steps.
