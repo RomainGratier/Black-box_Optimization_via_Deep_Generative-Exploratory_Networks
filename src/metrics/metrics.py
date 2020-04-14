@@ -437,7 +437,7 @@ def _sqn(arr):
     return flat.dot(flat)
 
 
-def polynomial_mmd_averages(codes_g, codes_r, n_subsets=50, subset_size=1000,
+def polynomial_mmd_averages(codes_g, codes_r, n_subsets=50, subset_size=100,
                             ret_var=True, output=sys.stdout, **kernel_args):
     m = min(codes_g.shape[0], codes_r.shape[0])
     mmds = np.zeros(n_subsets)
