@@ -5,7 +5,7 @@ Deep neural networks have garnered tremendous excitement in recent years thanks 
 
 **The goal** of this project is to devise a new **learning framework** that can learn from a finite dataset and noisy feedback of data properties **to discover novel samples** of particular interest. We used generative adversarial networks to search through the dataset for new sample and a forward model to decide what sample is a potential candidate.
 
-We used well known metrics from the generative model community as the **FID** score to justify our results.
+We used well known metrics from the generative model community as the **FID**(Fréchet Inception Distance), **KID**(Kernel Inception Distance) and **MSE**(mean squared error) scores to justify our results.
 
 ------------
 
@@ -55,7 +55,34 @@ We used well known metrics from the generative model community as the **FID** sc
 
 We wanted to assess the out-of-distribution generative power of a simple fully connected conditional GAN model. To do so we used the MNIST dataset and train the GAN on digit with thickness between 1-6 pixels. With our framework we experiment the GAN out-of-distribution quality by generating images with thickness between 6-9 pixels. 
 
-Here you can find the main findings of the experiment with qualitative and quantitative assessments:
+Here you can find the main findings of the experiment with qualitative and quantitative assessments. Keep in mind that the **upper images** are **generated images** and the **lower images** are **real images**.
+
+### In distribution quality:
+
+![In Distribution examples : thickness = 4 pxl](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/in-distribution4.png)
+
+### Out-of-distribution quality:
+
+![Out-of-Distribution examples : thickness = 9 pxl](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/out-of-distribution9.png)
+
+![Out-of-Distribution examples : thickness = 8 pxl](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/out-of-distribution8.png)
+
+![Out-of-Distribution examples : thickness = 7 pxl](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/out-of-distribution7.png)
+
+![Out-of-Distribution examples : thickness = 6 pxl](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/out-of-distribution6.png)
+
+### Main Findings:
+
+Table of quantitative results using FID, KID scores and MSE:
+
+| Models | FID (In) | KID(In) | Acc. Thick (In) | FID (Ext)| KID(Ext) | Acc. Thick (Ext) |
+| -------- | -------- | -------- | -------- | -------- | -------- | -------- |
+| Naive generator | 15.0 ± 0.6 | 0.38 ± 0.02 | 1.27 | 28.5 ± 1.7 | **0.91 ± 0.11** | 11.8 |
+| w/o IS | 15.0 ± 0.6 | 0.38 ± 0.02 | **0.31 ± 0.20** | 28.5 ± 1.7 | **0.91 ± 0.11** | 8.8 ± 2.6 |
+| w/o inference | **13.9 ± 0.7** | **0.33 ± 0.02** | 1.33 | **27.3 ± 1.8** | 0.91 ± 0.13 | 10.7 |
+| Full model | **13.9 ± 0.7** | **0.33 ± 0.02** | 0.41 ± 0.39 | **27.3 ± 1.8** | 0.91 ± 0.13 | 4.9 ± 2.7 |
+
+
 
 ## Getting Started
 
