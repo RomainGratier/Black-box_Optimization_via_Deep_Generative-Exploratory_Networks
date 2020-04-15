@@ -15,16 +15,29 @@ cuda = True if torch.cuda.is_available() else False
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
+batch_size=128
 latent_dim=100
-img_size=32
+img_size=28
+
+dcgan = True
 
 from src.metrics import calculate_fid_given_paths, calculate_kid_given_paths, mse, compute_thickness_ground_truth
 from src.models import LeNet5
 from src.models import ForwardModel, RMSELoss
 
+def create_labels_discriminator(batch_size, image_size, labels):
+    #random_labels = np.random.rand(batch_size)
+    gen_labels = np.zeros((batch_size, 1, image_size, image_size))
+    for i in range(batch_size):
+        gen_labels[i][0][:][:] = np.full((image_size, image_size), labels[i]) 
+    return gen_labels
+
 def save_numpy_arr(path, arr):
     np.save(path, arr)
     return path
+
+def save_obj_csv(d, path):
+    d.to_csv(path+'.csv', index=False)
 
 def generate_sample(minimum, maximum, sample_size, generator):
     # Sample noise
@@ -32,6 +45,10 @@ def generate_sample(minimum, maximum, sample_size, generator):
     # Get labels ranging from 0 to n_classes for n rows
     labels = np.random.uniform(minimum, maximum, sample_size)
     labels = Variable(FloatTensor(labels))
+    if dcgan:
+        labels = labels.view(-1, 1, 1, 1)
+        z = z.view(-1, latent_dim, 1, 1)
+        
     return generator(z, labels)
 
 def compute_fid_kid_for_mnist(generator, n_row, img_size, dataset, real_dataset, index_in_distribution, index_out_distribution, sample_size):
@@ -69,7 +86,11 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
     z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, latent_dim))))
     # Get labels ranging from 0 to n_classes for n rows
     labels = np.array([num for _ in range(n_row) for num in np.arange(0, 1, 1/n_row)])
-    labels = Variable(FloatTensor(labels))#Variable(LongTensor(labels))
+    labels = Variable(FloatTensor(labels))
+
+    if dcgan:
+        labels = labels.view(-1, 1, 1, 1)
+        z = z.view(-1, latent_dim, 1, 1)
 
     gen_imgs = generator(z, labels)
     save_image(gen_imgs.data, "images/%d.png" % batches_done, nrow=n_row, normalize=True)
@@ -94,7 +115,7 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
 
     return mse_generator, fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution
 
-def save_model_check(dist, df_check, mean_out, best_res, df_acc_gen, path_generator):
+def save_model_check(dist, df_check, mean_out, best_res, df_acc_gen, path_generator, generator):
     if df_check is not None:
         if mean_out < df_check[f'mse_{dist}'].iloc[-1]:
             print(f" ---------- Better Results {dist} distribution of : {df_check[f'mse_{dist}'].iloc[-1] - mean_out} ---------- ")
@@ -256,8 +277,8 @@ def train_gan_model(dataloader):
                 df_acc_gen = df_acc_gen.append(df, ignore_index=True)
 
                 # Check if we have better results
-                df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['mse_in'].values, best_res_in, df_acc_gen, path_generator)
-                df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['mse_out'].values, best_res_out, df_acc_gen, path_generator)
+                df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['mse_in'].values, best_res_in, df_acc_gen, path_generator, generator)
+                df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['mse_out'].values, best_res_out, df_acc_gen, path_generator, generator)
 
     return mse_gan_in_distribution, mse_gan_out_distribution, df_acc_gen, generator
 
