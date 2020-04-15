@@ -45,7 +45,7 @@ class GeneratorDCGAN(nn.Module):
 
         return x
 
-class discriminatorDCGAN(nn.Module):
+class DiscriminatorDCGAN(nn.Module):
     # initializers
     def __init__(self, d=128):
         super(discriminator, self).__init__()
