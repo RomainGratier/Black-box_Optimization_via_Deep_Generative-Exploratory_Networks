@@ -21,7 +21,7 @@ class GeneratorDCGAN(nn.Module):
         
         self.deconv1_1 = nn.ConvTranspose2d(100, d*2, 4, 1, 0)
         self.deconv1_1_bn = nn.BatchNorm2d(d*2)
-        self.deconv1_2 = nn.ConvTranspose2d(10, d*2, 4, 1, 0)
+        self.deconv1_2 = nn.ConvTranspose2d(1, d*2, 4, 1, 0)
         self.deconv1_2_bn = nn.BatchNorm2d(d*2)
         self.deconv2 = nn.ConvTranspose2d(d*4, d*2, 4, 2, 1)
         self.deconv2_bn = nn.BatchNorm2d(d*2)
@@ -52,8 +52,8 @@ class DiscriminatorDCGAN(nn.Module):
     def __init__(self, d=128):
         super(DiscriminatorDCGAN, self).__init__()
         
-        self.conv1_1 = nn.Conv2d(1, d/2, 4, 2, 1)
-        self.conv1_2 = nn.Conv2d(10, d/2, 4, 2, 1)
+        self.conv1_1 = nn.Conv2d(1, int(d/2), 4, 2, 1)
+        self.conv1_2 = nn.Conv1d(1, int(d/2), 1, 2, 1)
         self.conv2 = nn.Conv2d(d, d*2, 4, 2, 1)
         self.conv2_bn = nn.BatchNorm2d(d*2)
         self.conv3 = nn.Conv2d(d*2, d*4, 4, 2, 1)
@@ -68,7 +68,8 @@ class DiscriminatorDCGAN(nn.Module):
     # forward method
     def forward(self, input, label):
         x = F.leaky_relu(self.conv1_1(input), 0.2)
-        y = F.leaky_relu(self.conv1_2(label), 0.2)
+        #y = F.leaky_relu(self.conv1_2(label), 0.2)
+        y=label
         x = torch.cat([x, y], 1)
         x = F.leaky_relu(self.conv2_bn(self.conv2(x)), 0.2)
         x = F.leaky_relu(self.conv3_bn(self.conv3(x)), 0.2)
