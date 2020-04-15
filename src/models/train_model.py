@@ -16,7 +16,7 @@ FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
 latent_dim=100
-img_size=28
+img_size=32
 
 from src.metrics import calculate_fid_given_paths, calculate_kid_given_paths, mse, compute_thickness_ground_truth
 from src.models import LeNet5
