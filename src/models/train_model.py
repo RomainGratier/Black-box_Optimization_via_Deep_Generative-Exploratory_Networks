@@ -48,7 +48,7 @@ def generate_sample(minimum, maximum, sample_size, generator):
     if dcgan:
         labels = labels.view(-1, 1, 1, 1)
         z = z.view(-1, latent_dim, 1, 1)
-        
+
     return generator(z, labels)
 
 def compute_fid_kid_for_mnist(generator, n_row, img_size, dataset, real_dataset, index_in_distribution, index_out_distribution, sample_size):
@@ -71,7 +71,7 @@ def compute_fid_kid_for_mnist(generator, n_row, img_size, dataset, real_dataset,
     paths = [path_real_in, path_gen_in]
     fid_value_in_distribution = calculate_fid_given_paths(paths)
     kid_value_in_distribution = calculate_kid_given_paths(paths)
-    
+
     paths = [path_real_out, path_gen_out]
     fid_value_out_distribution = calculate_fid_given_paths(paths)
     kid_value_out_distribution = calculate_kid_given_paths(paths)
