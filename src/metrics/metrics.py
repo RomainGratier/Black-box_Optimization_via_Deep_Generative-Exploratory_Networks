@@ -25,7 +25,7 @@ limitations under the License.
 import os
 import pathlib
 import multiprocessing
-import cv2 
+import cv2
 
 import numpy as np
 import torch
@@ -54,9 +54,20 @@ if cuda:
     mnist_model.cuda()
 
 # ------------ Compare the forward model and the Measure from morphomnist ------------
+def transform_inv(X):
+    # Normalize between 0 - 1
+    X *= 0.5
+    X += 0.5
+
+    # Transfrom 0 - 255
+    X *= 255
+    return X
+
 def compute_thickness_ground_truth(images_generated):
+    print(images_generated.max())
+    print(images_generated.min())
     with multiprocessing.Pool() as pool:
-        thickness = measure_batch(images_generated, pool=pool)['thickness']
+        thickness = measure_batch(transform_inv(images_generated), pool=pool)['thickness']
     return thickness
 
 def mse(y_true, y_pred):
@@ -219,7 +230,7 @@ def preprocess_image_resize(im):
     """
     assert im.shape[2] == 1
     assert len(im.shape) == 3
-    
+
     im = np.expand_dims(cv2.resize(im, (32, 32)), 2)
     im = np.rollaxis(im, axis=2)
     im = torch.from_numpy(im)
@@ -270,7 +281,7 @@ def extract_lenet_activation_features(imgs, net):
     feats = []
 
     imgs = prepare_data_norm_shape(imgs)
-    imgs = preprocess_images_resize(imgs)    
+    imgs = preprocess_images_resize(imgs)
     #if imgs[0].min() < -0.001:
     #  imgs = (imgs + 1)/2.0
     print(imgs.shape, imgs.min(), imgs.max())
