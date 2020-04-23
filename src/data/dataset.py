@@ -27,7 +27,7 @@ class MNISTDataset(Dataset):
             self.minimum = np.min(labels['normalized_label'])
     
             # Read images from MNIST
-            images = self.__transform__(load_idx(img_file), 153)[index]
+            images = self.__transform__(load_idx(img_file))[index]
     
             # Select inputs
             self.x_data = torch.from_numpy(images).unsqueeze(1)
@@ -54,7 +54,7 @@ class MNISTDataset(Dataset):
             self.minimum = np.min(labels_te['normalized_label'])
     
             # Read images from MNIST
-            images = self.__transform__(load_idx(img_file_te), 153)[index_te]
+            images = self.__transform__(load_idx(img_file_te))[index_te]
     
             # Select inputs
             self.x_data = torch.from_numpy(images).unsqueeze(1)
@@ -80,7 +80,7 @@ class MNISTDataset(Dataset):
             self.minimum = np.min(labels_te['normalized_label'])
     
             # Read images from MNIST
-            images = self.__transform__(load_idx(img_file_tr), 153)[index_te]
+            images = self.__transform__(load_idx(img_file_tr))[index_te]
     
             # Select inputs
             self.x_data = torch.from_numpy(images).unsqueeze(1)
@@ -151,10 +151,17 @@ class MNISTDataset(Dataset):
         df['normalized_label'] = scaler.transform(df[feature].values.reshape(-1,1))
         return df
 
-    def __transform__(self, X, middle):
+    def __transform__(self, X):
         X = X.astype('float32')
-        X -= middle
-        X /= middle
+        
+        # Normalize between 0 - 1
+        X = (X - X.min())
+        X = X / (X.max() - X.min()) 
+        
+        # Normalize between -1 - 1
+        X -= 0.5
+        X /= 0.5
+
         return X
 
     def __getitem__(self, index):
