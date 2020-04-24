@@ -14,7 +14,7 @@ class MNISTDataset(Dataset):
     """ MNIST dataset."""
 
     # Initialize your data, download, etc.
-    def __init__(self, dataset, y_feature, data_type='normal'):
+    def __init__(self, dataset, y_feature, data_type='mnist'):
 
         if dataset == 'train':
 
