@@ -94,7 +94,7 @@ class MNISTDataset(Dataset):
 
         folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
         if data_type == 'thick':
-            folder = os.path.join(folder, data_type)
+            folder = os.path.join('/content', folder, data_type)
         if data_type == 'mnist':
             folder = os.path.join(folder, 'MNIST_morpho')
 
