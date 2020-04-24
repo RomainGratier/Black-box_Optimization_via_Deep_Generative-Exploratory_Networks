@@ -134,7 +134,7 @@ class MNISTDataset(Dataset):
         print(f"The extrem values from our labels:\nMaximum : {maximum}   Minimum : {minimum}")
         print()
         print(f"Check the distribution of our labels")
-        check = pd.DataFrame(labels[y_feature].astype('int'), columns=[y_feature])
+        check = pd.DataFrame(np.around(labels[y_feature].values), columns=[y_feature])
         print(check.groupby(y_feature)[y_feature].count())
         print(check.plot.hist(bins=20))
 
