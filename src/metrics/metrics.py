@@ -285,7 +285,12 @@ def extract_lenet_activation_features(imgs, net):
     #if imgs[0].min() < -0.001:
     #  imgs = (imgs + 1)/2.0
     print(imgs.shape, imgs.min(), imgs.max())
-    images_set = torch.from_numpy(imgs).cuda()
+
+    if cuda:
+        images_set = torch.from_numpy(imgs).cuda()
+    else:
+        images_set = torch.from_numpy(imgs)
+
     for i, images in enumerate(images_set):
         feats.append(net.extract_features(images.unsqueeze(0)).detach().cpu().numpy())
     feats = np.vstack(feats)
@@ -413,7 +418,12 @@ def extract_lenet_features(imgs, net):
     if imgs[0].min() < -0.001:
       imgs = (imgs + 1)/2.0
     print(imgs.shape, imgs.min(), imgs.max())
-    imgs = torch.from_numpy(imgs).cuda()
+
+    if cuda:
+         images_set = torch.from_numpy(imgs).cuda()
+    else:
+         images_set = torch.from_numpy(imgs)
+
     for i, images in enumerate(imgs):
         feats.append(net.extract_features(images).detach().cpu().numpy())
     feats = np.vstack(feats)

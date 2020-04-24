@@ -19,7 +19,7 @@ batch_size=128
 latent_dim=100
 img_size=28
 
-dcgan = True
+dcgan = False
 
 from src.metrics import calculate_fid_given_paths, calculate_kid_given_paths, mse, compute_thickness_ground_truth
 from src.models import LeNet5
@@ -29,7 +29,7 @@ def create_labels_discriminator(batch_size, image_size, labels):
     #random_labels = np.random.rand(batch_size)
     gen_labels = np.zeros((batch_size, 1, image_size, image_size))
     for i in range(batch_size):
-        gen_labels[i][0][:][:] = np.full((image_size, image_size), labels[i]) 
+        gen_labels[i][0][:][:] = np.full((image_size, image_size), labels[i])
     return gen_labels
 
 def save_numpy_arr(path, arr):
@@ -94,10 +94,10 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
 
     gen_imgs = generator(z, labels)
     save_image(gen_imgs.data, "images/%d.png" % batches_done, nrow=n_row, normalize=True)
-    
+
     measure_batch = compute_thickness_ground_truth(gen_imgs.squeeze(1).cpu().detach().numpy())
     thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
-    
+
     label_target = dataset.scaler.inverse_transform(np.array([num for num in np.arange(0, 1, 1/n_row)]).reshape(-1,1)).squeeze()
     mse_generator = mse(label_target, thickness)
 
@@ -215,7 +215,7 @@ def train_gan_model(dataloader):
 
             # Sample noise and labels as generator input
             z = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, latent_dim))))
-            gen_labels = Variable(FloatTensor(np.random.rand(batch_size))) 
+            gen_labels = Variable(FloatTensor(np.random.rand(batch_size)))
 
             # Generate a batch of images
             gen_imgs = generator(z, gen_labels)
@@ -362,13 +362,13 @@ def train_forward_model():
                 df_acc_eval = pd.DataFrame(columns=['label_norm', 'forward', 'morpho'])
 
                 for j, (imgs, labels) in enumerate(testloader):
-            
+
                     if j > 5:
                         break
-    
+
                     x = Variable(imgs.type(FloatTensor))
                     y_labels = Variable(labels.type(FloatTensor))
-    
+
                     # forward predictions
                     y_pred = forward(x.view(-1,28*28))
 
@@ -380,17 +380,17 @@ def train_forward_model():
                           y_measure_morpho = measure_batch(x.squeeze(1).cpu().detach().numpy(), pool=pool)['thickness']
 
                     mse_morpho = mse(y_measure_morpho, trainset.scaler.inverse_transform(y_labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
-    
+
                     df = pd.DataFrame(y_labels.cpu().detach().numpy(), columns=['label_norm'])
                     df['forward'] = mse_model
                     df['morpho'] = mse_morpho
-    
+
                     df_acc_eval = df_acc_eval.append(df, ignore_index=True)
-                
+
                 print(
                         f"[Epoch {epoch}] [Batch {j}/{len(testloader)}] [EVAL acc morpho: {df_acc_eval['morpho'].mean()}] [EVAL acc forward: {df_acc_eval['forward'].mean()}]"
                       )
-                
+
                 # Average of the accuracies
                 acc_res = pd.DataFrame([df_acc_eval.mean().tolist()], columns=['label_norm', 'forward', 'morpho'])
                 df_acc_final = df_acc_final.append(acc_res)

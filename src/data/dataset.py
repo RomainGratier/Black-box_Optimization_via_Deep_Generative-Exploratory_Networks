@@ -14,85 +14,90 @@ class MNISTDataset(Dataset):
     """ MNIST dataset."""
 
     # Initialize your data, download, etc.
-    def __init__(self, dataset, y_feature):
-      
+    def __init__(self, dataset, y_feature, data_type='normal'):
+
         if dataset == 'train':
 
-            img_file, digit_file, morpho = self.__getdatasets__(dataset)
+            img_file, digit_file, morpho = self.__getdatasets__(dataset, data_type)
             # Get the labels
             labels, minimum, maximum, index = self.__getlabels__(dataset, morpho, digit_file, y_feature)
             labels, scaler = self.__get_scaler__(8, labels, y_feature)
             print(labels.describe())
             self.maximum = np.max(labels['normalized_label'])
             self.minimum = np.min(labels['normalized_label'])
-    
+
             # Read images from MNIST
             images = self.__transform__(load_idx(img_file))[index]
-    
+
             # Select inputs
             self.x_data = torch.from_numpy(images).unsqueeze(1)
             self.y_data = torch.from_numpy(labels['normalized_label'].to_numpy())
             self.labels = labels[y_feature]
             self.scaler = scaler
-    
+
             self.len = self.y_data.shape[0]
 
         if dataset == 'test':
-            
-            img_file_tr, digit_file_tr, morpho_tr = self.__getdatasets__('train')
-            img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test')
-    
+
+            img_file_tr, digit_file_tr, morpho_tr = self.__getdatasets__('train', data_type)
+            img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test', data_type)
+
             # Get the labels
             labels_tr, minimum_tr, maximum_tr, index_tr = self.__getlabels__('train', morpho_tr, digit_file_tr, y_feature)
             labels_te, minimum_te, maximum_te, index_te = self.__getlabels__('test', morpho_te, digit_file_te, y_feature)
-    
+
             labels_tr, scaler_tr = self.__get_scaler__(8, labels_tr, y_feature)
             labels_te = self.__scale__(labels_te, y_feature, scaler_tr)
-    
+
             print(labels_te.describe())
             self.maximum = np.max(labels_te['normalized_label'])
             self.minimum = np.min(labels_te['normalized_label'])
-    
+
             # Read images from MNIST
             images = self.__transform__(load_idx(img_file_te))[index_te]
-    
+
             # Select inputs
             self.x_data = torch.from_numpy(images).unsqueeze(1)
             self.y_data = torch.from_numpy(labels_te['normalized_label'].to_numpy())
             self.labels = labels_te[y_feature]
             self.scaler = scaler_tr
-    
+
             self.len = self.y_data.shape[0]
 
         if dataset == 'full':
-            
-            img_file_tr, digit_file_tr, morpho_tr = self.__getdatasets__('train')
-    
+
+            img_file_tr, digit_file_tr, morpho_tr = self.__getdatasets__('train', data_type)
+
             # Get the labels
             labels_tr, minimum_tr, maximum_tr, index_tr = self.__getlabels__('train', morpho_tr, digit_file_tr, y_feature)
             labels_te, minimum_te, maximum_te, index_te = self.__getlabels__('test', morpho_tr, digit_file_tr, y_feature)
-    
+
             labels_tr, scaler_tr = self.__get_scaler__(8, labels_tr, y_feature)
             labels_te = self.__scale__(labels_te, y_feature, scaler_tr)
-    
+
             print(labels_te.describe())
             self.maximum = np.max(labels_te['normalized_label'])
             self.minimum = np.min(labels_te['normalized_label'])
-    
+
             # Read images from MNIST
             images = self.__transform__(load_idx(img_file_tr))[index_te]
-    
+
             # Select inputs
             self.x_data = torch.from_numpy(images).unsqueeze(1)
             self.y_data = torch.from_numpy(labels_te['normalized_label'].to_numpy())
             self.labels = labels_te[y_feature]
             self.scaler = scaler_tr
-    
+
             self.len = self.y_data.shape[0]
 
-    def __getdatasets__(self, dataset):
-        
-        folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/MNIST_morpho/'
+    def __getdatasets__(self, dataset, data_type):
+
+        folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
+        if data_type == 'thick':
+            folder = os.path.join(folder, data_type)
+        if data_type == 'mnist':
+            folder = os.path.join(folder, 'MNIST_morpho')
+
         if dataset == 'test':
             return os.path.join(folder,'t10k-images-idx3-ubyte.gz'), os.path.join(folder,'t10k-labels-idx1-ubyte.gz'), os.path.join(folder,'t10k-morpho.csv')
 
@@ -153,11 +158,11 @@ class MNISTDataset(Dataset):
 
     def __transform__(self, X):
         X = X.astype('float32')
-        
+
         # Normalize between 0 - 1
         X = (X - X.min())
-        X = X / (X.max() - X.min()) 
-        
+        X = X / (X.max() - X.min())
+
         # Normalize between -1 - 1
         X -= 0.5
         X /= 0.5
