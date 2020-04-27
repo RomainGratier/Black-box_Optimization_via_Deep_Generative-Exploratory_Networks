@@ -93,7 +93,7 @@ class MNISTDataset(Dataset):
     def __getdatasets__(self, dataset, data_type):
 
         folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
-        if data_type == 'thick':
+        if data_type == 'thic':
             folder = os.path.join(folder, data_type)
         if data_type == 'mnist':
             folder = os.path.join(folder, 'MNIST_morpho')
@@ -134,7 +134,7 @@ class MNISTDataset(Dataset):
         print(f"The extrem values from our labels:\nMaximum : {maximum}   Minimum : {minimum}")
         print()
         print(f"Check the distribution of our labels")
-        check = pd.DataFrame(labels[y_feature].astype('int'), columns=[y_feature])
+        check = pd.DataFrame(np.around(labels[y_feature].values), columns=[y_feature])
         print(check.groupby(y_feature)[y_feature].count())
         print(check.plot.hist(bins=20))
 
