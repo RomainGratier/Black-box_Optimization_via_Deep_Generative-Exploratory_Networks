@@ -61,13 +61,14 @@ def transform_inv(X):
 
     # Transfrom 0 - 255
     X *= 255
-    return X
+    
+    # Convert the float tensor to byte tensor
+    return X.round().byte()
 
-def compute_thickness_ground_truth(images_generated):
-    print(images_generated.max())
-    print(images_generated.min())
+def compute_thickness_ground_truth(images_generated, feature = 'thickness'):
+    ''' Byte input image thickness measurment '''
     with multiprocessing.Pool() as pool:
-        thickness = measure_batch(transform_inv(images_generated), pool=pool)['thickness']
+        thickness = measure_batch(transform_inv(images_generated), pool=pool)[feature]
     return thickness
 
 def mse(y_true, y_pred):
