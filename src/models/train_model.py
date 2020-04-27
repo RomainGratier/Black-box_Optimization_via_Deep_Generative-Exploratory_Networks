@@ -95,7 +95,7 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
     gen_imgs = generator(z, labels)
     save_image(gen_imgs.data, "images/%d.png" % batches_done, nrow=n_row, normalize=True)
 
-    measure_batch = compute_thickness_ground_truth(gen_imgs.squeeze(1).cpu().detach().numpy())
+    measure_batch = compute_thickness_ground_truth(gen_imgs.squeeze(1).cpu().detach())
     thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
 
     label_target = dataset.scaler.inverse_transform(np.array([num for num in np.arange(0, 1, 1/n_row)]).reshape(-1,1)).squeeze()

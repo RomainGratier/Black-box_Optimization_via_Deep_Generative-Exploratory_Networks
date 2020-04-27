@@ -62,8 +62,11 @@ def transform_inv(X):
     # Transfrom 0 - 255
     X *= 255
     
-    # Convert the float tensor to byte tensor
-    return X.round().byte()
+    # Convert the float tensor to uint8 numpy
+    if type(X) == type(torch.tensor([])):
+        return X.round().byte().numpy()
+    if type(X) == type(np.array([])):
+        return X.round().astype(np.uint8)
 
 def compute_thickness_ground_truth(images_generated, feature = 'thickness'):
     ''' Byte input image thickness measurment '''
