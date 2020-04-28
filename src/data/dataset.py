@@ -16,11 +16,9 @@ class MNISTDataset(Dataset):
     # Initialize your data, download, etc.
     def __init__(self, dataset, y_feature, data_type = 'original'):
 
-        ``` Initialise the data type:
-
-            - data_type : original, global, thic, frac, local, plain, swel, thin
-
-            ```
+        '''Initialise the data type:
+        - data_type : original, global, thic, frac, local, plain, swel, thin
+        '''
 
         if dataset == 'train':
 
