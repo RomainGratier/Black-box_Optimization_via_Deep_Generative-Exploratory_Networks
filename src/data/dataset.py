@@ -14,7 +14,13 @@ class MNISTDataset(Dataset):
     """ MNIST dataset."""
 
     # Initialize your data, download, etc.
-    def __init__(self, dataset, y_feature, data_type='mnist'):
+    def __init__(self, dataset, y_feature, data_type = 'original'):
+
+        ``` Initialise the data type:
+
+            - data_type : original, global, thic, frac, local, plain, swel, thin
+
+            ```
 
         if dataset == 'train':
 
@@ -92,11 +98,8 @@ class MNISTDataset(Dataset):
 
     def __getdatasets__(self, dataset, data_type):
 
-        folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
-        if data_type == 'thic':
-            folder = os.path.join(folder, data_type)
-        if data_type == 'mnist':
-            folder = os.path.join(folder, 'MNIST_morpho')
+        folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/morpho_mnist/'
+        folder = os.path.join(folder, data_type)
 
         if dataset == 'test':
             return os.path.join(folder,'t10k-images-idx3-ubyte.gz'), os.path.join(folder,'t10k-labels-idx1-ubyte.gz'), os.path.join(folder,'t10k-morpho.csv')
