@@ -14,7 +14,7 @@ class MNISTDataset(Dataset):
     """ MNIST dataset."""
 
     # Initialize your data, download, etc.
-    def __init__(self, dataset, y_feature, data_type = 'original'):
+    def __init__(self, dataset, y_feature, data_type = 'morpho_mnist/original'):
 
         '''Initialise the data type:
         - data_type : original, global, thic, frac, local, plain, swel, thin
@@ -96,7 +96,7 @@ class MNISTDataset(Dataset):
 
     def __getdatasets__(self, dataset, data_type):
 
-        folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/morpho_mnist/'
+        folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
         folder = os.path.join(folder, data_type)
 
         if dataset == 'test':
