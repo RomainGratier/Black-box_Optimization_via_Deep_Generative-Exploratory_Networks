@@ -24,7 +24,7 @@ def main(data_dirs):
 if __name__ == '__main__':
     ROOT = '../data/processed/'
     #dirs = ["thickened05", "thickened10", "thickened15", "thickened20",  "thickened25", "thinned06"]
-    dirs = ["thinned06"]
+    dirs = ["thinned04", "thinned06", "thinned08"]
     datadir = [os.path.join(ROOT, dir) for dir in dirs]
     datadir = [os.path.join(ROOT, dir) for dir in dirs]
 
