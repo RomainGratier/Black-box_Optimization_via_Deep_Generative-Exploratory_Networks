@@ -11,12 +11,12 @@ THRESHOLD = .5
 UP_FACTOR = 4
 
 PERTURBATIONS = [
-    #perturb.Thickening(0.5),
-    #perturb.Thickening(1.0),
-    #perturb.Thickening(1.5),
-    #perturb.Thickening(2.0),
-    perturb.Thinning(amount=.6),
+    perturb.Thickening(0.5),
+    perturb.Thickening(1.0),
+    perturb.Thickening(1.5),
+    perturb.Thickening(2.0),
     perturb.Thickening(2.5),
+    perturb.Thinning(amount=.6),
 ]
 
 
@@ -30,8 +30,7 @@ def process_image(args):
 
 raw_dir = "../data/morpho_mnist/original"
 dataset_root = "../data/processed"
-#dataset_names = ["thickened05", "thickened10", "thickened15", "thickened20", "thinned06", "thickened25"]
-dataset_names = ["thinned06", "thickened25"]
+dataset_names = ["thickened05", "thickened10", "thickened15", "thickened20",  "thickened25", "thinned06"]
 
 pool = multiprocessing.Pool()
 for subset in ["train", "t10k"]:
