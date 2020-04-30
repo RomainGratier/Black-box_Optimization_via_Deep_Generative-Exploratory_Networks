@@ -22,8 +22,10 @@ def main(data_dirs):
 
 
 if __name__ == '__main__':
-    ROOT = '../Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/processed/'
-    dirs = ['thickened05', 'thickened10', 'thickened15', 'thickened20']
+    ROOT = '../data/processed/'
+    #dirs = ['thickened05', 'thickened10', 'thickened15', 'thickened20', 'thinned06', 'thickened25']
+    dirs = ['thinned06', 'thickened25']
+    datadir = [os.path.join(ROOT, dir) for dir in dirs]
     datadir = [os.path.join(ROOT, dir) for dir in dirs]
 
     print(f"Processing the following directories :\n{datadir}")
