@@ -85,6 +85,9 @@ def merge_datasets(list_paths, data_type):
         data_merged = pd.concat(data, ignore_index=True)
         print(data_merged.shape)
 
+        # Reindex the data
+        data_merged['index'] = data_merged.index
+
         # Save them
         data_merged.to_csv(os.path.join(OUTPUT_PATH, name), index=False)
 
@@ -100,7 +103,7 @@ def merger(ls_paths):
             if list(check)[-1].split('.')[-1] == 'gz':
                 print(f'Successfuly assessed the data {check}')
                 merge_datasets(data, data_type = 'gz')
-
+            
             elif list(check)[-1].split('.')[-1] == 'csv':
                 print(f'Successfuly assessed the data {check}')
                 merge_datasets(data, data_type = 'csv')
