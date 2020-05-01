@@ -81,7 +81,7 @@ def uniform_resampling(df, sample_size = 5300):
 
 def load_manipulate_save(input_path, out_path, train_index, test_index):
     train_paths = [path for path in glob(os.path.join(input_path, 'train*'))]; test_paths = [path for path in glob(os.path.join(input_path, 't10k*'))];
-
+    
     for path in train_paths:
         name = path.split('/')[-1]
         if name.split('.')[-1] == 'gz':
@@ -90,15 +90,21 @@ def load_manipulate_save(input_path, out_path, train_index, test_index):
         if name.split('.')[-1] == 'csv':
             data_new = pd.read_csv(path).loc[train_index.values]
             data_new.to_csv(os.path.join(out_path, name), index=False)
+            print(' ------------ CHECK ------------ ')
+            data_new['round'] = round(data_new["thickness"])
+            print(data_new.groupby('round')['round'].count())
 
     for path in test_paths:
         name = path.split('/')[-1]
         if name.split('.')[-1] == 'gz':
-            data_new = load_idx(path)[train_index.values]
+            data_new = load_idx(path)[test_index.values]
             save_idx(data_new, os.path.join(out_path, name))
         if name.split('.')[-1] == 'csv':
-            data_new = pd.read_csv(path).loc[train_index.values]
+            data_new = pd.read_csv(path).loc[test_index.values]
             data_new.to_csv(os.path.join(out_path, name), index=False)
+            print(' ------------ CHECK ------------ ')
+            data_new['round'] = round(data_new["thickness"])
+            print(data_new.groupby('round')['round'].count())
 
 def data_resampling(input_path, out_path):
     # Get data
