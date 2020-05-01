@@ -103,7 +103,7 @@ def merger(ls_paths):
             if list(check)[-1].split('.')[-1] == 'gz':
                 print(f'Successfuly assessed the data {check}')
                 merge_datasets(data, data_type = 'gz')
-            
+
             elif list(check)[-1].split('.')[-1] == 'csv':
                 print(f'Successfuly assessed the data {check}')
                 merge_datasets(data, data_type = 'csv')
