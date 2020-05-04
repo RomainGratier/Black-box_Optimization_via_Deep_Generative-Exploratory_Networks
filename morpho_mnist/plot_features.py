@@ -62,10 +62,10 @@ def violine_plots(data_path, output_path, cols=['thickness','slant', 'width', 'h
     axs[1, 0].set_yticks([1])
     axs[1, 0].set_yticklabels(["All"])
     axs[1, 0].set_ylim(.5, 1.5)
-    for ax in axs[:, 1]:
-        ax.axvline(0., lw=1., ls=':', c='k')
-    axs[1, 1].set_xlim(-46, 46)
-    axs[1, 1].xaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.0f}$\degree$"))
+    #for ax in axs[:, 1]:
+    #    ax.axvline(0., lw=1., ls=':', c='k')
+    #axs[1, 1].set_xlim(-46, 46)
+    #axs[1, 1].xaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.0f}$\degree$"))
     plt.savefig(os.path.join(output_path, data_path.split('/')[-1]+'.pdf' ), bbox_inches='tight')
     plt.show()
 
@@ -76,6 +76,3 @@ if __name__ == '__main__':
     
     for path in paths:
         violine_plots(path, OUPUT_PTH)
-    
-    plt.savefig("../fig/distributions_x8_test.pdf", bbox_inches='tight')
-    plt.show()
