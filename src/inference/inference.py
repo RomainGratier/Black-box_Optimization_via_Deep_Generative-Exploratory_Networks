@@ -115,11 +115,11 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
 
     # ------------ Compute the mse between the target and the forward model predictions ------------
     se_forward_train, forward_pred_train = se_between_target_and_prediction(target, Variable(testset.x_data[select_img_label_index].type(FloatTensor)), ncol, forward, trainset)
-    
+
     thickness_train = compute_thickness_ground_truth(image_from_test)
 
     se_train = mse(target, thickness_train.values)
-    
+
     # ------------ EDA of the best x* generated ------------
     top_values = 10
     index = np.argsort(se_forward)[:top_values]
@@ -127,13 +127,8 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     
     print()
     print(f" ------------ Best forward image ------------")
-    #print(f'Label : {trainset.scaler.inverse_transform(labels[index].reshape(-1, 1)).squeeze()}')
-    #print(f"Forward pred = {trainset.scaler.inverse_transform(forward_pred[index].reshape(-1, 1)).squeeze()}")
-    #print(f"Morpho measure pred = {thickness.values[index]}")
     print(f"MSE measure pred = {forward_mse_mean} ± {forward_mse_std} ")
     print(f"MSE morpho on Generated data: {global_mean}")
-    #print(f"MSE forward on Generate data: {np.mean(se_forward)}")
-    #print(f"MSE Training data: {np.mean(se_train)}")
 
     # Transormf output to real value
     model_pred = trainset.scaler.inverse_transform(forward_pred.reshape(-1, 1)).squeeze()
@@ -149,17 +144,6 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     fid_value_gen, kid_value_gen = compute_fid_mnist_monte_carlo(np.expand_dims(images_generated, 1), target, testset, sample_number)
 
     plots_results(target, model_pred, model_pred_train, thickness.values, thickness_train.values, se_forward, conditions, testset, images_generated, select_img_label_index, fid_value_gen, kid_value_gen, nrow=2, ncol=4)
-
-    #print()
-    #index = np.argmin(se_measure)
-    #print(f" ------------ Best Morpho measured image ------------")
-    #print(f'Minimum SE : {np.min(se_measure)}   \\  Label : {trainset.scaler.inverse_transform(labels[index].reshape(-1, 1)).squeeze()}')
-    #print(f"Forward pred = {trainset.scaler.inverse_transform(forward_pred[index].reshape(-1, 1)).squeeze()}")
-    #print(f"Morpho measure pred = {thickness.values[index]}")
-    #print(f"MSE Generated data: {np.mean(se_measure)}")
-    #print(f"MSE Training data: {np.mean(mse(target, thickness_train.values))}")
-
-    #plots_results(target, model_pred, model_pred_train, thickness.values, thickness_train.values, se_measure, conditions, testset, images_generated, select_img_label_index, fid_value_gen, fid_value_true, nrow=2, ncol=4)
     
     return [forward_mse_mean, forward_mse_std], global_mean, fid_value_gen, kid_value_gen
     

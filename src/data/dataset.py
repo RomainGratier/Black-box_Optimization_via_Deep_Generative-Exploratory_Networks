@@ -38,7 +38,8 @@ class MNISTDataset(Dataset):
             self.y_data = torch.from_numpy(labels['normalized_label'].to_numpy())
             self.labels = labels[y_feature]
             self.scaler = scaler
-
+            self.maximum_label = self.__max_labels__()
+            self.minimum_label = self.__min_labels__()
             self.len = self.y_data.shape[0]
 
         if dataset == 'test':
@@ -65,7 +66,8 @@ class MNISTDataset(Dataset):
             self.y_data = torch.from_numpy(labels_te['normalized_label'].to_numpy())
             self.labels = labels_te[y_feature]
             self.scaler = scaler_tr
-
+            self.maximum_label = self.__max_labels__()
+            self.minimum_label = self.__min_labels__()
             self.len = self.y_data.shape[0]
 
         if dataset == 'full':
@@ -91,8 +93,15 @@ class MNISTDataset(Dataset):
             self.y_data = torch.from_numpy(labels_te['normalized_label'].to_numpy())
             self.labels = labels_te[y_feature]
             self.scaler = scaler_tr
-
+            self.maximum_label = self.__max_labels__()
+            self.minimum_label = self.__min_labels__()
             self.len = self.y_data.shape[0]
+
+    def __max_labels__(self,):
+        return np.max(self.labels)
+    
+    def __min_labels__(self,):
+        return np.min(self.labels)
 
     def __getdatasets__(self, dataset, data_type):
 

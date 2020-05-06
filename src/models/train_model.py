@@ -51,14 +51,14 @@ def generate_sample(minimum, maximum, sample_size, generator):
 
     return generator(z, labels)
 
-def compute_fid_kid_for_mnist(generator, n_row, img_size, dataset, real_dataset, index_in_distribution, index_out_distribution, sample_size):
+def compute_fid_kid_for_mnist(generator, n_row, img_size, dataset, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size):
     gen_img_in_distribution = generate_sample(0, dataset.maximum, sample_size, generator)
     gen_img_out_distribution = generate_sample(dataset.maximum, 1, sample_size, generator)
 
     random_id_in_distribution = random.sample(index_in_distribution.tolist(), sample_size)
     random_id_out_distribution = random.sample(index_out_distribution.tolist(), sample_size)
-    real_imgs_in_distribution = real_dataset[random_id_in_distribution].numpy()
-    real_imgs_out_distribution = real_dataset[random_id_out_distribution].numpy()
+    real_imgs_in_distribution = real_dataset_in[random_id_in_distribution].numpy()
+    real_imgs_out_distribution = real_dataset_out[random_id_out_distribution].numpy()
 
     folder = 'save_data'
     os.makedirs(folder, exist_ok=True)
@@ -78,7 +78,7 @@ def compute_fid_kid_for_mnist(generator, n_row, img_size, dataset, real_dataset,
 
     return fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution
 
-def sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset, sample_size):
+def sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, dataset, sample_size):
     """Saves a grid of generated digits ranging from 0 to n_classes"""
 
     ## -------------- In distribution --------------
@@ -101,7 +101,7 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
     label_target = dataset.scaler.inverse_transform(np.array([num for num in np.arange(0, 1, 1/n_row)]).reshape(-1,1)).squeeze()
     mse_generator = mse(label_target, thickness)
 
-    fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, img_size, dataset, real_dataset, index_in_distribution, index_out_distribution, sample_size)
+    fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, img_size, dataset, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size)
 
     print()
     print(f"The thickness distribution =\n{dataset.scaler.transform(thickness.reshape(-1,1)).squeeze()}")
@@ -143,12 +143,12 @@ def check_memory_cuda():
     print(f' --------------- MEMORY free     : {info.free} --------------- ')
     #print(f'used     : {info.used}')
 
-def train_gan_model(dataloader):
+def train_gan_model(dataloader, path_generator):
+
     mse_gan_in_distribution = []
     mse_gan_out_distribution = []
-    df_acc_gen = pd.DataFrame(columns=['mse_in', 'mse_out', 'fid_in', 'fid_out', 'kid_in', 'kid_out'])
+    df_acc_gen = pd.DataFrame(columns=['mse_in', 'mse_out', 'fid_in', 'fid_out'])
 
-    path_generator = '/content/drive/My Drive/master_thesis/models/generative/'
     if os.path.exists(path_generator):
         df_check_in_distribution = load_obj_csv(os.path.join(path_generator, 'results_in_distribution'))
         df_check_out_distribution = load_obj_csv(os.path.join(path_generator, 'results_out_distribution'))
@@ -182,12 +182,13 @@ def train_gan_model(dataloader):
     os.makedirs("images", exist_ok=True)
 
     # FID needs
-    df_test = pd.DataFrame(np.around(testset.y_data.numpy(),1), columns=['label'])
+    df_test = pd.DataFrame(np.around(fulldataset.y_data.numpy(),2), columns=['label'])
     index_in_distribution = df_test[df_test['label']<=dataset.maximum].index
     index_out_distribution = df_test[df_test['label']>dataset.maximum].index
-    real_dataset = deepcopy(testset.x_data)
+    real_dataset = deepcopy(fulldataset.x_data)
 
     arr = np.array([num for num in np.arange(0, 1, 1/n_row)])
+    print(f"Checkup the plots of the displayed labels {arr}")
     in_distribution_index = np.where(arr <= dataset.maximum)
     out_distribution_index = np.where(arr > dataset.maximum)
 
@@ -195,6 +196,14 @@ def train_gan_model(dataloader):
     best_res_out = 100000
 
     for epoch in range(n_epochs):
+        d_loss_check = []
+        g_loss_check = []
+
+        if (epoch+1) % 50 == 0:
+            optimizer_G.param_groups[0]['lr'] /= 10
+            optimizer_D.param_groups[0]['lr'] /= 10
+            print("learning rate change!")
+
         for i, (imgs, labels) in enumerate(dataloader):
             ## Initialization
             batch_size = imgs.shape[0]
@@ -215,7 +224,7 @@ def train_gan_model(dataloader):
 
             # Sample noise and labels as generator input
             z = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, latent_dim))))
-            gen_labels = Variable(FloatTensor(np.random.rand(batch_size)))
+            gen_labels = Variable(FloatTensor(np.random.rand(batch_size))) 
 
             # Generate a batch of images
             gen_imgs = generator(z, gen_labels)
@@ -226,6 +235,8 @@ def train_gan_model(dataloader):
 
             g_loss.backward()
             optimizer_G.step()
+
+            g_loss_check.append(g_loss.item())
 
             # ---------------------
             #  Train Discriminator
@@ -247,19 +258,21 @@ def train_gan_model(dataloader):
             d_loss.backward()
             optimizer_D.step()
 
+            d_loss_check.append(d_loss.item())
+
             batches_done = epoch * len(dataloader) + i
             if batches_done % sample_interval == 0:
 
                 print(
                   "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
-                  % (epoch, n_epochs, i, len(dataloader), d_loss.item(), g_loss.item())
+                  % (epoch, n_epochs, i, len(dataloader), np.mean(d_loss_check), np.mean(g_loss_check))
                 )
 
                 # Delete useless data from GPU
                 del valid; del fake; del real_imgs; del labels; del z; del gen_labels; del g_loss; del d_loss; del gen_imgs; del validity;
                 torch.cuda.empty_cache()
 
-                mse_gan, fid_in, kid_in, fid_out, kid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset, 700)
+                mse_gan, fid_in, kid_in, fid_out, kid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset, 1000)
 
                 mean_in_mse = np.mean(mse_gan[in_distribution_index])
                 mean_out_mse = np.mean(mse_gan[out_distribution_index])
@@ -280,7 +293,7 @@ def train_gan_model(dataloader):
                 df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['mse_in'].values, best_res_in, df_acc_gen, path_generator, generator)
                 df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['mse_out'].values, best_res_out, df_acc_gen, path_generator, generator)
 
-    return mse_gan_in_distribution, mse_gan_out_distribution, df_acc_gen, generator
+    return mse_gan_in_distribution, mse_gan_out_distribution, df_acc_gen
 
 def eval_forward(dist, df_check, mean_out, best_res, df_acc_gen, path_forward, model):
     if df_check is not None:
