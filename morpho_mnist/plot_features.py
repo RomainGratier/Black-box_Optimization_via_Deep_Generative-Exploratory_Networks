@@ -30,12 +30,12 @@ from morphomnist import io
 #         bar.set_facecolor(cmap(count / max(counts)))
 
 def violine_plots(data_path, output_path, cols=['thickness','slant', 'width', 'height']):
-    
+
     df = pd.read_csv(os.path.join(data_path, "train-morpho.csv"), index_col='index')
     df['digit'] = io.load_idx(os.path.join(data_path, "train-labels-idx1-ubyte.gz"))
-    #df['slant'] = np.rad2deg(np.arctan(-df['shear']))
+    df['slant'] = np.rad2deg(np.arctan(-df['slant']))
 
-    labels = cols
+    labels = ["Thickness [pxl]", "Slant [°]", "Width [pxl]", "Height [pxl]"]
     fig, axs = plt.subplots(2, len(cols), sharex='col', sharey='row', figsize=(12, 4),
                             gridspec_kw=dict(height_ratios=[10, 1], hspace=.1, wspace=.1, left=0,
                                              right=1))
@@ -45,7 +45,7 @@ def violine_plots(data_path, output_path, cols=['thickness','slant', 'width', 'h
             pc.set_facecolor('#1f77b480')
             pc.set_edgecolor('C0')
             pc.set_alpha(None)
-    
+
     for c, col in enumerate(cols):
         ax = axs[0, c]
         parts = ax.violinplot([df.loc[df['digit'] == d, col].values.tolist() for d in range(10)], positions=np.arange(10), vert=False, widths=0.7, showextrema=False, showmedians=True)
@@ -62,17 +62,17 @@ def violine_plots(data_path, output_path, cols=['thickness','slant', 'width', 'h
     axs[1, 0].set_yticks([1])
     axs[1, 0].set_yticklabels(["All"])
     axs[1, 0].set_ylim(.5, 1.5)
-    #for ax in axs[:, 1]:
-    #    ax.axvline(0., lw=1., ls=':', c='k')
-    #axs[1, 1].set_xlim(-46, 46)
-    #axs[1, 1].xaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.0f}$\degree$"))
+    for ax in axs[:, 1]:
+        ax.axvline(0., lw=1., ls=':', c='k')
+    axs[1, 1].set_xlim(-46, 46)
+    axs[1, 1].xaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.0f}$\degree$"))
     plt.savefig(os.path.join(output_path, data_path.split('/')[-1]+'.pdf' ), bbox_inches='tight')
     plt.show()
 
 if __name__ == '__main__':
-    ROOT = "../data/" 
+    ROOT = "../data/"
     OUPUT_PTH = "../fig/"
-    paths = [os.path.join(ROOT, "processed/original_thic_resample"), os.path.join(ROOT, "morpho_mnist/original"), os.path.join(ROOT, "morpho_mnist/thic")]
-    
+    paths = [os.path.join(ROOT, "processed/original_thic_resample"), os.path.join(ROOT, "morpho_mnist/global"), os.path.join(ROOT, "morpho_mnist/original"), os.path.join(ROOT, "morpho_mnist/thic"), os.path.join(ROOT, "processed/original_thic")]
+
     for path in paths:
         violine_plots(path, OUPUT_PTH)
