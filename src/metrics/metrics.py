@@ -27,9 +27,7 @@ import numpy as np
 import torch
 import multiprocessing
 
-import sys
-sys.path.append('../..')
-from morphomnist.measure import measure_batch
+from src.morphomnist.measure import measure_batch
 
 # ------------ Compare the forward model and the Measure from morphomnist ------------
 def transform_inv(X):

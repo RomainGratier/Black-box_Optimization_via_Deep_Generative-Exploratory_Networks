@@ -3,9 +3,6 @@ import pandas as pd
 import os
 import random
 
-import multiprocessing
-from morphomnist.measure import measure_batch
-
 import torch
 from torch.autograd import Variable
 from torchvision.utils import save_image
@@ -134,6 +131,12 @@ def check_memory_cuda():
     print(f' --------------- MEMORY free     : {info.free} --------------- ')
     #print(f'used     : {info.used}')
 
+def load_obj_csv(path):
+    return pd.read_csv(path+'.csv')
+
+def save_obj_csv(d, path):
+    d.to_csv(path+'.csv', index=False)
+
 def train_gan_model(dataloader, path_generator):
 
     mse_gan_in_distribution = []
@@ -173,10 +176,14 @@ def train_gan_model(dataloader, path_generator):
     os.makedirs("images", exist_ok=True)
 
     # FID needs
-    df_test = pd.DataFrame(np.around(fulldataset.y_data.numpy(),2), columns=['label'])
-    index_in_distribution = df_test[df_test['label']<=dataset.maximum].index
-    index_out_distribution = df_test[df_test['label']>dataset.maximum].index
-    real_dataset = deepcopy(fulldataset.x_data)
+    df_test_in = pd.DataFrame(dataset.labels.values, columns=['label'])
+    df_test_out = pd.DataFrame(fulldataset.labels.values, columns=['label'])
+    index_in_distribution = df_test_in[df_test_in['label']<=dataset.maximum_label].index
+    index_out_distribution = df_test_out[df_test_out['label']>dataset.maximum_label].index
+    print(f'size of in distribution data for fid/kid : {len(index_in_distribution)}')
+    print(f'size of out distribution data for fid/kid : {len(index_out_distribution)}')
+    real_dataset_in = deepcopy(dataset.x_data)
+    real_dataset_out = deepcopy(fulldataset.x_data)
 
     arr = np.array([num for num in np.arange(0, 1, 1/n_row)])
     print(f"Checkup the plots of the displayed labels {arr}")
@@ -263,7 +270,7 @@ def train_gan_model(dataloader, path_generator):
                 del valid; del fake; del real_imgs; del labels; del z; del gen_labels; del g_loss; del d_loss; del gen_imgs; del validity;
                 torch.cuda.empty_cache()
 
-                mse_gan, fid_in, kid_in, fid_out, kid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, index_in_distribution, index_out_distribution, generator, dataset, real_dataset, 1000)
+                mse_gan, fid_in, kid_in, fid_out, kid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, dataset, 1000)
 
                 mean_in_mse = np.mean(mse_gan[in_distribution_index])
                 mean_out_mse = np.mean(mse_gan[out_distribution_index])
@@ -285,23 +292,3 @@ def train_gan_model(dataloader, path_generator):
                 df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['mse_out'].values, best_res_out, df_acc_gen, path_generator, generator)
 
     return mse_gan_in_distribution, mse_gan_out_distribution, df_acc_gen
-
-def eval_forward(dist, df_check, mean_out, best_res, df_acc_gen, path_forward, model):
-    if df_check is not None:
-        if mean_out < df_check[f'mse_{dist}'].iloc[-1]:
-            print(f" ---------- Better Results {dist} distribution of : {df_check[f'mse_{dist}'].iloc[-1] - mean_out} ---------- ")
-            torch.save(model, os.path.join(path_forward, f"best_forward_{dist}_distribution.pth"))
-            save_obj_csv(df_acc_gen, os.path.join(path_forward, f"results_{dist}_distribution"))
-
-            best_res = mean_out
-            df_check = None
-
-    else:
-        if mean_out < best_res:
-            print(f" ---------- Model Improving {dist} distribution of : {best_res - mean_out}---------- ")
-            torch.save(model, os.path.join(path_forward, f"best_forward_{dist}_distribution.pth"))
-            save_obj_csv(df_acc_gen, os.path.join(path_forward, f"results_{dist}_distribution"))
-
-            best_res = mean_out
-
-    return df_check, best_res

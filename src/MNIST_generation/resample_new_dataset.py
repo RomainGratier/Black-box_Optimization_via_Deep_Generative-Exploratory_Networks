@@ -74,7 +74,7 @@ def data_resampling(input_path, out_path):
 
 
 # Absolute path
-FOLDER = '../data/processed/'
+FOLDER = '../../data/processed/'
 INPUT_NAME = 'original_thic'
 OUTPUT_NAME = 'original_thic_resample'
 INPUT_PATH = os.path.join(FOLDER, INPUT_NAME)
