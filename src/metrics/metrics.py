@@ -27,6 +27,8 @@ import numpy as np
 import torch
 import multiprocessing
 
+import sys
+sys.path.append('../..')
 from morphomnist.measure import measure_batch
 
 # ------------ Compare the forward model and the Measure from morphomnist ------------
