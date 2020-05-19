@@ -75,7 +75,7 @@ def merge_dataset(dirs):
     merger(ls_paths)
 
 # Absolute path
-FOLDER = '../data/processed/'
+FOLDER = '../../data/processed/'
 NAME = 'original_thic'
 OUTPUT_PATH = os.path.join(FOLDER, NAME)
 
