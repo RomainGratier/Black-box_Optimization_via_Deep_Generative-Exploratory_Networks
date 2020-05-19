@@ -47,7 +47,7 @@ def transform_inv(X):
 def compute_thickness_ground_truth(images_generated, feature = 'thickness'):
     ''' Byte input image thickness measurment '''
     with multiprocessing.Pool() as pool:
-        thickness = measure_batch(transform_inv(images_generated.squeeze(1)), pool=pool)[feature]
+        thickness = measure_batch(transform_inv(images_generated), pool=pool)[feature]
     return thickness
 
 def mse(y_true, y_pred):

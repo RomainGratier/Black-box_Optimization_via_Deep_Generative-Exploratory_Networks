@@ -190,7 +190,7 @@ def test_model(net, criterion, testinloader, testoutloader, scaler, num_ens=1, b
     return df_acc_in, df_acc_out
 
 
-def run(dataset, net_type):
+def run(dataset, net_type, ckpt_dir):
 
     # Hyper Parameter settings
     layer_type = cfg.layer_type
@@ -212,8 +212,7 @@ def run(dataset, net_type):
         trainset, testset_in, testset_out, valid_size, batch_size, num_workers)
     net = getModel(net_type, inputs, outputs, priors, layer_type, activation_type).to(device)
 
-    ckpt_dir = f'save_models/{dataset}/bayesian'
-    ckpt_name = f'save_models/{dataset}/bayesian/model_{net_type}_{layer_type}_{activation_type}.pth'
+    ckpt_name = os.path.join(ckpt_dir, f'model_{net_type}_{layer_type}_{activation_type}.pth')
 
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir, exist_ok=True)
