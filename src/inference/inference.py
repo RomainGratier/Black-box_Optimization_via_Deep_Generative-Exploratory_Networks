@@ -1,157 +1,288 @@
-from scipy.stats import truncnorm, norm
-import random
+from __future__ import print_function
+
+import numpy as np
 import pandas as pd
-import numpy as np 
-import matplotlib.pyplot as plt
-import os 
 
-from src.metrics import mse, compute_thickness_ground_truth
-from src.generative.metrics import calculate_fid_given_paths, calculate_kid_given_paths
+import os
+import argparse
+from scipy.stats.stats import pearsonr   
 
-latent_dim = 100
+import torch
+import numpy as np
+from torch.optim import Adam, lr_scheduler
+from torch.nn import functional as F
 
-import torch 
-from torch.autograd import Variable
+import src.forward.config_bayesian as cfg
+import src.forward.utils
+from src.forward.metrics import ELBO, calculate_kl, get_beta
+from src.forward.bcnn_models import BBB3Conv3FC, BBBAlexNet, BBBLeNet
+from src.data import getDataset, getDataloader
+from src.metrics import mse
+from src.forward.uncertainty_estimation import get_uncertainty_per_batch
 
-cuda = True if torch.cuda.is_available() else False
+# CUDA settings
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
-LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
+def getModel(net_type, inputs, outputs, priors, layer_type, activation_type):
+    if (net_type == 'lenet'):
+        return BBBLeNet(outputs, inputs, priors, layer_type, activation_type)
+    elif (net_type == 'alexnet'):
+        return BBBAlexNet(outputs, inputs, priors, layer_type, activation_type)
+    elif (net_type == '3conv3fc'):
+        return BBB3Conv3FC(outputs, inputs, priors, layer_type, activation_type)
+    elif (net_type == 'fc'):
+        return BBBFC(outputs, inputs, priors, layer_type, activation_type)
+    else:
+        raise ValueError('Network should be either [LeNet / AlexNet / 3Conv3FC')
 
-def save_numpy_arr(path, arr):
-    np.save(path, arr)
-    return path
+def train_model(net, optimizer, criterion, trainloader, scaler, num_ens=1, beta_type=0.1, epoch=None, num_epochs=None):
+    net.train()
+    training_loss = 0.0
+    accs = []
+    kl_list = []
+    for i, (inputs, labels) in enumerate(trainloader, 1):
 
-def get_truncated_normal(form, mean=0, sd=1, quant=0.8):
-    upp = norm.ppf(quant, mean, sd)
-    low = norm.ppf(1 - quant, mean, sd)
-    return truncnorm(
-        (low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd).rvs(form)
+        optimizer.zero_grad()
+        inputs = F.interpolate(inputs, size=32)
+        inputs, labels = inputs.to(device), labels.to(device)
+        outputs = torch.zeros(inputs.shape[0], net.num_classes, num_ens).to(device)
 
-def generate_sample_from_GAN(target, z, sample_size, generator, scaler):
-    # Prepare labels
-    normalized_target = scaler.transform(np.array(target).reshape(-1,1))[0]
-    z = Variable(FloatTensor(z))
-    labels = Variable(FloatTensor(get_truncated_normal(sample_size, mean=normalized_target, sd=1, quant=0.6)))
-    images_generated = generator(z, labels)
+        kl = 0.0
+        for j in range(num_ens):
+            net_out, _kl = net(inputs)
+            kl += _kl
+            #outputs[:, :, j] = F.log_softmax(net_out, dim=1)
+        
+        kl = kl / num_ens
+        kl_list.append(kl.item())
+        #log_outputs = utils.logmeanexp(outputs, dim=2)
 
-    return images_generated, labels
+        beta = get_beta(i-1, len(trainloader), beta_type, epoch, num_epochs)
+        loss = criterion(net_out.squeeze(1), labels.float(), kl, beta)
+        #loss = criterion(log_outputs, labels, kl, beta)
+        loss.backward()
+        optimizer.step()
 
-def se_between_target_and_prediction(target, x, sample_number, forward, trainset):
+        #accs.append(acc(log_outputs.data, labels))
+        training_loss += loss.cpu().data.numpy()
 
-    y_labels = np.empty(sample_number)
-    y_labels.fill(target)
-    y_pred = forward(x.view(-1,28*28)).squeeze(1).cpu().detach().numpy()
+        # accuracy measures model's ability
+        mse_model = mse(scaler.inverse_transform(net_out.cpu().detach().numpy().reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
 
-    return mse(trainset.scaler.inverse_transform(y_pred.reshape(-1,1)).squeeze(), y_labels), y_pred
+        accs.extend(mse_model)
+        accs.append(0)
 
-def plots_results(target, forward_pred, forward_pred_train, morpho_pred, morpho_pred_train, se, conditions, testset, images_generated, select_img_label_index, fid_value_gen, kid_value_gen, nrow=2, ncol=4):
-
-    fig, ax = plt.subplots(nrows=nrow, ncols=ncol, figsize=(8,3), dpi=200)
-    i=0
-    for row in ax:
-        j=0
-        if i == 0:
-            lst = pd.Series(se)
-            n_top_index = lst.nsmallest(ncol).index.values.tolist()
-        else:
-            imgs = testset.x_data.numpy()[select_img_label_index].squeeze(1)
-        for col in row:
-            if i == 0:
-                image = images_generated[n_top_index[j]]
-                col.imshow(image)
-                col.axis('off')
-                col.set_title(f"Forward={np.round(float(forward_pred[n_top_index[j]]),1)} / true={np.round(float(morpho_pred[n_top_index[j]]),1)} / Cond={np.round(float(conditions[n_top_index[j]]),1)}", fontsize=6)
-            else:
-                image = imgs[j]
-                col.imshow(image)
-                col.axis('off')
-                col.set_title(f"Forward={np.round(float(forward_pred_train[j]),1)} / true={np.round(float(morpho_pred_train[j]),1)}", fontsize=6)
-            j+=1
-        i+=1
-    plt.suptitle(f"Target : {target} \ FID Value : {np.round(fid_value_gen[0])} ± {np.round(fid_value_gen[1])} \ KID Value : {np.around(kid_value_gen[0], decimals=3)}  ± {np.around(kid_value_gen[1], decimals=3)}", fontsize=9)
-    plt.show()
-
-def compute_fid_mnist_monte_carlo(fake, target, testset, sample_size):
-    folder = 'save_data'
-    os.makedirs(folder, exist_ok=True)
-
-    # Measure on trained data
-    test_img_label = pd.DataFrame(np.around(testset.labels).values.tolist(), columns=['label'])
-    random.seed(1)
-    select_img_label_index = random.sample(test_img_label[test_img_label['label']==target].index.values.tolist(), sample_size)
-    image_from_test = testset.x_data.numpy()[select_img_label_index]
-
-    path_gen = save_numpy_arr(os.path.join(folder, 'gen_img_in_distribution.npy'), fake)
-    path_real = save_numpy_arr(os.path.join(folder, 'image_from_test.npy'), image_from_test)
-
-    paths = [path_real, path_gen]
-    return calculate_fid_given_paths(paths), calculate_kid_given_paths(paths)
-
-def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 4, nrow =2, sample_number = 100):
-
-    # ------------ Sample z from normal gaussian distribution with a bound ------------
-    z = get_truncated_normal((sample_number, latent_dim), quant=0.8)
-
-    # ------------ Generate sample from z and y target ------------
-    images_generated, labels = generate_sample_from_GAN(target, z, sample_number, generator, trainset.scaler)
-
-    # ------------ Compute the mse between the target and the forward model predictions ------------
-    se_forward, forward_pred = se_between_target_and_prediction(target, images_generated, sample_number, forward, trainset)
-
-    # Move variable to cpu
-    images_generated = images_generated.squeeze(1).cpu().detach().numpy()
-    labels = labels.cpu().detach().numpy()
-
-    # ------------ Compare the forward model and the Measure from morphomnist ------------
-    thickness = compute_thickness_ground_truth(images_generated)
-
-    # ------------ Compute the mse between the target and the morpho measure predictions ------------
-    se_measure = mse(target, thickness.values)
-
-    # Measure on trained data
-    train_img_label = pd.DataFrame(np.around(testset.labels).values.tolist(), columns=['label'])
-    select_img_label_index = random.sample(train_img_label[train_img_label['label']==target].index.values.tolist() , ncol)
-    image_from_test = testset.x_data.numpy()[select_img_label_index].squeeze(1)
-
-    # ------------ Compute the mse between the target and the forward model predictions ------------
-    se_forward_train, forward_pred_train = se_between_target_and_prediction(target, Variable(testset.x_data[select_img_label_index].type(FloatTensor)), ncol, forward, trainset)
-
-    thickness_train = compute_thickness_ground_truth(image_from_test)
-
-    se_train = mse(target, thickness_train.values)
-
-    # ------------ EDA of the best x* generated ------------
-    top_values = 10
-    index = np.argsort(se_forward)[:top_values]
-    forward_mse_mean = np.mean(mse(target,thickness.values[index])); forward_mse_std = np.std(mse(target,thickness.values[index])); global_mean = np.mean(se_measure);
-
-    print()
-    print(f" ------------ Best forward image ------------")
-    print(f"MSE measure pred = {forward_mse_mean} ± {forward_mse_std} ")
-    print(f"MSE morpho on Generated data: {global_mean}")
-
-    # Transormf output to real value
-    model_pred = trainset.scaler.inverse_transform(forward_pred.reshape(-1, 1)).squeeze()
-    model_pred_train = trainset.scaler.inverse_transform(forward_pred_train.reshape(-1, 1)).squeeze()
-    conditions = trainset.scaler.inverse_transform(labels.reshape(-1, 1)).squeeze()
-
-    # Create true target values
-    test_img_label = pd.DataFrame(np.around(testset.labels).values.tolist(), columns=['label'])
-    select_img_label_index = random.sample(test_img_label[test_img_label['label']==target].index.values.tolist(), sample_number)
-    image_from_test = testset.x_data.numpy()[select_img_label_index]
-
-    # Compute FID values
-    fid_value_gen, kid_value_gen = compute_fid_mnist_monte_carlo(np.expand_dims(images_generated, 1), target, testset, sample_number)
-
-    plots_results(target, model_pred, model_pred_train, thickness.values, thickness_train.values, se_forward, conditions, testset, images_generated, select_img_label_index, fid_value_gen, kid_value_gen, nrow=2, ncol=4)
-
-    return [forward_mse_mean, forward_mse_std], global_mean, fid_value_gen, kid_value_gen
-
-def save_obj_csv(d, path):
-    d.to_csv(path+'.csv', index=False)
-
-def load_obj_csv(path):
-    return pd.read_csv(path+'.csv')
+    return training_loss/len(trainloader), np.mean(accs), np.mean(kl_list)
 
 
+def validate_model(net, criterion, validloader, scaler, num_ens=1, beta_type=0.1, epoch=None, num_epochs=None):
+    """Calculate ensemble accuracy and NLL Loss"""
+    net.eval() #net.train()
+    valid_loss = 0.0
+
+    accs_val = []
+    accs_avr = []
+    accs_epistemic = []
+    accs_aleatoric = []
+
+    for i, (inputs, labels) in enumerate(validloader):
+        inputs, labels = inputs.to(device), labels.to(device)
+        inputs = F.interpolate(inputs, size=32)#.float()        
+
+        #outputs = torch.zeros(inputs.shape[0], net.num_classes, num_ens).to(device)
+        kl = 0.0
+        for j in range(num_ens):
+            net_out, _kl = net(inputs)
+            kl += _kl
+            #outputs[:, :, j] = F.log_softmax(net_out, dim=1).data
+
+        #log_outputs = utils.logmeanexp(outputs, dim=2)
+
+        beta = get_beta(i-1, len(validloader), beta_type, epoch, num_epochs)
+        valid_loss += criterion(net_out.squeeze(1), labels.float(), kl, beta).item()
+
+        # accuracy measures model's ability
+        mse_model = mse(scaler.inverse_transform(net_out.cpu().detach().numpy().reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+
+        preds, epistemic, aleatoric = get_uncertainty_per_batch(net, inputs, device, T=15, normalized=False)
+
+        # accuracy measures model's ability
+        mse_model_averaged = mse(scaler.inverse_transform(preds.reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+
+        accs_val.extend(mse_model)
+        accs_avr.extend(mse_model_averaged)
+        accs_epistemic.extend(epistemic)
+        accs_aleatoric.extend(aleatoric)
+
+    return valid_loss/len(validloader), np.mean(accs_val), np.mean(accs_avr), np.mean(accs_epistemic), np.mean(accs_aleatoric)
+
+
+def test_model(net, criterion, testinloader, testoutloader, scaler, num_ens=1, beta_type=0.1, epoch=None, num_epochs=None):
+    """Calculate ensemble accuracy and NLL Loss"""
+    net.eval()
+
+    df_acc_in = pd.DataFrame(columns=['label_norm', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'mse_forward', 'mse_forward_avg'])
+    df_acc_out = pd.DataFrame(columns=['label_norm', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'mse_forward', 'mse_forward_avg'])
+
+    accs_val = []
+    accs_avr = []
+    accs_epistemic = []
+    accs_aleatoric = []
+
+    for i, (inputs, labels) in enumerate(testinloader):
+        inputs, labels = inputs.to(device), labels.to(device)
+        inputs = F.interpolate(inputs, size=32)#.float()        
+
+        #outputs = torch.zeros(inputs.shape[0], net.num_classes, num_ens).to(device)
+        kl = 0.0
+        for j in range(num_ens):
+            net_out, _kl = net(inputs)
+            kl += _kl
+
+        beta = get_beta(i-1, len(testinloader), beta_type, epoch, num_epochs)
+
+        # accuracy measures model's ability
+        mse_model = mse(scaler.inverse_transform(net_out.cpu().detach().numpy().reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+
+        preds, epistemic, aleatoric = get_uncertainty_per_batch(net, inputs, device, T=15, normalized=False)
+
+        # accuracy measures model's ability
+        mse_model_averaged = mse(scaler.inverse_transform(preds.reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+
+        df = pd.DataFrame(labels.cpu().detach().numpy().reshape(-1,1), columns=['label_norm'])
+        df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
+        df['pred_w_uncertainty'] = preds
+        df['epistemic'] = epistemic
+        df['aleatoric'] = aleatoric
+        df['mse_forward'] = mse_model
+        df['mse_forward_avg'] = mse_model_averaged
+        df_acc_in = df_acc_in.append(df)
+    
+    for i, (inputs, labels) in enumerate(testoutloader):
+        inputs, labels = inputs.to(device), labels.to(device)
+        inputs = F.interpolate(inputs, size=32)#.float()        
+
+        #outputs = torch.zeros(inputs.shape[0], net.num_classes, num_ens).to(device)
+        kl = 0.0
+        for j in range(num_ens):
+            net_out, _kl = net(inputs)
+            kl += _kl
+
+        beta = get_beta(i-1, len(testoutloader), beta_type, epoch, num_epochs)
+
+        # accuracy measures model's ability
+        mse_model = mse(scaler.inverse_transform(net_out.cpu().detach().numpy().reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+
+        preds, epistemic, aleatoric = get_uncertainty_per_batch(net, inputs, device, T=15, normalized=False)
+
+        # accuracy measures model's ability
+        mse_model_averaged = mse(scaler.inverse_transform(preds.reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+
+        df = pd.DataFrame(labels.cpu().detach().numpy().reshape(-1,1), columns=['label_norm'])
+        df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
+        df['pred_w_uncertainty'] = preds
+        df['epistemic'] = epistemic
+        df['aleatoric'] = aleatoric
+        df['mse_forward'] = mse_model
+        df['mse_forward_avg'] = mse_model_averaged
+        df_acc_out = df_acc_out.append(df)
+
+    return df_acc_in, df_acc_out
+
+
+def run(dataset, net_type, ckpt_dir):
+
+    # Hyper Parameter settings
+    layer_type = cfg.layer_type
+    activation_type = cfg.activation_type
+    priors = cfg.priors
+
+    train_ens = cfg.train_ens
+    valid_ens = cfg.valid_ens
+    n_epochs = cfg.n_epochs
+    lr_start = cfg.lr_start
+    num_workers = cfg.num_workers
+    valid_size = cfg.valid_size
+    batch_size = cfg.batch_size
+    beta_type = cfg.beta_type
+
+    trainset, testset_in, testset_out, inputs, outputs = getDataset(dataset)
+    scaler = trainset.scaler
+    train_loader, valid_loader, test_loader_in, test_loader_out = getDataloader(
+        trainset, testset_in, testset_out, valid_size, batch_size, num_workers)
+    net = getModel(net_type, inputs, outputs, priors, layer_type, activation_type).to(device)
+
+    ckpt_name = os.path.join(ckpt_dir, f'model_{net_type}_{layer_type}_{activation_type}.pt')
+
+    if not os.path.exists(ckpt_dir):
+        os.makedirs(ckpt_dir, exist_ok=True)
+
+    criterion = ELBO(len(trainset)).to(device)
+    optimizer = Adam(net.parameters(), lr=lr_start)
+    lr_sched = lr_scheduler.ReduceLROnPlateau(optimizer, patience=6, verbose=True)
+    valid_loss_max = np.Inf
+    df_acc_final_in = pd.DataFrame(columns=['label_norm', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'mse_forward', 'mse_forward_avg'])
+    df_acc_final_out = pd.DataFrame(columns=['label_norm', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'mse_forward', 'mse_forward_avg'])
+
+    for epoch in range(n_epochs):  # loop over the dataset multiple times
+
+        train_loss, train_acc, train_kl = train_model(net, optimizer, criterion, train_loader, scaler, num_ens=train_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
+        valid_loss, valid_acc, valid_acc_avr, valid_epi, valid_ale = validate_model(net, criterion, valid_loader, scaler, num_ens=valid_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
+        
+        if epoch % 1 == 0:
+            df_acc_in, df_acc_out = test_model(net, criterion, test_loader_in, test_loader_out, scaler, num_ens=valid_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
+            df_acc_final_in = df_acc_final_in.append(df_acc_in)
+            df_acc_final_out = df_acc_final_out.append(df_acc_out)
+
+            from sklearn import preprocessing
+            stand = preprocessing.StandardScaler()
+            df = pd.DataFrame(stand.fit_transform(df_acc_in[['mse_forward_avg', 'epistemic']]))
+            corr_in = list(pearsonr(df.iloc[:,0], df.iloc[:,1]))
+            df = pd.DataFrame(stand.fit_transform(df_acc_out[['mse_forward_avg', 'epistemic']]))
+            corr_out = list(pearsonr(df.iloc[:,0], df.iloc[:,1]))
+
+            labels_out = np.around(scaler.inverse_transform(df_acc_out['label_norm'].values.reshape(-1, 1)), decimals = 0).squeeze()
+            labels_in = np.around(scaler.inverse_transform(df_acc_in['label_norm'].values.reshape(-1, 1)), decimals = 0).squeeze()
+            for label in np.unique(labels_out):
+                print(label)
+                indexe = np.argwhere(labels_out == label)
+                corr_out_selected = list(pearsonr(df.iloc[indexe.squeeze(),0], df.iloc[indexe.squeeze(),1]))
+                print(corr_out_selected)
+            
+            print()
+            print(f"---------- IN distribution epistemic min : {df_acc_in['epistemic'].min()}")
+            print(f"---------- IN distribution epistemic max : {df_acc_in['epistemic'].max()}")
+            print()
+            print(f"---------- OUT distribution epistemic min : {df_acc_out['epistemic'].min()}")
+            print(f"---------- OUT distribution epistemic max : {df_acc_out['epistemic'].max()}")
+
+            print()
+            print('Erase the prediction with a bigger epistemic uncertainty value than its epistemic median')
+            median_in = df_acc_in['epistemic'].median()
+            df_acc_in_acc = df_acc_in[df_acc_in['epistemic'] < median_in]
+            median_out = df_acc_out['epistemic'].median()
+            df_acc_out_acc = df_acc_out[df_acc_out['epistemic'] < median_out]
+
+            df_checkup = pd.DataFrame(np.around(scaler.inverse_transform(df_acc_out_acc['label_norm'].values.reshape(-1, 1)), decimals = 0).squeeze(), columns=['labels'])
+            print(df_checkup.groupby('labels')['labels'].count())
+            print(np.mean(df_acc_in['mse_forward_avg']))
+            print(f"ACC forward avg IN dist : {np.mean(df_acc_in_acc['mse_forward_avg'])}")
+            print(np.mean(df_acc_out['mse_forward_avg']))
+            print(f"ACC forward avg OUT dist : {np.mean(df_acc_out_acc['mse_forward_avg'])}")
+            print()
+            print('TESTING : IN dist  Forward mse: {:.4f}\tForward avg mse: {:.4f}\tepistemic mean: {:.4f}\taleatoric mean: {:.4f}\tcorrelation uncertainty {:.4f} p_val {:.4f} ||  OUT dist  Forward mse:{:.4f}\tForward avg mse: {:.4f}\tepistemic mean: {:.4f}\taleatoric mean: {:.4f} \tcorrelation uncertainty {:.4f} p_val {:.4f}'.format(
+                np.mean(df_acc_in['mse_forward']), np.mean(df_acc_in['mse_forward_avg']), np.mean(df_acc_in['epistemic']), np.mean(df_acc_in['aleatoric']), corr_in[0], corr_in[1], np.mean(df_acc_out['mse_forward']), np.mean(df_acc_out['mse_forward_avg']), np.mean(df_acc_out['epistemic']), np.mean(df_acc_out['aleatoric']),  corr_out[0], corr_out[1]))
+            
+        print('Epoch: {} Training Loss: {:.4f}\tTraining Accuracy: {:.4f}\tValidation Loss: {:.4f}\tValidation Accuracy: {:.4f}\tValidation Accuracy Avr: {:.4f}\ttrain_kl_div: {:.4f}\tepistemic: {:.4f}\taleatoric: {:.4f}'.format(
+            epoch, train_loss, train_acc, valid_loss, valid_acc, valid_acc_avr, train_kl, valid_epi, valid_ale))
+
+        lr_sched.step(valid_loss)
+
+        # save model if validation accuracy has increased
+        if valid_loss <= valid_loss_max:
+            print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(
+                valid_loss_max, valid_loss))
+            torch.save(net.state_dict(), ckpt_name)
+            df_acc_final_in.to_csv(os.path.join(ckpt_dir,f'results_in_{net_type}_{layer_type}_{activation_type}.csv'))
+            df_acc_final_out.to_csv(os.path.join(ckpt_dir,f'results_out_{net_type}_{layer_type}_{activation_type}.csv'))
+            valid_loss_max = valid_loss

@@ -213,7 +213,7 @@ def run(dataset, net_type):
     net = getModel(net_type, inputs, outputs, priors, layer_type, activation_type).to(device)
 
     ckpt_dir = f'save_models/{dataset}/bayesian'
-    ckpt_name = f'save_models/{dataset}/bayesian/model_{net_type}_{layer_type}_{activation_type}.pt'
+    ckpt_name = f'save_models/{dataset}/bayesian/model_{net_type}_{layer_type}_{activation_type}.pth'
 
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir, exist_ok=True)
@@ -283,7 +283,7 @@ def run(dataset, net_type):
         if valid_loss <= valid_loss_max:
             print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(
                 valid_loss_max, valid_loss))
-            torch.save(net.state_dict(), ckpt_name)
+            torch.save(net, ckpt_name)
             df_acc_final_in.to_csv(os.path.join(ckpt_dir,f'results_in_{net_type}_{layer_type}_{activation_type}.csv'))
             df_acc_final_out.to_csv(os.path.join(ckpt_dir,f'results_out_{net_type}_{layer_type}_{activation_type}.csv'))
             valid_loss_max = valid_loss

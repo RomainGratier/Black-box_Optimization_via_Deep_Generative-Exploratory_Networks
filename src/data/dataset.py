@@ -272,14 +272,13 @@ def _load_uint8(f):
     data = np.frombuffer(f.read(buffer_length), dtype=np.uint8).reshape(shape)
     return data
 
-def getDataset(dataset):
+def getDataset(dataset_type):
     
-    if(dataset == 'transformed_morpho_MNIST_resample'):
-        trainset = MNISTDataset('train', 'thickness', data_type='processed/original_thic_resample')
-        testset_in = MNISTDataset('test_in', 'thickness', data_type='processed/original_thic_resample')
-        testset_out = MNISTDataset('test_out', 'thickness', data_type='processed/original_thic_resample')
-        num_classes = 1
-        inputs=1
+    trainset = MNISTDataset('train', 'thickness', data_type=dataset_type)
+    testset_in = MNISTDataset('test_in', 'thickness', data_type=dataset_type)
+    testset_out = MNISTDataset('test_out', 'thickness', data_type=dataset_type)
+    num_classes = 1
+    inputs=1
 
     return trainset, testset_in, testset_out, inputs, num_classes
 
