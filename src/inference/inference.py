@@ -5,7 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os 
 
-from src.metrics import mse, compute_thickness_ground_truth, calculate_fid_given_paths, calculate_kid_given_paths
+from src.metrics import mse, compute_thickness_ground_truth
+from src.generative.metrics import calculate_fid_given_paths, calculate_kid_given_paths
 
 latent_dim = 100
 
@@ -124,7 +125,7 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     top_values = 10
     index = np.argsort(se_forward)[:top_values]
     forward_mse_mean = np.mean(mse(target,thickness.values[index])); forward_mse_std = np.std(mse(target,thickness.values[index])); global_mean = np.mean(se_measure);
-    
+
     print()
     print(f" ------------ Best forward image ------------")
     print(f"MSE measure pred = {forward_mse_mean} ± {forward_mse_std} ")
@@ -139,14 +140,14 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     test_img_label = pd.DataFrame(np.around(testset.labels).values.tolist(), columns=['label'])
     select_img_label_index = random.sample(test_img_label[test_img_label['label']==target].index.values.tolist(), sample_number)
     image_from_test = testset.x_data.numpy()[select_img_label_index]
-    
+
     # Compute FID values
     fid_value_gen, kid_value_gen = compute_fid_mnist_monte_carlo(np.expand_dims(images_generated, 1), target, testset, sample_number)
 
     plots_results(target, model_pred, model_pred_train, thickness.values, thickness_train.values, se_forward, conditions, testset, images_generated, select_img_label_index, fid_value_gen, kid_value_gen, nrow=2, ncol=4)
-    
+
     return [forward_mse_mean, forward_mse_std], global_mean, fid_value_gen, kid_value_gen
-    
+
 def save_obj_csv(d, path):
     d.to_csv(path+'.csv', index=False)
 
