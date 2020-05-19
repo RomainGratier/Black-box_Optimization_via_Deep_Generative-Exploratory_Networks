@@ -1,1 +1,1 @@
-from .dataset import MNISTDataset
+from .dataset import MNISTDataset, getDataset, getDataloader
