@@ -48,7 +48,7 @@ from collections import OrderedDict
 from src.generative_model import LeNet5
 
 mnist_model = LeNet5()
-mnist_model.load_state_dict(torch.load('Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/models/lenet.pth'))
+mnist_model.load_state_dict(torch.load('src/models/lenet.pth'))
 if cuda:
     mnist_model.cuda()
 
