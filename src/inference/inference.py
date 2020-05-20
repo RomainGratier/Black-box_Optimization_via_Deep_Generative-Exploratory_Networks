@@ -149,10 +149,6 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     else:
         se_forward_train, forward_pred_train = se_between_target_and_prediction(target, x_train, forward, trainset)
 
-    thickness_train = compute_thickness_ground_truth(image_from_test)
-
-    se_train = mse(target, thickness_train.values)
-
     # ------------ EDA of the best x* generated ------------
     
     top_values = 10
@@ -177,7 +173,7 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     # Compute FID values
     fid_value_gen, kid_value_gen = compute_fid_mnist_monte_carlo(np.expand_dims(images_generated, 1), target, testset, sample_number_fid_kid)
 
-    plots_results(target, model_pred, model_pred_train, thickness.values, thickness_train.values, se_forward, conditions, testset, images_generated, select_img_label_index, fid_value_gen, kid_value_gen, nrow=2, ncol=4)
+    plots_results(target, model_pred, model_pred_train, thickness.values, testset.y_data[select_img_label_index].numpy(), se_forward, conditions, testset, images_generated, select_img_label_index, fid_value_gen, kid_value_gen, nrow=2, ncol=4)
 
     return [forward_mse_mean, forward_mse_std], global_mean, fid_value_gen, kid_value_gen
 
