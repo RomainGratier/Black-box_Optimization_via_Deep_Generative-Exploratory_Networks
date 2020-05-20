@@ -140,7 +140,7 @@ def run_frequentist(dataset, net_type, ckpt_dir):
         trainset, testset_in, testset_out, valid_size, batch_size, num_workers)
     net = getModel(net_type, inputs, outputs).to(device)
 
-    ckpt_name = os.path.join(ckpt_dir, f'model_model_{net_type}.pth')
+    ckpt_name = os.path.join(ckpt_dir, f'model_{net_type}.pth')
 
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir, exist_ok=True)
@@ -176,7 +176,7 @@ def run_frequentist(dataset, net_type, ckpt_dir):
         if valid_loss <= valid_loss_max:
             print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(
                 valid_loss_max, valid_loss))
-            torch.save(net.state_dict(), ckpt_name)
-            #df_acc_final_in.to_csv(os.path.join(ckpt_dir,f'results_in_{net_type}.csv'))
-            #df_acc_final_out.to_csv(os.path.join(ckpt_dir,f'results_out_{net_type}.csv'))
+            torch.save(net, ckpt_name)
+            df_acc_final_in.to_csv(os.path.join(ckpt_dir,f'results_in_{net_type}.csv'))
+            df_acc_final_out.to_csv(os.path.join(ckpt_dir,f'results_out_{net_type}.csv'))
             valid_loss_max = valid_loss
