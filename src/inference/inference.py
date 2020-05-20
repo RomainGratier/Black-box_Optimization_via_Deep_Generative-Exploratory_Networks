@@ -33,18 +33,18 @@ def get_truncated_normal(form, mean=0, sd=1, quant=0.8):
     return truncnorm(
         (low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd).rvs(form)
 
-def generate_sample_from_GAN(target, z, sample_size, generator, scaler):
+def generate_sample_from_GAN(target, z, generator, scaler):
     # Prepare labels
     normalized_target = scaler.transform(np.array(target).reshape(-1,1))[0]
     z = Variable(FloatTensor(z))
-    labels = Variable(FloatTensor(get_truncated_normal(sample_size, mean=normalized_target, sd=1, quant=0.6)))
+    labels = Variable(FloatTensor(get_truncated_normal(z.shape[0], mean=normalized_target, sd=1, quant=0.6)))
     images_generated = generator(z, labels)
 
     return images_generated, labels
 
-def se_between_target_and_prediction(target, x, sample_number, forward, trainset):
+def se_between_target_and_prediction(target, x, forward, trainset):
 
-    y_labels = np.empty(sample_number)
+    y_labels = np.empty(x.shape[0])
     y_labels.fill(target)
     if bayesian:
         # CUDA settings
@@ -102,26 +102,35 @@ def compute_fid_mnist_monte_carlo(fake, target, testset, sample_size):
 def uncertainty_selection(uncertainty, policy_type='quantile'):
     if policy_type == 'quantile':
         quantile = np.quantile(uncertainty, 0.5)
-        return np.argwhere(uncertainty < quantile).squeeze()
+        new_index = np.argwhere(uncertainty < quantile)
+    return new_index.squeeze()
 
 
-def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 4, nrow =2, sample_number = 100):
+def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 4, nrow =2, sample_number_fid_kid = 300, size=500):
 
     # ------------ Sample z from normal gaussian distribution with a bound ------------
-    z = get_truncated_normal((sample_number, latent_dim), quant=0.8)
+    z = get_truncated_normal((size, latent_dim), quant=0.8)
 
     # ------------ Generate sample from z and y target ------------
-    images_generated, labels = generate_sample_from_GAN(target, z, sample_number, generator, trainset.scaler)
+    images_generated, conditions = generate_sample_from_GAN(target, z, generator, trainset.scaler)
 
     # ------------ Compute the mse between the target and the forward model predictions ------------
     if bayesian:
-        se_forward, forward_pred, uncertainty = se_between_target_and_prediction(target, images_generated, sample_number, forward, trainset)
+        se_forward, forward_pred, uncertainty = se_between_target_and_prediction(target, images_generated, forward, trainset)
+        
+        # ------------ Uncertainty policy ------------
+        index_certain = uncertainty_selection(uncertainty.squeeze())
+        se_forward = se_forward[index_certain]
+        forward_pred = forward_pred[index_certain]
+        images_generated = images_generated[index_certain]
+        conditions = conditions[index_certain]
+
     else:
-        se_forward, forward_pred = se_between_target_and_prediction(target, images_generated, sample_number, forward, trainset)
+        se_forward, forward_pred = se_between_target_and_prediction(target, images_generated, forward, trainset)
 
     # Move variable to cpu
     images_generated = images_generated.squeeze(1).cpu().detach().numpy()
-    labels = labels.cpu().detach().numpy()
+    conditions = conditions.cpu().detach().numpy()
 
     # ------------ Compare the forward model and the Measure from morphomnist ------------
     thickness = compute_thickness_ground_truth(images_generated)
@@ -133,12 +142,13 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     train_img_label = pd.DataFrame(np.around(testset.labels).values.tolist(), columns=['label'])
     select_img_label_index = random.sample(train_img_label[train_img_label['label']==target].index.values.tolist() , ncol)
     image_from_test = testset.x_data.numpy()[select_img_label_index].squeeze(1)
+    x_train = Variable(testset.x_data[select_img_label_index].type(FloatTensor))
 
     # ------------ Compute the mse between testset and the forward model predictions ------------
     if bayesian:
-        se_forward_train, forward_pred_train, uncertainty_train = se_between_target_and_prediction(target, Variable(testset.x_data[select_img_label_index].type(FloatTensor)), ncol, forward, trainset)
+        se_forward_train, forward_pred_train, _ = se_between_target_and_prediction(target, x_train, forward, trainset)
     else:
-        se_forward_train, forward_pred_train = se_between_target_and_prediction(target, Variable(testset.x_data[select_img_label_index].type(FloatTensor)), ncol, forward, trainset)
+        se_forward_train, forward_pred_train = se_between_target_and_prediction(target, x_train, forward, trainset)
 
     thickness_train = compute_thickness_ground_truth(image_from_test)
 
@@ -147,12 +157,6 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     # ------------ EDA of the best x* generated ------------
     
     top_values = 10
-    # ------------ Uncertainty policy ------------
-    if bayesian :
-        index_certain = uncertainty_selection(uncertainty)
-        se_forward_bis = np.repeat(np.inf, uncertainty.shape[0])
-        se_forward_bis[index_certain] = se_forward[index_certain]
-        se_forward = se_forward_bis
 
     index = np.argsort(se_forward)[:top_values]
     forward_mse_mean = np.mean(mse(target,thickness.values[index])); forward_mse_std = np.std(mse(target,thickness.values[index])); global_mean = np.mean(se_measure);
@@ -165,15 +169,15 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     # Transormf output to real value
     model_pred = trainset.scaler.inverse_transform(forward_pred.reshape(-1, 1)).squeeze()
     model_pred_train = trainset.scaler.inverse_transform(forward_pred_train.reshape(-1, 1)).squeeze()
-    conditions = trainset.scaler.inverse_transform(labels.reshape(-1, 1)).squeeze()
+    conditions = trainset.scaler.inverse_transform(conditions.reshape(-1, 1)).squeeze()
 
-    # Create true target values
+    '''# Create true target values
     test_img_label = pd.DataFrame(np.around(testset.labels).values.tolist(), columns=['label'])
     select_img_label_index = random.sample(test_img_label[test_img_label['label']==target].index.values.tolist(), sample_number)
-    image_from_test = testset.x_data.numpy()[select_img_label_index]
+    image_from_test = testset.x_data.numpy()[select_img_label_index]'''
 
     # Compute FID values
-    fid_value_gen, kid_value_gen = compute_fid_mnist_monte_carlo(np.expand_dims(images_generated, 1), target, testset, sample_number)
+    fid_value_gen, kid_value_gen = compute_fid_mnist_monte_carlo(np.expand_dims(images_generated, 1), target, testset, sample_number_fid_kid)
 
     plots_results(target, model_pred, model_pred_train, thickness.values, thickness_train.values, se_forward, conditions, testset, images_generated, select_img_label_index, fid_value_gen, kid_value_gen, nrow=2, ncol=4)
 
