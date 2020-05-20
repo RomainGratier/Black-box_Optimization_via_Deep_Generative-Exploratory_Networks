@@ -21,7 +21,7 @@ cuda = True if torch.cuda.is_available() else False
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
-bayesian = True
+bayesian = False
 
 def save_numpy_arr(path, arr):
     np.save(path, arr)
@@ -52,7 +52,7 @@ def se_between_target_and_prediction(target, x, forward, trainset):
         return mse(y_pred, y_labels), y_pred, epistemic
 
     else:
-        y_pred = forward(x.view(-1,28*28)).squeeze(1).cpu().detach().numpy()
+        y_pred = forward(F.interpolate(x, size=32)).squeeze(1).cpu().detach().numpy()
         return mse(y_pred, y_labels), y_pred
 
 def plots_results(target, forward_pred, forward_pred_train, morpho_pred, morpho_pred_train, se, conditions, testset, images_generated, select_img_label_index, fid_value_gen, kid_value_gen, nrow=2, ncol=4):
@@ -100,7 +100,7 @@ def compute_fid_mnist_monte_carlo(fake, target, testset, sample_size):
 
 def uncertainty_selection(uncertainty, policy_type='quantile'):
     if policy_type == 'quantile':
-        quantile = np.quantile(uncertainty, 0.5)
+        quantile = np.quantile(uncertainty, 0.2)
         new_index = np.argwhere(uncertainty < quantile)
     return new_index.squeeze()
 
