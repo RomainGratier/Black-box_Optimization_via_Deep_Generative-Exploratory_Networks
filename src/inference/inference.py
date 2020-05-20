@@ -35,9 +35,8 @@ def get_truncated_normal(form, mean=0, sd=1, quant=0.8):
 
 def generate_sample_from_GAN(target, z, generator, scaler):
     # Prepare labels
-    normalized_target = scaler.transform(np.array(target).reshape(-1,1))[0]
     z = Variable(FloatTensor(z))
-    labels = Variable(FloatTensor(get_truncated_normal(z.shape[0], mean=normalized_target, sd=1, quant=0.6)))
+    labels = Variable(FloatTensor(get_truncated_normal(z.shape[0], mean=target, sd=1, quant=0.6)))
     images_generated = generator(z, labels)
 
     return images_generated, labels
@@ -50,11 +49,11 @@ def se_between_target_and_prediction(target, x, forward, trainset):
         # CUDA settings
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(x, size=32), device)
-        return mse(trainset.scaler.inverse_transform(y_pred.reshape(-1,1)).squeeze(), y_labels), y_pred, epistemic
+        return mse(y_pred, y_labels), y_pred, epistemic
 
     else:
         y_pred = forward(x.view(-1,28*28)).squeeze(1).cpu().detach().numpy()
-        return mse(trainset.scaler.inverse_transform(y_pred.reshape(-1,1)).squeeze(), y_labels), y_pred
+        return mse(y_pred, y_labels), y_pred
 
 def plots_results(target, forward_pred, forward_pred_train, morpho_pred, morpho_pred_train, se, conditions, testset, images_generated, select_img_label_index, fid_value_gen, kid_value_gen, nrow=2, ncol=4):
 
@@ -167,9 +166,8 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     print(f"MSE morpho on Generated data: {global_mean}")
 
     # Transormf output to real value
-    model_pred = trainset.scaler.inverse_transform(forward_pred.reshape(-1, 1)).squeeze()
-    model_pred_train = trainset.scaler.inverse_transform(forward_pred_train.reshape(-1, 1)).squeeze()
-    conditions = trainset.scaler.inverse_transform(conditions.reshape(-1, 1)).squeeze()
+    model_pred = forward_pred
+    model_pred_train = forward_pred_train
 
     '''# Create true target values
     test_img_label = pd.DataFrame(np.around(testset.labels).values.tolist(), columns=['label'])
