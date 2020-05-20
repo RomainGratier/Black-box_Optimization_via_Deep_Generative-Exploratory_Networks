@@ -11,7 +11,7 @@ import torch.nn as nn
 from torch.optim import Adam, lr_scheduler
 
 import src.forward.config_frequentist as cfg
-from src.forward.bcnn_models import AlexNet, LeNet, ThreeConvThreeFC
+from src.forward.cnn_models import AlexNet, LeNet, ThreeConvThreeFC
 from src.data import getDataset, getDataloader
 from src.metrics import mse
 import src.forward.utils
@@ -53,7 +53,7 @@ def train_model(net, optimizer, criterion, trainloader, num_ens=1, beta_type=0.1
         training_loss += loss.cpu().data.numpy()
 
         # accuracy measures model's ability
-        mse_model = mse(net_out.cpu().detach().numpy(), labels.cpu().detach().numpy())
+        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         accs.extend(mse_model)
 
     return training_loss/len(trainloader), np.mean(accs)
@@ -75,7 +75,7 @@ def validate_model(net, criterion, validloader, num_ens=1, beta_type=0.1, epoch=
         valid_loss += criterion(net_out.squeeze(1), labels.double()).item()
 
         # accuracy measures model's ability
-        mse_model = mse(net_out.cpu().detach().numpy(), labels.cpu().detach().numpy())
+        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         
         accs_val.extend(mse_model)
 
@@ -101,7 +101,7 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
         net_out = net(inputs)
 
         # accuracy measures model's ability
-        mse_model = mse(net_out.cpu().detach().numpy(), labels.cpu().detach().numpy())
+        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         
         df = pd.DataFrame(labels.cpu().detach().numpy().reshape(-1,1), columns=['label_norm'])
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
@@ -116,7 +116,7 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
             net_out = net(inputs)
             
         # accuracy measures model's ability
-        mse_model = mse(net_out.cpu().detach().numpy(), labels.cpu().detach().numpy())
+        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         
         df = pd.DataFrame(labels.cpu().detach().numpy().reshape(-1,1), columns=['label_norm'])
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
@@ -140,7 +140,7 @@ def run_frequentist(dataset, net_type, ckpt_dir):
         trainset, testset_in, testset_out, valid_size, batch_size, num_workers)
     net = getModel(net_type, inputs, outputs).to(device)
 
-    ckpt_name = os.path.join(ckpt_dir, f'model_{net_type}_{layer_type}_{activation_type}.pth')
+    ckpt_name = os.path.join(ckpt_dir, f'model_model_{net_type}.pth')
 
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir, exist_ok=True)
