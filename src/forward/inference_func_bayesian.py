@@ -8,7 +8,6 @@ import argparse
 from scipy.stats.stats import pearsonr   
 
 import torch
-import numpy as np
 from torch.optim import Adam, lr_scheduler
 from torch.nn import functional as F
 
@@ -185,7 +184,7 @@ def test_model(net, criterion, testinloader, testoutloader, scaler, num_ens=1, b
     return df_acc_in, df_acc_out
 
 
-def run(dataset, net_type, ckpt_dir):
+def run_bayesian(dataset, net_type, ckpt_dir):
 
     # Hyper Parameter settings
     layer_type = cfg.layer_type
