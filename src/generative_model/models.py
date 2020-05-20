@@ -13,6 +13,12 @@ channels=1
 
 img_shape = (channels, img_size, img_size)
 
+min_dataset = 1
+max_dataset = 9
+
+def minmaxs(X):
+    return (X - min_dataset) / (max_dataset - min_dataset)
+
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
@@ -35,7 +41,7 @@ class Generator(nn.Module):
 
     def forward(self, noise, labels):
         # Concatenate label embedding and image to produce input
-        gen_input = torch.cat((labels.unsqueeze(1), noise), -1)
+        gen_input = torch.cat((minmaxs(labels).unsqueeze(1), noise), -1)
         img = self.model(gen_input)
         img = img.view(img.size(0), *img_shape)
         return img
@@ -58,7 +64,7 @@ class Discriminator(nn.Module):
 
     def forward(self, img, labels):
         # Concatenate label embedding and image to produce input
-        d_in = torch.cat((img.view(img.size(0), -1), labels.unsqueeze(1)), -1)
+        d_in = torch.cat((img.view(img.size(0), -1), minmaxs(labels).unsqueeze(1)), -1)
         validity = self.model(d_in)
         return validity
 

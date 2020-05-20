@@ -30,15 +30,15 @@ class MNISTDataset(Dataset):
             labels, minimum, maximum, index = self.__getlabels__(dataset, morpho, digit_file, y_feature)
             labels, scaler = self.__get_scaler__(8, labels, y_feature)
             print(labels.describe())
-            self.maximum = np.max(labels['normalized_label'])
-            self.minimum = np.min(labels['normalized_label'])
+            self.maximum = np.max(labels[y_feature])
+            self.minimum = np.min(labels[y_feature])
 
             # Read images from MNIST
             images = self.__transform__(load_idx(img_file))[index]
 
             # Select inputs
             self.x_data = torch.from_numpy(images).unsqueeze(1)#.double()
-            self.y_data = torch.from_numpy(labels['normalized_label'].to_numpy())
+            self.y_data = torch.from_numpy(labels[y_feature].to_numpy())
             self.labels = labels[y_feature]
             self.scaler = scaler
             self.maximum_label = self.__max_labels__()
@@ -58,15 +58,15 @@ class MNISTDataset(Dataset):
             labels_te = self.__scale__(labels_te, y_feature, scaler_tr)
 
             print(labels_te.describe())
-            self.maximum = np.max(labels_te['normalized_label'])
-            self.minimum = np.min(labels_te['normalized_label'])
+            self.maximum = np.max(labels_te[y_feature])
+            self.minimum = np.min(labels_te[y_feature])
 
             # Read images from MNIST
             images = self.__transform__(load_idx(img_file_te))[index_te]
 
             # Select inputs
             self.x_data = torch.from_numpy(images).unsqueeze(1)#.double()
-            self.y_data = torch.from_numpy(labels_te['normalized_label'].to_numpy())
+            self.y_data = torch.from_numpy(labels_te[y_feature].to_numpy())
             self.labels = labels_te[y_feature]
             self.scaler = scaler_tr
             self.maximum_label = self.__max_labels__()
@@ -86,15 +86,15 @@ class MNISTDataset(Dataset):
             labels_te = self.__scale__(labels_te, y_feature, scaler_tr)
 
             print(labels_te.describe())
-            self.maximum = np.max(labels_te['normalized_label'])
-            self.minimum = np.min(labels_te['normalized_label'])
+            self.maximum = np.max(labels_te[y_feature])
+            self.minimum = np.min(labels_te[y_feature])
 
             # Read images from MNIST
             images = self.__transform__(load_idx(img_file_te))[index_te]
 
             # Select inputs
             self.x_data = torch.from_numpy(images).unsqueeze(1)#.double()
-            self.y_data = torch.from_numpy(labels_te['normalized_label'].to_numpy())
+            self.y_data = torch.from_numpy(labels_te[y_feature].to_numpy())
             self.labels = labels_te[y_feature]
             self.scaler = scaler_tr
             self.maximum_label = self.__max_labels__()
@@ -114,15 +114,15 @@ class MNISTDataset(Dataset):
             labels_te = self.__scale__(labels_te, y_feature, scaler_tr)
 
             print(labels_te.describe())
-            self.maximum = np.max(labels_te['normalized_label'])
-            self.minimum = np.min(labels_te['normalized_label'])
+            self.maximum = np.max(labels_te[y_feature])
+            self.minimum = np.min(labels_te[y_feature])
 
             # Read images from MNIST
             images = self.__transform__(load_idx(img_file_te))[index_te]
 
             # Select inputs
             self.x_data = torch.from_numpy(images).unsqueeze(1)
-            self.y_data = torch.from_numpy(labels_te['normalized_label'].to_numpy())
+            self.y_data = torch.from_numpy(labels_te[y_feature].to_numpy())
             self.labels = labels_te[y_feature]
             self.scaler = scaler_tr
             self.maximum_label = self.__max_labels__()
@@ -141,15 +141,15 @@ class MNISTDataset(Dataset):
             labels_te = self.__scale__(labels_te, y_feature, scaler_tr)
 
             print(labels_te.describe())
-            self.maximum = np.max(labels_te['normalized_label'])
-            self.minimum = np.min(labels_te['normalized_label'])
+            self.maximum = np.max(labels_te[y_feature])
+            self.minimum = np.min(labels_te[y_feature])
 
             # Read images from MNIST
             images = self.__transform__(load_idx(img_file_tr))[index_te]
 
             # Select inputs
             self.x_data = torch.from_numpy(images).unsqueeze(1)#.double()
-            self.y_data = torch.from_numpy(labels_te['normalized_label'].to_numpy())
+            self.y_data = torch.from_numpy(labels_te[y_feature].to_numpy())
             self.labels = labels_te[y_feature]
             self.scaler = scaler_tr
             self.maximum_label = self.__max_labels__()

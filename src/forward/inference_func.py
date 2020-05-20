@@ -51,26 +51,21 @@ def train_model(net, optimizer, criterion, trainloader, scaler, num_ens=1, beta_
         for j in range(num_ens):
             net_out, _kl = net(inputs)
             kl += _kl
-            #outputs[:, :, j] = F.log_softmax(net_out, dim=1)
         
         kl = kl / num_ens
         kl_list.append(kl.item())
-        #log_outputs = utils.logmeanexp(outputs, dim=2)
 
         beta = get_beta(i-1, len(trainloader), beta_type, epoch, num_epochs)
         loss = criterion(net_out.squeeze(1), labels.float(), kl, beta)
-        #loss = criterion(log_outputs, labels, kl, beta)
         loss.backward()
         optimizer.step()
 
-        #accs.append(acc(log_outputs.data, labels))
         training_loss += loss.cpu().data.numpy()
 
         # accuracy measures model's ability
-        mse_model = mse(scaler.inverse_transform(net_out.cpu().detach().numpy().reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
-
+        
+        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         accs.extend(mse_model)
-        accs.append(0)
 
     return training_loss/len(trainloader), np.mean(accs), np.mean(kl_list)
 
@@ -102,12 +97,12 @@ def validate_model(net, criterion, validloader, scaler, num_ens=1, beta_type=0.1
         valid_loss += criterion(net_out.squeeze(1), labels.float(), kl, beta).item()
 
         # accuracy measures model's ability
-        mse_model = mse(scaler.inverse_transform(net_out.cpu().detach().numpy().reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
 
         preds, epistemic, aleatoric = get_uncertainty_per_batch(net, inputs, device, T=15, normalized=False)
 
         # accuracy measures model's ability
-        mse_model_averaged = mse(scaler.inverse_transform(preds.reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+        mse_model_averaged = mse(preds, labels.cpu().detach().numpy())
 
         accs_val.extend(mse_model)
         accs_avr.extend(mse_model_averaged)
@@ -142,12 +137,12 @@ def test_model(net, criterion, testinloader, testoutloader, scaler, num_ens=1, b
         beta = get_beta(i-1, len(testinloader), beta_type, epoch, num_epochs)
 
         # accuracy measures model's ability
-        mse_model = mse(scaler.inverse_transform(net_out.cpu().detach().numpy().reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
 
         preds, epistemic, aleatoric = get_uncertainty_per_batch(net, inputs, device, T=15, normalized=False)
 
         # accuracy measures model's ability
-        mse_model_averaged = mse(scaler.inverse_transform(preds.reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+        mse_model_averaged = mse(preds, labels.cpu().detach().numpy())
 
         df = pd.DataFrame(labels.cpu().detach().numpy().reshape(-1,1), columns=['label_norm'])
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
@@ -171,12 +166,12 @@ def test_model(net, criterion, testinloader, testoutloader, scaler, num_ens=1, b
         beta = get_beta(i-1, len(testoutloader), beta_type, epoch, num_epochs)
 
         # accuracy measures model's ability
-        mse_model = mse(scaler.inverse_transform(net_out.cpu().detach().numpy().reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
 
         preds, epistemic, aleatoric = get_uncertainty_per_batch(net, inputs, device, T=15, normalized=False)
 
         # accuracy measures model's ability
-        mse_model_averaged = mse(scaler.inverse_transform(preds.reshape(-1,1)).squeeze(), scaler.inverse_transform(labels.cpu().detach().numpy().reshape(-1,1)).squeeze())
+        mse_model_averaged = mse(preds, labels.cpu().detach().numpy())
 
         df = pd.DataFrame(labels.cpu().detach().numpy().reshape(-1,1), columns=['label_norm'])
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
@@ -241,8 +236,8 @@ def run(dataset, net_type, ckpt_dir):
             df = pd.DataFrame(stand.fit_transform(df_acc_out[['mse_forward_avg', 'epistemic']]))
             corr_out = list(pearsonr(df.iloc[:,0], df.iloc[:,1]))
 
-            labels_out = np.around(scaler.inverse_transform(df_acc_out['label_norm'].values.reshape(-1, 1)), decimals = 0).squeeze()
-            labels_in = np.around(scaler.inverse_transform(df_acc_in['label_norm'].values.reshape(-1, 1)), decimals = 0).squeeze()
+            labels_out = np.around(df_acc_out['label_norm'].values, decimals = 0).squeeze()
+            labels_in = np.around(df_acc_in['label_norm'].values, decimals = 0).squeeze()
             for label in np.unique(labels_out):
                 print(label)
                 indexe = np.argwhere(labels_out == label)
@@ -263,7 +258,7 @@ def run(dataset, net_type, ckpt_dir):
             median_out = df_acc_out['epistemic'].median()
             df_acc_out_acc = df_acc_out[df_acc_out['epistemic'] < median_out]
 
-            df_checkup = pd.DataFrame(np.around(scaler.inverse_transform(df_acc_out_acc['label_norm'].values.reshape(-1, 1)), decimals = 0).squeeze(), columns=['labels'])
+            df_checkup = pd.DataFrame(np.around(df_acc_out_acc['label_norm'].values, decimals = 0).squeeze(), columns=['labels'])
             print(df_checkup.groupby('labels')['labels'].count())
             print(np.mean(df_acc_in['mse_forward_avg']))
             print(f"ACC forward avg IN dist : {np.mean(df_acc_in_acc['mse_forward_avg'])}")
