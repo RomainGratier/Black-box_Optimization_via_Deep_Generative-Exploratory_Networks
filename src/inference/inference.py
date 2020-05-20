@@ -106,7 +106,7 @@ def uncertainty_selection(uncertainty, policy_type='quantile'):
     return new_index.squeeze()
 
 
-def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 4, nrow =2, sample_number_fid_kid = 300, size=500):
+def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 4, nrow =2, sample_number_fid_kid = 300, size=2000):
 
     # ------------ Sample z from normal gaussian distribution with a bound ------------
     z = get_truncated_normal((size, latent_dim), quant=0.8)
@@ -146,7 +146,7 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
 
     # ------------ Compute the mse between testset and the forward model predictions ------------
     if bayesian:
-        se_forward_train, forward_pred_train, _ = se_between_target_and_prediction(target, x_train, forward, trainset)
+        se_forward_train, forward_pred_train, uncertainty_train = se_between_target_and_prediction(target, x_train, forward, trainset)
     else:
         se_forward_train, forward_pred_train = se_between_target_and_prediction(target, x_train, forward, trainset)
 
