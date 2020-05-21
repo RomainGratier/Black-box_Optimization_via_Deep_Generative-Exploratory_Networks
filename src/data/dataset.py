@@ -173,7 +173,7 @@ class MNISTDataset(Dataset):
         if dataset == 'train':
             return os.path.join(folder,'train-images-idx3-ubyte.gz'), os.path.join(folder,'train-labels-idx1-ubyte.gz'), os.path.join(folder,'train-morpho.csv')
 
-    def __getlabels__(self, dataset, file, digit_file, y_feature, in_bound=6, out_bound=9):
+    def __getlabels__(self, dataset, file, digit_file, y_feature, in_bound=4.5, out_bound=6.5):
         # Get the labels
         labels = pd.read_csv(file)
         labels['digit'] = load_idx(digit_file)

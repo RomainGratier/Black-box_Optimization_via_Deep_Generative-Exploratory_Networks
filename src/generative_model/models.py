@@ -5,16 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict
 
-latent_dim=100
-label_dim_input = 1
-
-img_size=28
-channels=1
-
-img_shape = (channels, img_size, img_size)
-
-min_dataset = 1
-max_dataset = 9
+import src.config
 
 def minmaxs(X):
     return (X - min_dataset) / (max_dataset - min_dataset)
