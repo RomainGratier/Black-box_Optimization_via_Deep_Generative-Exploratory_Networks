@@ -13,7 +13,7 @@ from torch.optim import Adam, lr_scheduler
 import src.forward.config_frequentist as cfg
 from src.forward.cnn_models import AlexNet, LeNet, ThreeConvThreeFC
 from src.data import getDataset, getDataloader
-from src.metrics import mse
+from src.metrics import se
 import src.forward.utils
 
 from torch.nn import functional as F
@@ -53,8 +53,8 @@ def train_model(net, optimizer, criterion, trainloader, num_ens=1, beta_type=0.1
         training_loss += loss.cpu().data.numpy()
 
         # accuracy measures model's ability
-        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
-        accs.extend(mse_model)
+        se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
+        accs.extend(se_model)
 
     return training_loss/len(trainloader), np.mean(accs)
 
@@ -75,9 +75,9 @@ def validate_model(net, criterion, validloader, num_ens=1, beta_type=0.1, epoch=
         valid_loss += criterion(net_out.squeeze(1), labels.double()).item()
 
         # accuracy measures model's ability
-        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
+        se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         
-        accs_val.extend(mse_model)
+        accs_val.extend(se_model)
 
     return valid_loss/len(validloader), np.mean(accs_val)
 
@@ -86,8 +86,8 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
     """Calculate ensemble accuracy and NLL Loss"""
     net.eval()
 
-    df_acc_in = pd.DataFrame(columns=['label_norm', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'mse_forward', 'mse_forward_avg'])
-    df_acc_out = pd.DataFrame(columns=['label_norm', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'mse_forward', 'mse_forward_avg'])
+    df_acc_in = pd.DataFrame(columns=['label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg'])
+    df_acc_out = pd.DataFrame(columns=['label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg'])
 
     accs_val = []
     accs_avr = []
@@ -101,11 +101,12 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
         net_out = net(inputs)
 
         # accuracy measures model's ability
-        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
+        se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         
-        df = pd.DataFrame(labels.cpu().detach().numpy().reshape(-1,1), columns=['label_norm'])
+        df = pd.DataFrame(epoch, columns=['epoch'])
+        df['label_norm'] = labels.cpu().detach().numpy().reshape(-1,1)
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
-        df['mse_forward'] = mse_model
+        df['se_forward'] = se_model
         df_acc_in = df_acc_in.append(df)
     
     for i, (inputs, labels) in enumerate(testoutloader):
@@ -116,11 +117,12 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
             net_out = net(inputs)
             
         # accuracy measures model's ability
-        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
+        se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         
-        df = pd.DataFrame(labels.cpu().detach().numpy().reshape(-1,1), columns=['label_norm'])
+        df = pd.DataFrame(epoch, columns=['epoch'])
+        df['label_norm'] = labels.cpu().detach().numpy().reshape(-1,1)
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
-        df['mse_forward'] = mse_model
+        df['se_forward'] = se_model
         df_acc_out = df_acc_out.append(df)
 
     return df_acc_in, df_acc_out
@@ -150,8 +152,8 @@ def run_frequentist(dataset, net_type, ckpt_dir):
     lr_sched = lr_scheduler.ReduceLROnPlateau(optimizer, patience=6, verbose=True)
     valid_loss_max = np.Inf
 
-    df_acc_final_in = pd.DataFrame(columns=['label_norm', 'val_pred', 'mse_forward'])
-    df_acc_final_out = pd.DataFrame(columns=['label_norm', 'val_pred', 'mse_forward'])
+    df_acc_final_in = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'se_forward'])
+    df_acc_final_out = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'se_forward'])
 
     for epoch in range(n_epochs):  # loop over the dataset multiple times
 
@@ -165,7 +167,7 @@ def run_frequentist(dataset, net_type, ckpt_dir):
             df_acc_final_out = df_acc_final_out.append(df_acc_out)
 
             print('TESTING : IN dist  Forward mse: {:.4f} ||  OUT dist  Forward mse:{:.4f}'.format(
-                np.mean(df_acc_in['mse_forward']), np.mean(df_acc_out['mse_forward'])))
+                np.mean(df_acc_in['se_forward']), np.mean(df_acc_out['se_forward'])))
         
         
         print('Epoch: {} \tTraining Loss: {:.4f} \tTraining Accuracy: {:.4f} \tValidation Loss: {:.4f} \tValidation Accuracy: {:.4f}'.format(

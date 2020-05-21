@@ -6,12 +6,10 @@ import matplotlib.pyplot as plt
 import os 
 from torch.nn import functional as F
 
-from src.metrics import mse, compute_thickness_ground_truth
+from src.metrics import se, compute_thickness_ground_truth
 from src.generative_model.metrics import calculate_fid_given_paths, calculate_kid_given_paths
-from src.metrics import mse, compute_thickness_ground_truth
 from src.forward.uncertainty_estimation import get_uncertainty_per_batch
-
-latent_dim = 100
+import src.config
 
 import torch 
 from torch.autograd import Variable
@@ -49,11 +47,11 @@ def se_between_target_and_prediction(target, x, forward, trainset):
         # CUDA settings
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(x, size=32), device)
-        return mse(y_pred, y_labels), y_pred, epistemic
+        return se(y_pred, y_labels), y_pred, epistemic
 
     else:
         y_pred = forward(F.interpolate(x, size=32)).squeeze(1).cpu().detach().numpy()
-        return mse(y_pred, y_labels), y_pred
+        return se(y_pred, y_labels), y_pred
 
 def plots_results(target, forward_pred, forward_pred_train, morpho_pred, morpho_pred_train, se, conditions, testset, images_generated, select_img_label_index, fid_value_gen, kid_value_gen, nrow=2, ncol=4):
 
@@ -113,7 +111,7 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     # ------------ Generate sample from z and y target ------------
     images_generated, conditions = generate_sample_from_GAN(target, z, generator, trainset.scaler)
 
-    # ------------ Compute the mse between the target and the forward model predictions ------------
+    # ------------ Compute the se between the target and the forward model predictions ------------
     if bayesian:
         se_forward, forward_pred, uncertainty = se_between_target_and_prediction(target, images_generated, forward, trainset)
         
@@ -134,8 +132,8 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     # ------------ Compare the forward model and the Measure from morphomnist ------------
     thickness = compute_thickness_ground_truth(images_generated)
 
-    # ------------ Compute the mse between the target and the morpho measure predictions ------------
-    se_measure = mse(target, thickness.values)
+    # ------------ Compute the se between the target and the morpho measure predictions ------------
+    se_measure = se(target, thickness.values)
 
     # Measure on trained data
     train_img_label = pd.DataFrame(np.around(testset.labels).values.tolist(), columns=['label'])
@@ -143,7 +141,7 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     image_from_test = testset.x_data.numpy()[select_img_label_index].squeeze(1)
     x_train = Variable(testset.x_data[select_img_label_index].type(FloatTensor))
 
-    # ------------ Compute the mse between testset and the forward model predictions ------------
+    # ------------ Compute the se between testset and the forward model predictions ------------
     if bayesian:
         se_forward_train, forward_pred_train, uncertainty_train = se_between_target_and_prediction(target, x_train, forward, trainset)
     else:
@@ -154,11 +152,11 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
     top_values = 10
 
     index = np.argsort(se_forward)[:top_values]
-    forward_mse_mean = np.mean(mse(target,thickness.values[index])); forward_mse_std = np.std(mse(target,thickness.values[index])); global_mean = np.mean(se_measure);
+    forward_se_mean = np.mean(se(target,thickness.values[index])); forward_se_std = np.std(se(target,thickness.values[index])); global_mean = np.mean(se_measure);
 
     print()
     print(f" ------------ Best forward image ------------")
-    print(f"MSE measure pred = {forward_mse_mean} ± {forward_mse_std} ")
+    print(f"MSE measure pred = {forward_se_mean} ± {forward_se_std} ")
     print(f"MSE morpho on Generated data: {global_mean}")
 
     # Transormf output to real value
@@ -175,7 +173,7 @@ def monte_carlo_inference(target, generator, forward, trainset, testset, ncol = 
 
     plots_results(target, model_pred, model_pred_train, thickness.values, testset.y_data[select_img_label_index].numpy(), se_forward, conditions, testset, images_generated, select_img_label_index, fid_value_gen, kid_value_gen, nrow=2, ncol=4)
 
-    return [forward_mse_mean, forward_mse_std], global_mean, fid_value_gen, kid_value_gen
+    return [forward_se_mean, forward_se_std], global_mean, fid_value_gen, kid_value_gen
 
 def save_obj_csv(d, path):
     d.to_csv(path+'.csv', index=False)

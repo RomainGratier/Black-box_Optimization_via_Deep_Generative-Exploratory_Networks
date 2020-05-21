@@ -50,5 +50,5 @@ def compute_thickness_ground_truth(images_generated, feature = 'thickness'):
         thickness = measure_batch(transform_inv(images_generated), pool=pool)[feature]
     return thickness
 
-def mse(y_true, y_pred):
+def se(y_true, y_pred):
     return np.square(np.subtract(y_true, y_pred))

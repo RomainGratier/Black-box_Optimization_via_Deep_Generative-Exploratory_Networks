@@ -16,7 +16,7 @@ import src.forward.utils
 from src.forward.metrics import ELBO, calculate_kl, get_beta
 from src.forward.bcnn_models import BBB3Conv3FC, BBBAlexNet, BBBLeNet
 from src.data import getDataset, getDataloader
-from src.metrics import mse
+from src.metrics import se
 from src.forward.uncertainty_estimation import get_uncertainty_per_batch
 
 # CUDA settings
@@ -63,8 +63,8 @@ def train_model(net, optimizer, criterion, trainloader, scaler, num_ens=1, beta_
 
         # accuracy measures model's ability
         
-        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
-        accs.extend(mse_model)
+        se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
+        accs.extend(se_model)
 
     return training_loss/len(trainloader), np.mean(accs), np.mean(kl_list)
 
@@ -96,15 +96,15 @@ def validate_model(net, criterion, validloader, scaler, num_ens=1, beta_type=0.1
         valid_loss += criterion(net_out.squeeze(1), labels.float(), kl, beta).item()
 
         # accuracy measures model's ability
-        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
+        se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
 
         preds, epistemic, aleatoric = get_uncertainty_per_batch(net, inputs, device, T=15, normalized=False)
 
         # accuracy measures model's ability
-        mse_model_averaged = mse(preds, labels.cpu().detach().numpy())
+        se_model_averaged = se(preds, labels.cpu().detach().numpy())
 
-        accs_val.extend(mse_model)
-        accs_avr.extend(mse_model_averaged)
+        accs_val.extend(se_model)
+        accs_avr.extend(se_model_averaged)
         accs_epistemic.extend(epistemic)
         accs_aleatoric.extend(aleatoric)
 
@@ -115,13 +115,8 @@ def test_model(net, criterion, testinloader, testoutloader, scaler, num_ens=1, b
     """Calculate ensemble accuracy and NLL Loss"""
     net.eval()
 
-    df_acc_in = pd.DataFrame(columns=['label_norm', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'mse_forward', 'mse_forward_avg'])
-    df_acc_out = pd.DataFrame(columns=['label_norm', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'mse_forward', 'mse_forward_avg'])
-
-    accs_val = []
-    accs_avr = []
-    accs_epistemic = []
-    accs_aleatoric = []
+    df_acc_in = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg'])
+    df_acc_out = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg'])
 
     for i, (inputs, labels) in enumerate(testinloader):
         inputs, labels = inputs.to(device), labels.to(device)
@@ -136,20 +131,21 @@ def test_model(net, criterion, testinloader, testoutloader, scaler, num_ens=1, b
         beta = get_beta(i-1, len(testinloader), beta_type, epoch, num_epochs)
 
         # accuracy measures model's ability
-        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
+        se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
 
         preds, epistemic, aleatoric = get_uncertainty_per_batch(net, inputs, device, T=15, normalized=False)
 
         # accuracy measures model's ability
-        mse_model_averaged = mse(preds, labels.cpu().detach().numpy())
-
-        df = pd.DataFrame(labels.cpu().detach().numpy().reshape(-1,1), columns=['label_norm'])
+        se_model_averaged = se(preds, labels.cpu().detach().numpy())
+        
+        df = pd.DataFrame(epoch, columns=['epoch'])
+        df['label'] = labels.cpu().detach().numpy().reshape(-1,1)
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
         df['pred_w_uncertainty'] = preds
         df['epistemic'] = epistemic
         df['aleatoric'] = aleatoric
-        df['mse_forward'] = mse_model
-        df['mse_forward_avg'] = mse_model_averaged
+        df['se_forward'] = se_model
+        df['se_forward_avg'] = se_model_averaged
         df_acc_in = df_acc_in.append(df)
     
     for i, (inputs, labels) in enumerate(testoutloader):
@@ -165,20 +161,20 @@ def test_model(net, criterion, testinloader, testoutloader, scaler, num_ens=1, b
         beta = get_beta(i-1, len(testoutloader), beta_type, epoch, num_epochs)
 
         # accuracy measures model's ability
-        mse_model = mse(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
+        se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
 
         preds, epistemic, aleatoric = get_uncertainty_per_batch(net, inputs, device, T=15, normalized=False)
 
         # accuracy measures model's ability
-        mse_model_averaged = mse(preds, labels.cpu().detach().numpy())
+        se_model_averaged = se(preds, labels.cpu().detach().numpy())
 
         df = pd.DataFrame(labels.cpu().detach().numpy().reshape(-1,1), columns=['label_norm'])
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
         df['pred_w_uncertainty'] = preds
         df['epistemic'] = epistemic
         df['aleatoric'] = aleatoric
-        df['mse_forward'] = mse_model
-        df['mse_forward_avg'] = mse_model_averaged
+        df['se_forward'] = se_model
+        df['se_forward_avg'] = se_model_averaged
         df_acc_out = df_acc_out.append(df)
 
     return df_acc_in, df_acc_out
@@ -215,8 +211,8 @@ def run_bayesian(dataset, net_type, ckpt_dir):
     optimizer = Adam(net.parameters(), lr=lr_start)
     lr_sched = lr_scheduler.ReduceLROnPlateau(optimizer, patience=6, verbose=True)
     valid_loss_max = np.Inf
-    df_acc_final_in = pd.DataFrame(columns=['label_norm', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'mse_forward', 'mse_forward_avg'])
-    df_acc_final_out = pd.DataFrame(columns=['label_norm', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'mse_forward', 'mse_forward_avg'])
+    df_acc_final_in = pd.DataFrame(columns=['epoch','label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg', 'se_forward_avg_opt'])
+    df_acc_final_out = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'mse_forward_avg', 'se_forward_avg_opt'])
 
     for epoch in range(n_epochs):  # loop over the dataset multiple times
 
@@ -225,23 +221,30 @@ def run_bayesian(dataset, net_type, ckpt_dir):
         
         if epoch % 1 == 0:
             df_acc_in, df_acc_out = test_model(net, criterion, test_loader_in, test_loader_out, scaler, num_ens=valid_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
-            df_acc_final_in = df_acc_final_in.append(df_acc_in)
-            df_acc_final_out = df_acc_final_out.append(df_acc_out)
 
+            ## --------------------------------------------------------------------------------------------------------------
             from sklearn import preprocessing
             stand = preprocessing.StandardScaler()
-            df = pd.DataFrame(stand.fit_transform(df_acc_in[['mse_forward_avg', 'epistemic']]))
-            corr_in = list(pearsonr(df.iloc[:,0], df.iloc[:,1]))
-            df = pd.DataFrame(stand.fit_transform(df_acc_out[['mse_forward_avg', 'epistemic']]))
-            corr_out = list(pearsonr(df.iloc[:,0], df.iloc[:,1]))
+            df_corr_in = pd.DataFrame(stand.fit_transform(df_acc_in[['se_forward_avg', 'epistemic']]))
+            corr_in = list(pearsonr(df_corr_in.iloc[:,0], df_corr_in.iloc[:,1]))
+            df_corr_out = pd.DataFrame(stand.fit_transform(df_acc_out[['se_forward_avg', 'epistemic']]))
+            corr_out = list(pearsonr(df_corr_out.iloc[:,0], df_corr_out.iloc[:,1]))
 
-            labels_out = np.around(df_acc_out['label_norm'].values, decimals = 0).squeeze()
-            labels_in = np.around(df_acc_in['label_norm'].values, decimals = 0).squeeze()
+            labels_in = np.around(df_acc_in['label'].values, decimals = 0).squeeze()
+            for label in np.unique(labels_in):
+                print(label)
+                indexe = np.argwhere(labels_in == label)
+                corr_out_selected = list(pearsonr(df_corr_in.iloc[indexe.squeeze(),0], df_corr_in.iloc[indexe.squeeze(),1]))
+                print(corr_out_selected)
+
+            labels_out = np.around(df_acc_out['label'].values, decimals = 0).squeeze()
             for label in np.unique(labels_out):
                 print(label)
                 indexe = np.argwhere(labels_out == label)
-                corr_out_selected = list(pearsonr(df.iloc[indexe.squeeze(),0], df.iloc[indexe.squeeze(),1]))
+                corr_out_selected = list(pearsonr(df_corr_out.iloc[indexe.squeeze(),0], df_corr_out.iloc[indexe.squeeze(),1]))
                 print(corr_out_selected)
+            
+            ## --------------------------------------------------------------------------------------------------------------
             
             print()
             print(f"---------- IN distribution epistemic min : {df_acc_in['epistemic'].min()}")
@@ -259,16 +262,19 @@ def run_bayesian(dataset, net_type, ckpt_dir):
 
             df_checkup = pd.DataFrame(np.around(df_acc_out_acc['label_norm'].values, decimals = 0).squeeze(), columns=['labels'])
             print(df_checkup.groupby('labels')['labels'].count())
-            print(np.mean(df_acc_in['mse_forward_avg']))
-            print(f"ACC forward avg IN dist : {np.mean(df_acc_in_acc['mse_forward_avg'])}")
-            print(np.mean(df_acc_out['mse_forward_avg']))
-            print(f"ACC forward avg OUT dist : {np.mean(df_acc_out_acc['mse_forward_avg'])}")
+            print(np.mean(df_acc_in['se_forward_avg']))
+            print(f"ACC forward avg IN dist : {np.mean(df_acc_in_acc['se_forward_avg'])}")
+            print(np.mean(df_acc_out['se_forward_avg']))
+            print(f"ACC forward avg OUT dist : {np.mean(df_acc_out_acc['se_forward_avg'])}")
             print()
             print('TESTING : IN dist  Forward mse: {:.4f}\tForward avg mse: {:.4f}\tepistemic mean: {:.4f}\taleatoric mean: {:.4f}\tcorrelation uncertainty {:.4f} p_val {:.4f} ||  OUT dist  Forward mse:{:.4f}\tForward avg mse: {:.4f}\tepistemic mean: {:.4f}\taleatoric mean: {:.4f} \tcorrelation uncertainty {:.4f} p_val {:.4f}'.format(
-                np.mean(df_acc_in['mse_forward']), np.mean(df_acc_in['mse_forward_avg']), np.mean(df_acc_in['epistemic']), np.mean(df_acc_in['aleatoric']), corr_in[0], corr_in[1], np.mean(df_acc_out['mse_forward']), np.mean(df_acc_out['mse_forward_avg']), np.mean(df_acc_out['epistemic']), np.mean(df_acc_out['aleatoric']),  corr_out[0], corr_out[1]))
+                np.mean(df_acc_in['se_forward']), np.mean(df_acc_in['se_forward_avg']), np.mean(df_acc_in['epistemic']), np.mean(df_acc_in['aleatoric']), corr_in[0], corr_in[1], np.mean(df_acc_out['se_forward']), np.mean(df_acc_out['se_forward_avg']), np.mean(df_acc_out['epistemic']), np.mean(df_acc_out['aleatoric']),  corr_out[0], corr_out[1]))
             
         print('Epoch: {} Training Loss: {:.4f}\tTraining Accuracy: {:.4f}\tValidation Loss: {:.4f}\tValidation Accuracy: {:.4f}\tValidation Accuracy Avr: {:.4f}\ttrain_kl_div: {:.4f}\tepistemic: {:.4f}\taleatoric: {:.4f}'.format(
             epoch, train_loss, train_acc, valid_loss, valid_acc, valid_acc_avr, train_kl, valid_epi, valid_ale))
+            
+            df_acc_final_in = df_acc_final_in.append(df_acc_in)
+            df_acc_final_out = df_acc_final_out.append(df_acc_out)
 
         lr_sched.step(valid_loss)
 
