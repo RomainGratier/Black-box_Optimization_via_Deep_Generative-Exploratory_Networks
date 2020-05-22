@@ -208,20 +208,20 @@ def compute_fid_mnist(gen_img, index_distribution, real_dataset, sample_size):
 def monte_carlo_inference_general(distribution, generator, forward, testset, ncol = 4, nrow =2, sample_number_fid_kid = 300, size=2000):
     
     if distribution == 'in':
-        conditions = np.random.uniform(cfg.min_dataset, cfg.limit_data, size)
+        conditions = np.random.uniform(cfg.min_dataset, cfg.limit_dataset, size)
         
         # FID needs
         df_test_in = pd.DataFrame(testset.labels.values, columns=['label'])
-        index_distribution = df_test_in[df_test_in['label']<=cfg.limit_data].index
+        index_distribution = df_test_in[df_test_in['label']<=cfg.limit_dataset].index
         print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
         real_dataset = deepcopy(testset.x_data)
 
     if distribution == 'out':
-        conditions = np.random.uniform(cfg.limit_data, cfg.max_dataset, size)
+        conditions = np.random.uniform(cfg.limit_dataset, cfg.max_dataset, size)
         
         # FID needs
         df_test_out = pd.DataFrame(testset.labels.values, columns=['label'])
-        index_distribution = df_test_out[df_test_out['label']>cfg.limit_data].index
+        index_distribution = df_test_out[df_test_out['label']>cfg.limit_dataset].index
         print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
         real_dataset = deepcopy(testset.x_data)
 

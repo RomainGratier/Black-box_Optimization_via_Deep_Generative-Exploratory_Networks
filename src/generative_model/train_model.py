@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import os
 import random
+import shutil
+from copy import deepcopy
 
 import torch
 from torch.autograd import Variable
@@ -16,7 +18,7 @@ import src.config as cfg
 
 from src.metrics import se, compute_thickness_ground_truth
 from .metrics import calculate_fid_given_paths, calculate_kid_given_paths
-from src.generative_model import LeNet5
+from src.generative_model import Generator, Discriminator, LeNet5
 
 def save_numpy_arr(path, arr):
     np.save(path, arr)
@@ -34,10 +36,10 @@ def generate_sample(minimum, maximum, sample_size, generator):
 
     return generator(z, labels)
 
-def compute_fid_kid_for_mnist(generator, n_row, dataset, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size):
+def compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size):
 
-    gen_img_in_distribution = generate_sample(cfg.min_dataset, dataset.maximum, sample_size, generator)
-    gen_img_out_distribution = generate_sample(dataset.maximum, cfg.max_dataset, sample_size, generator)
+    gen_img_in_distribution = generate_sample(cfg.min_dataset, cfg.limit_dataset, sample_size, generator)
+    gen_img_out_distribution = generate_sample(cfg.limit_dataset, cfg.max_dataset, sample_size, generator)
 
     random_id_in_distribution = random.sample(index_in_distribution.tolist(), sample_size)
     random_id_out_distribution = random.sample(index_out_distribution.tolist(), sample_size)
@@ -62,7 +64,7 @@ def compute_fid_kid_for_mnist(generator, n_row, dataset, real_dataset_in, real_d
 
     return fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution
 
-def sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, dataset, sample_size):
+def sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, sample_size):
     """Saves a grid of generated digits ranging from 0 to n_classes"""
 
     ## -------------- In distribution --------------
@@ -81,7 +83,7 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
     label_target = np.array([num for num in np.linspace(cfg.min_dataset, cfg.max_dataset, 10, endpoint=True)])
     se_generator = se(label_target, thickness)
 
-    fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, dataset, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size)
+    fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size)
 
     print()
     print(f"The thickness distribution =\n{thickness}")
@@ -129,7 +131,7 @@ def load_obj_csv(path):
 def save_obj_csv(d, path):
     d.to_csv(path+'.csv', index=False)
 
-def train_gan_model(dataloader, path_generator):
+def train_gan_model(dataloader, testset, path_generator):
 
     se_gan_in_distribution = []
     se_gan_out_distribution = []
@@ -156,8 +158,8 @@ def train_gan_model(dataloader, path_generator):
         adversarial_loss.cuda()
 
     # Optimizers
-    optimizer_G = torch.optim.Adam(generator.parameters(), lr=lr, betas=(b1, b2))
-    optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(b1, b2))
+    optimizer_G = torch.optim.Adam(generator.parameters(), lr=cfg.lr, betas=(cfg.b1, cfg.b2))
+    optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=cfg.lr, betas=(cfg.b1, cfg.b2))
 
     FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
     LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
@@ -167,24 +169,24 @@ def train_gan_model(dataloader, path_generator):
     os.makedirs("images", exist_ok=True)
 
     # FID needs
-    df_test_in = pd.DataFrame(dataset.labels.values, columns=['label'])
-    df_test_out = pd.DataFrame(fulldataset.labels.values, columns=['label'])
-    index_in_distribution = df_test_in[df_test_in['label']<=dataset.maximum_label].index
-    index_out_distribution = df_test_out[df_test_out['label']>dataset.maximum_label].index
+    df_test_in = pd.DataFrame(testset.labels.values, columns=['label'])
+    df_test_out = pd.DataFrame(testset.labels.values, columns=['label'])
+    index_in_distribution = df_test_in[df_test_in['label']<=cfg.limit_dataset].index
+    index_out_distribution = df_test_out[df_test_out['label']>cfg.limit_dataset].index
     print(f'size of in distribution data for fid/kid : {len(index_in_distribution)}')
     print(f'size of out distribution data for fid/kid : {len(index_out_distribution)}')
-    real_dataset_in = deepcopy(dataset.x_data)
-    real_dataset_out = deepcopy(fulldataset.x_data)
+    real_dataset_in = deepcopy(testset.x_data)
+    real_dataset_out = deepcopy(testset.x_data)
 
-    arr = np.array([num for num in np.linspace(cfg.min_dataset, cfg.max_dataset, 10, endpoint=True)])
+    arr = np.around(np.array([num for num in np.linspace(cfg.min_dataset, cfg.max_dataset, 10, endpoint=True)]), decimals = 2)
     print(f"Checkup the plots of the displayed labels {arr}")
-    in_distribution_index = np.where(arr <= dataset.maximum)
-    out_distribution_index = np.where(arr > dataset.maximum)
+    in_distribution_index = np.where(arr <= cfg.limit_dataset)
+    out_distribution_index = np.where(arr > cfg.limit_dataset)
 
     best_res_in = 100000
     best_res_out = 100000
 
-    for epoch in range(n_epochs):
+    for epoch in range(cfg.n_epochs):
         d_loss_check = []
         g_loss_check = []
 
@@ -250,18 +252,18 @@ def train_gan_model(dataloader, path_generator):
             d_loss_check.append(d_loss.item())
 
             batches_done = epoch * len(dataloader) + i
-            if batches_done % sample_interval == 0:
+            if batches_done % cfg.sample_interval == 0:
 
                 print(
                   "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
-                  % (epoch, n_epochs, i, len(dataloader), np.mean(d_loss_check), np.mean(g_loss_check))
+                  % (epoch, cfg.n_epochs, i, len(dataloader), np.mean(d_loss_check), np.mean(g_loss_check))
                 )
 
                 # Delete useless data from GPU
                 del valid; del fake; del real_imgs; del labels; del z; del gen_labels; del g_loss; del d_loss; del gen_imgs; del validity;
                 torch.cuda.empty_cache()
 
-                se_gan, fid_in, kid_in, fid_out, kid_out = sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, dataset, 10000)
+                se_gan, fid_in, kid_in, fid_out, kid_out = sample_image(cfg.n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, cfg.fid_kid_sample)
 
                 mean_in_se = np.mean(se_gan[in_distribution_index])
                 mean_out_se = np.mean(se_gan[out_distribution_index])

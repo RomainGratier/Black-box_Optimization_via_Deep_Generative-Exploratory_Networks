@@ -86,8 +86,8 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
     """Calculate ensemble accuracy and NLL Loss"""
     net.eval()
 
-    df_acc_in = pd.DataFrame(columns=['label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg'])
-    df_acc_out = pd.DataFrame(columns=['label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg'])
+    df_acc_in = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'se_forward'])
+    df_acc_out = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'se_forward'])
 
     accs_val = []
     accs_avr = []
@@ -104,8 +104,8 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
         se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         
         df = pd.DataFrame(np.full(inputs.shape[0], epoch), columns=['epoch'])
-        df['label_norm'] = labels.cpu().detach().numpy().reshape(-1,1)
-        df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
+        df['label'] = labels.cpu().detach().numpy()
+        df['val_pred'] = net_out.cpu().detach().numpy()
         df['se_forward'] = se_model
         df_acc_in = df_acc_in.append(df)
     
@@ -120,8 +120,8 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
         se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         
         df = pd.DataFrame(np.full(inputs.shape[0], epoch), columns=['epoch'])
-        df['label_norm'] = labels.cpu().detach().numpy().reshape(-1,1)
-        df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
+        df['label'] = labels.cpu().detach().numpy()
+        df['val_pred'] = net_out.cpu().detach().numpy()
         df['se_forward'] = se_model
         df_acc_out = df_acc_out.append(df)
 
@@ -155,7 +155,7 @@ def run_frequentist(dataset, net_type, ckpt_dir):
     df_acc_final_in = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'se_forward'])
     df_acc_final_out = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'se_forward'])
 
-    for epoch in range(n_epochs):  # loop over the dataset multiple times
+    for epoch in range(n_epochs+1):  # loop over the dataset multiple times
 
         train_loss, train_acc = train_model(net, optimizer, criterion, train_loader, epoch=epoch, num_epochs=n_epochs)
         valid_loss, valid_acc = validate_model(net, criterion, valid_loader, epoch=epoch, num_epochs=n_epochs)
@@ -168,6 +168,9 @@ def run_frequentist(dataset, net_type, ckpt_dir):
 
             print('TESTING : IN dist  Forward mse: {:.4f} ||  OUT dist  Forward mse:{:.4f}'.format(
                 np.mean(df_acc_in['se_forward']), np.mean(df_acc_out['se_forward'])))
+
+            df_acc_final_in.to_csv(os.path.join(ckpt_dir,f'results_in_{net_type}.csv'))
+            df_acc_final_out.to_csv(os.path.join(ckpt_dir,f'results_out_{net_type}.csv'))
         
         
         print('Epoch: {} \tTraining Loss: {:.4f} \tTraining Accuracy: {:.4f} \tValidation Loss: {:.4f} \tValidation Accuracy: {:.4f}'.format(
@@ -179,6 +182,4 @@ def run_frequentist(dataset, net_type, ckpt_dir):
             print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(
                 valid_loss_max, valid_loss))
             torch.save(net, ckpt_name)
-            df_acc_final_in.to_csv(os.path.join(ckpt_dir,f'results_in_{net_type}.csv'))
-            df_acc_final_out.to_csv(os.path.join(ckpt_dir,f'results_out_{net_type}.csv'))
             valid_loss_max = valid_loss
