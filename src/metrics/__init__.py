@@ -1,1 +1,1 @@
-from .metrics import mse, compute_thickness_ground_truth
+from .metrics import se, compute_thickness_ground_truth

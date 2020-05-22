@@ -5,10 +5,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict
 
-import src.config
+import src.config as cfg
 
 def minmaxs(X):
-    return (X - min_dataset) / (max_dataset - min_dataset)
+    return (X - cfg.min_dataset) / (cfg.max_dataset - cfg.min_dataset)
 
 class Generator(nn.Module):
     def __init__(self):
@@ -22,11 +22,11 @@ class Generator(nn.Module):
             return layers
 
         self.model = nn.Sequential(
-            *block(latent_dim + label_dim_input, 128, normalize=False),
+            *block(cfg.latent_dim + cfg.label_dim_input, 128, normalize=False),
             *block(128, 256),
             *block(256, 512),
             *block(512, 1024),
-            nn.Linear(1024, int(np.prod(img_shape))),
+            nn.Linear(1024, int(np.prod(cfg.img_shape))),
             nn.Tanh()
         )
 
@@ -34,7 +34,7 @@ class Generator(nn.Module):
         # Concatenate label embedding and image to produce input
         gen_input = torch.cat((minmaxs(labels).unsqueeze(1), noise), -1)
         img = self.model(gen_input)
-        img = img.view(img.size(0), *img_shape)
+        img = img.view(img.size(0), *cfg.img_shape)
         return img
 
 class Discriminator(nn.Module):
@@ -42,7 +42,7 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
 
         self.model = nn.Sequential(
-            nn.Linear(label_dim_input + int(np.prod(img_shape)), 512),
+            nn.Linear(cfg.label_dim_input + int(np.prod(cfg.img_shape)), 512),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(512, 512),
             nn.Dropout(0.4),

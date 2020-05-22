@@ -103,7 +103,7 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
         # accuracy measures model's ability
         se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         
-        df = pd.DataFrame(epoch, columns=['epoch'])
+        df = pd.DataFrame(np.full(inputs.shape[0], epoch), columns=['epoch'])
         df['label_norm'] = labels.cpu().detach().numpy().reshape(-1,1)
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
         df['se_forward'] = se_model
@@ -119,7 +119,7 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
         # accuracy measures model's ability
         se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         
-        df = pd.DataFrame(epoch, columns=['epoch'])
+        df = pd.DataFrame(np.full(inputs.shape[0], epoch), columns=['epoch'])
         df['label_norm'] = labels.cpu().detach().numpy().reshape(-1,1)
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
         df['se_forward'] = se_model

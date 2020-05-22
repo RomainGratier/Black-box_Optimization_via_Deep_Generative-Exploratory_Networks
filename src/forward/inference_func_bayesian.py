@@ -138,7 +138,7 @@ def test_model(net, criterion, testinloader, testoutloader, scaler, num_ens=1, b
         # accuracy measures model's ability
         se_model_averaged = se(preds, labels.cpu().detach().numpy())
         
-        df = pd.DataFrame(epoch, columns=['epoch'])
+        df = pd.DataFrame(np.full(inputs.shape[0], epoch), columns=['epoch'])
         df['label'] = labels.cpu().detach().numpy().reshape(-1,1)
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
         df['pred_w_uncertainty'] = preds
@@ -168,7 +168,8 @@ def test_model(net, criterion, testinloader, testoutloader, scaler, num_ens=1, b
         # accuracy measures model's ability
         se_model_averaged = se(preds, labels.cpu().detach().numpy())
 
-        df = pd.DataFrame(labels.cpu().detach().numpy().reshape(-1,1), columns=['label_norm'])
+        df = pd.DataFrame(np.full(inputs.shape[0], epoch), columns=['epoch'])
+        df['label'] = labels.cpu().detach().numpy().reshape(-1,1)
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
         df['pred_w_uncertainty'] = preds
         df['epistemic'] = epistemic
@@ -221,7 +222,8 @@ def run_bayesian(dataset, net_type, ckpt_dir):
         
         if epoch % 1 == 0:
             df_acc_in, df_acc_out = test_model(net, criterion, test_loader_in, test_loader_out, scaler, num_ens=valid_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
-
+            df_acc_final_in = df_acc_final_in.append(df_acc_in)
+            df_acc_final_out = df_acc_final_out.append(df_acc_out)
             ## --------------------------------------------------------------------------------------------------------------
             from sklearn import preprocessing
             stand = preprocessing.StandardScaler()
@@ -260,7 +262,7 @@ def run_bayesian(dataset, net_type, ckpt_dir):
             median_out = df_acc_out['epistemic'].median()
             df_acc_out_acc = df_acc_out[df_acc_out['epistemic'] < median_out]
 
-            df_checkup = pd.DataFrame(np.around(df_acc_out_acc['label_norm'].values, decimals = 0).squeeze(), columns=['labels'])
+            df_checkup = pd.DataFrame(np.around(df_acc_out_acc['label'].values, decimals = 0).squeeze(), columns=['labels'])
             print(df_checkup.groupby('labels')['labels'].count())
             print(np.mean(df_acc_in['se_forward_avg']))
             print(f"ACC forward avg IN dist : {np.mean(df_acc_in_acc['se_forward_avg'])}")
@@ -272,9 +274,6 @@ def run_bayesian(dataset, net_type, ckpt_dir):
             
         print('Epoch: {} Training Loss: {:.4f}\tTraining Accuracy: {:.4f}\tValidation Loss: {:.4f}\tValidation Accuracy: {:.4f}\tValidation Accuracy Avr: {:.4f}\ttrain_kl_div: {:.4f}\tepistemic: {:.4f}\taleatoric: {:.4f}'.format(
             epoch, train_loss, train_acc, valid_loss, valid_acc, valid_acc_avr, train_kl, valid_epi, valid_ale))
-            
-            df_acc_final_in = df_acc_final_in.append(df_acc_in)
-            df_acc_final_out = df_acc_final_out.append(df_acc_out)
 
         lr_sched.step(valid_loss)
 
