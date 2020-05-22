@@ -13,6 +13,8 @@ import torchvision.transforms as transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 from sklearn.preprocessing import MinMaxScaler
 
+import src.config as cfg
+
 class MNISTDataset(Dataset):
     """ MNIST dataset."""
 
@@ -173,7 +175,7 @@ class MNISTDataset(Dataset):
         if dataset == 'train':
             return os.path.join(folder,'train-images-idx3-ubyte.gz'), os.path.join(folder,'train-labels-idx1-ubyte.gz'), os.path.join(folder,'train-morpho.csv')
 
-    def __getlabels__(self, dataset, file, digit_file, y_feature, in_bound=4.5, out_bound=6.5):
+    def __getlabels__(self, dataset, file, digit_file, y_feature, in_bound=cfg.limit_data, out_bound=cfg.max_dataset):
         # Get the labels
         labels = pd.read_csv(file)
         labels['digit'] = load_idx(digit_file)

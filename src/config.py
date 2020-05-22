@@ -17,8 +17,8 @@ img_size=28
 channels=1
 img_shape = (channels, img_size, img_size)
 min_dataset = 0
-max_dataset = 7
-limit_data = 4.5
+max_dataset = 8
+limit_data = 6
 batch_size=128
 seed = 42
 
