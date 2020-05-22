@@ -12,7 +12,7 @@ cuda = True if torch.cuda.is_available() else False
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
-import src.config
+import src.config as cfg
 
 from src.metrics import se, compute_thickness_ground_truth
 from .metrics import calculate_fid_given_paths, calculate_kid_given_paths
@@ -27,17 +27,17 @@ def save_obj_csv(d, path):
 
 def generate_sample(minimum, maximum, sample_size, generator):
     # Sample noise
-    z = Variable(FloatTensor(np.random.normal(0, 1, (sample_size, latent_dim))))
+    z = Variable(FloatTensor(np.random.normal(0, 1, (sample_size, cfg.latent_dim))))
     # Get labels ranging from 0 to n_classes for n rows
     labels = np.random.uniform(minimum, maximum, sample_size)
     labels = Variable(FloatTensor(labels))
 
     return generator(z, labels)
 
-def compute_fid_kid_for_mnist(generator, n_row, img_size, dataset, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size):
+def compute_fid_kid_for_mnist(generator, n_row, dataset, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size):
 
-    gen_img_in_distribution = generate_sample(min_dataset, dataset.maximum, sample_size, generator)
-    gen_img_out_distribution = generate_sample(dataset.maximum, max_dataset, sample_size, generator)
+    gen_img_in_distribution = generate_sample(cfg.min_dataset, dataset.maximum, sample_size, generator)
+    gen_img_out_distribution = generate_sample(dataset.maximum, cfg.max_dataset, sample_size, generator)
 
     random_id_in_distribution = random.sample(index_in_distribution.tolist(), sample_size)
     random_id_out_distribution = random.sample(index_out_distribution.tolist(), sample_size)
@@ -67,9 +67,9 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
 
     ## -------------- In distribution --------------
     # Sample noise
-    z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, latent_dim))))
+    z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfg.latent_dim))))
     # Get labels ranging from 0 to n_classes for n rows
-    labels = np.array([num for _ in range(n_row) for num in np.linspace(min_dataset, max_dataset, 10, endpoint=True)])
+    labels = np.array([num for _ in range(n_row) for num in np.linspace(cfg.min_dataset, cfg.max_dataset, 10, endpoint=True)])
     labels = Variable(FloatTensor(labels))
 
     gen_imgs = generator(z, labels)
@@ -78,10 +78,10 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
     measure_batch = compute_thickness_ground_truth(gen_imgs.cpu().detach().squeeze(1))
     thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
 
-    label_target = np.array([num for num in np.linspace(min_dataset, max_dataset, 10, endpoint=True)])
+    label_target = np.array([num for num in np.linspace(cfg.min_dataset, cfg.max_dataset, 10, endpoint=True)])
     se_generator = se(label_target, thickness)
 
-    fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, img_size, dataset, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size)
+    fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, dataset, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size)
 
     print()
     print(f"The thickness distribution =\n{thickness}")
@@ -143,8 +143,6 @@ def train_gan_model(dataloader, path_generator):
         df_check_in_distribution = None
         df_check_out_distribution = None
 
-    max_dataset = 9
-    min_dataset = 0
     # Loss functions
     adversarial_loss = torch.nn.MSELoss()
 
@@ -178,7 +176,7 @@ def train_gan_model(dataloader, path_generator):
     real_dataset_in = deepcopy(dataset.x_data)
     real_dataset_out = deepcopy(fulldataset.x_data)
 
-    arr = np.array([num for num in np.linspace(min_dataset, max_dataset, 10, endpoint=True)])
+    arr = np.array([num for num in np.linspace(cfg.min_dataset, cfg.max_dataset, 10, endpoint=True)])
     print(f"Checkup the plots of the displayed labels {arr}")
     in_distribution_index = np.where(arr <= dataset.maximum)
     out_distribution_index = np.where(arr > dataset.maximum)
@@ -214,8 +212,8 @@ def train_gan_model(dataloader, path_generator):
             optimizer_G.zero_grad()
 
             # Sample noise and labels as generator input
-            z = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, latent_dim))))
-            gen_labels = Variable(FloatTensor(np.random.rand(batch_size)*max_dataset)) 
+            z = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, cfg.latent_dim))))
+            gen_labels = Variable(FloatTensor(np.random.rand(batch_size)*cfg.max_dataset)) 
 
             # Generate a batch of images
             gen_imgs = generator(z, gen_labels)
