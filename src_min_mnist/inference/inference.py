@@ -7,10 +7,10 @@ import os
 from torch.nn import functional as F
 from copy import deepcopy
 
-from src.metrics import se, compute_thickness_ground_truth
-from src.generative_model.metrics import calculate_fid_given_paths, calculate_kid_given_paths
-from src.forward.uncertainty_estimation import get_uncertainty_per_batch
-import src.config as cfg
+from src_min_mnist.metrics import se, compute_thickness_ground_truth
+from src_min_mnist.generative_model.metrics import calculate_fid_given_paths, calculate_kid_given_paths
+from src_min_mnist.forward.uncertainty_estimation import get_uncertainty_per_batch
+import src_min_mnist.config as cfg
 
 import torch 
 from torch.autograd import Variable
@@ -202,7 +202,7 @@ def compute_fid_mnist(gen_img, index_distribution, real_dataset, sample_size):
 def monte_carlo_inference_general(distribution, generator, forward, testset, ncol = 8, nrow =4, sample_number_fid_kid = 300, size=2000):
     
     if distribution == 'in':
-        conditions = np.random.uniform(1, cfg.limit_dataset + 1, size)
+        conditions = np.random.uniform(cfg.limit_dataset -0.5, cfg.max_dataset + 0.5, size)
 
         # FID needs
         df_test_in = pd.DataFrame(testset.labels.values, columns=['label'])
@@ -211,7 +211,7 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
         real_dataset = deepcopy(testset.x_data)
 
     if distribution == 'out':
-        conditions = np.random.uniform(cfg.limit_dataset, cfg.max_dataset, size)
+        conditions = np.random.uniform(cfg.min_dataset + -0.5 , cfg.limit_dataset + 0.5, size)
         
         # FID needs
         df_test_out = pd.DataFrame(testset.labels.values, columns=['label'])
