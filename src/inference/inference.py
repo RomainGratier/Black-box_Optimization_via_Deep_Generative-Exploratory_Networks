@@ -228,7 +228,7 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
     # ------------ Compute the se between the target and the forward model predictions ------------
     try:
         y_pred = forward(F.interpolate(images_generated, size=32)).squeeze(1).cpu().detach().numpy()
-        forward_pred = np.array(y_pred)
+        forward_pred = np.array(y_pred).T
 
     except:
         y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(images_generated, size=32), device)
@@ -237,8 +237,7 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
         index_certain = uncertainty_selection(epistemic.squeeze())
         y_pred = y_pred[index_certain]
         epistemic = epistemic[index_certain]
-        forward_pred = np.array([y_pred, epistemic.squeeze(1)])
-        forward_pred = np.swapaxes(forward_pred, 0, 1)
+        forward_pred = np.array([y_pred, epistemic.squeeze(1)]).T
         images_generated = images_generated[index_certain]
         conditions = conditions[index_certain]
 
