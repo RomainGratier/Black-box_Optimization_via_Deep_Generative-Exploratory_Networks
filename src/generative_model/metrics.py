@@ -48,7 +48,8 @@ from collections import OrderedDict
 import src.config as cfg
 from src.generative_model import LeNet5
 
-mnist_model = torch.load(cfg.model_fidkid_path)
+mnist_model = LeNet5()
+mnist_model.load_state_dict(torch.load('models/lenet.pth'))
 if cuda:
     mnist_model.cuda()
 
