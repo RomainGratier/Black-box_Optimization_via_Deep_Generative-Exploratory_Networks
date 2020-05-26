@@ -14,7 +14,7 @@ cuda = True if torch.cuda.is_available() else False
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
-import src.generative_model.config_gan as cfgan
+import src.config_gan as cfgan
 import src.config as cfg
 
 from src.metrics import se, compute_thickness_ground_truth
