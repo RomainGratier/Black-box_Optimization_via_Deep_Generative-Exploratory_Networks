@@ -24,7 +24,7 @@ class MNISTDataset(Dataset):
     """ MNIST dataset."""
 
     # Initialize your data, download, etc.
-    def __init__(self, dataset, experiment, y_feature, data_type = 'morpho_mnist/original'):
+    def __init__(self, dataset, y_feature, data_type = 'morpho_mnist/original'):
 
         '''Initialise the data type:
         - data_type : original, global, thic, frac, local, plain, swel, thin
@@ -133,37 +133,34 @@ class MNISTDataset(Dataset):
         if dataset == 'train':
             return os.path.join(folder,'train-images-idx3-ubyte.gz'), os.path.join(folder,'train-labels-idx1-ubyte.gz'), os.path.join(folder,'train-morpho.csv')
 
-    def __getlabels__(self, dataset, file, digit_file, y_feature, in_bound=cfg_data.limit_dataset, out_bound=cfg_data.max_dataset):
+    def __getlabels__(self, dataset, file, digit_file, y_feature):
         # Get the labels
         labels = pd.read_csv(file)
         labels['digit'] = load_idx(digit_file)
 
         if (dataset == 'train') | (dataset == 'test_in'):
-            if cfg.experience == 'max_mnist':
-                index = labels[labels[y_feature] < in_bound].index
-            elif cfg.experience == 'min_mnist':
-                index = labels[(labels[y_feature] > limit_bound) & (labels[y_feature] < max_bound)].index
+            if cfg.experiment == 'max_mnist':
+                index = labels[labels[y_feature] < cfg_data.limit_dataset].index
+            elif cfg.experiment == 'min_mnist':
+                index = labels[(labels[y_feature] >= cfg_data.limit_dataset) & (labels[y_feature] < cfg_data.max_dataset)].index
             labels = labels.loc[index]
 
         elif dataset == 'test_out':
-            if cfg.experience == 'max_mnist':
-                index = labels[(labels[y_feature] >= in_bound) & (labels[y_feature] < out_bound)].index
-            elif cfg.experience == 'min_mnist':
-                index = labels[labels[y_feature] < limit_bound].index
+            if cfg.experiment == 'max_mnist':
+                index = labels[(labels[y_feature] >= cfg_data.limit_dataset) & (labels[y_feature] < cfg_data.max_dataset)].index
+            elif cfg.experiment == 'min_mnist':
+                index = labels[labels[y_feature] < cfg_data.limit_dataset].index
             labels = labels.loc[index]
 
         else:
-            if cfg.experience == 'max_mnist':
-                index = labels[labels[y_feature] < out_bound].index
-            elif cfg.experience == 'min_mnist':
-                index = labels[labels[y_feature] < max_bound].index
+            if cfg.experiment == 'max_mnist':
+                index = labels[labels[y_feature] < cfg_data.max_dataset].index
+            elif cfg.experiment == 'min_mnist':
+                index = labels[labels[y_feature] < cfg_data.max_dataset].index
             labels = labels.loc[index]
 
         print(labels.describe())
         print(f" -------------------- EDA -------------------- ")
-        print()
-        print(f"The extrem values from our labels:\nMaximum : {maximum}   Minimum : {minimum}")
-        print()
         print(f"Check the distribution of our labels")
         check = pd.DataFrame(np.around(labels[y_feature].values), columns=[y_feature])
         print(check.groupby(y_feature)[y_feature].count())

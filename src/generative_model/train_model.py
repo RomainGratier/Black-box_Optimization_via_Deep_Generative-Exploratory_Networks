@@ -16,6 +16,10 @@ LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
 import src.config_gan as cfgan
 import src.config as cfg
+if cfg.experiment == 'min_mnist':
+    import src.config_min_mnist as cfg_data
+elif cfg.experiment == 'max_mnist':
+    import src.config_max_mnist as cfg_data
 
 from src.metrics import se, compute_thickness_ground_truth
 from .metrics import calculate_fid_given_paths, calculate_kid_given_paths
@@ -39,8 +43,8 @@ def generate_sample(minimum, maximum, sample_size, generator):
 
 def compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size):
 
-    gen_img_in_distribution = generate_sample(cfg.min_dataset, cfg.limit_dataset, sample_size, generator)
-    gen_img_out_distribution = generate_sample(cfg.limit_dataset, cfg.max_dataset, sample_size, generator)
+    gen_img_in_distribution = generate_sample(cfg_data.min_dataset, cfg_data.limit_dataset, sample_size, generator)
+    gen_img_out_distribution = generate_sample(cfg_data.limit_dataset, cfg_data.max_dataset, sample_size, generator)
 
     random_id_in_distribution = random.sample(index_in_distribution.tolist(), sample_size)
     random_id_out_distribution = random.sample(index_out_distribution.tolist(), sample_size)
@@ -72,7 +76,7 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
     # Sample noise
     z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim))))
     # Get labels ranging from 0 to n_classes for n rows
-    labels = np.array([num for _ in range(n_row) for num in np.linspace(cfg.min_dataset, cfg.max_dataset, 10, endpoint=True)])
+    labels = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)])
     labels = Variable(FloatTensor(labels))
 
     gen_imgs = generator(z, labels)
@@ -81,7 +85,7 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
     measure_batch = compute_thickness_ground_truth(gen_imgs.cpu().detach().squeeze(1))
     thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
 
-    label_target = np.array([num for num in np.linspace(cfg.min_dataset, cfg.max_dataset, 10, endpoint=True)])
+    label_target = np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)])
     se_generator = se(label_target, thickness)
 
     fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size)
@@ -170,19 +174,19 @@ def train_gan_model(dataloader, testset, path_generator):
     os.makedirs("images", exist_ok=True)
 
     # FID needs
-    df_test_in = pd.DataFrame(testset.labels.values, columns=['label'])
-    df_test_out = pd.DataFrame(testset.labels.values, columns=['label'])
-    index_in_distribution = df_test_in[df_test_in['label']<=cfg.limit_dataset].index
-    index_out_distribution = df_test_out[df_test_out['label']>cfg.limit_dataset].index
+    df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
+    df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
+    index_in_distribution = df_test_in[df_test_in['label']<=cfg_data.limit_dataset].index
+    index_out_distribution = df_test_out[df_test_out['label']>cfg_data.limit_dataset].index
     print(f'size of in distribution data for fid/kid : {len(index_in_distribution)}')
     print(f'size of out distribution data for fid/kid : {len(index_out_distribution)}')
     real_dataset_in = deepcopy(testset.x_data)
     real_dataset_out = deepcopy(testset.x_data)
 
-    arr = np.around(np.array([num for num in np.linspace(cfg.min_dataset, cfg.max_dataset, 10, endpoint=True)]), decimals = 2)
+    arr = np.around(np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)]), decimals = 2)
     print(f"Checkup the plots of the displayed labels {arr}")
-    in_distribution_index = np.where(arr <= cfg.limit_dataset)
-    out_distribution_index = np.where(arr > cfg.limit_dataset)
+    in_distribution_index = np.where(arr <= cfg_data.limit_dataset)
+    out_distribution_index = np.where(arr > cfg_data.limit_dataset)
 
     best_res_in = 100000
     best_res_out = 100000
@@ -213,7 +217,7 @@ def train_gan_model(dataloader, testset, path_generator):
 
             # Sample noise and labels as generator input
             z = Variable(FloatTensor(np.random.normal(0, 1, (cfgan.batch_size, cfgan.latent_dim))))
-            gen_labels = Variable(FloatTensor(np.random.rand(cfgan.batch_size)*cfg.max_dataset)) 
+            gen_labels = Variable(FloatTensor(np.random.rand(cfgan.batch_size)*cfg_data.max_dataset)) 
 
             # Generate a batch of images
             gen_imgs = generator(z, gen_labels)

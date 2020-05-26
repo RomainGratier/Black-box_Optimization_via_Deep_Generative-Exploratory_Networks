@@ -7,9 +7,13 @@ from collections import OrderedDict
 
 import src.config_gan as cfgan
 import src.config as cfg
+if cfg.experiment == 'min_mnist':
+    import src.config_min_mnist as cfg_data
+elif cfg.experiment == 'max_mnist':
+    import src.config_max_mnist as cfg_data
 
 def minmaxs(X):
-    return (X - cfg.min_dataset) / (cfg.max_dataset - cfg.min_dataset)
+    return (X - cfg_data.min_dataset) / (cfg_data.max_dataset - cfg_data.min_dataset)
 
 class Generator(nn.Module):
     def __init__(self):
@@ -43,7 +47,7 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
 
         self.model = nn.Sequential(
-            nn.Linear(cfg.label_dim_input + int(np.prod(cfg.img_shape)), 512),
+            nn.Linear(cfgan.label_dim_input + int(np.prod(cfg.img_shape)), 512),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(512, 512),
             nn.Dropout(0.4),
