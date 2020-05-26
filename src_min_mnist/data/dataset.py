@@ -192,7 +192,7 @@ class MNISTDataset(Dataset):
             print(' ---------------------------------------- CHECK NANS')
             print(labels[labels[y_feature].isnull()])
 
-        elif dataset == 'full':
+        else:
             index = labels[labels[y_feature] < max_bound].index
             labels = labels.loc[index]
             print(' ---------------------------------------- CHECK NANS')

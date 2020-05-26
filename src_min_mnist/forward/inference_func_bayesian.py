@@ -15,7 +15,7 @@ import src.forward.config_bayesian as cfg
 import src.forward.utils
 from src.forward.metrics import ELBO, calculate_kl, get_beta
 from src.forward.bcnn_models import BBB3Conv3FC, BBBAlexNet, BBBLeNet
-from src.data import getDataset, getDataloader
+from src_min_mnist.data import getDataset, getDataloader
 from src.metrics import se
 from src.forward.uncertainty_estimation import get_uncertainty_per_batch
 

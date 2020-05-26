@@ -12,7 +12,7 @@ from torch.optim import Adam, lr_scheduler
 
 import src.forward.config_frequentist as cfg
 from src.forward.cnn_models import AlexNet, LeNet, ThreeConvThreeFC
-from src.data import getDataset, getDataloader
+from src_min_mnist.data import getDataset, getDataloader
 from src.metrics import se
 import src.forward.utils
 

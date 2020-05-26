@@ -206,7 +206,7 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
 
         # FID needs
         df_test_in = pd.DataFrame(testset.labels.values, columns=['label'])
-        index_distribution = df_test_in[df_test_in['label']<=cfg.limit_dataset].index
+        index_distribution = df_test_in[(df_test_in['label'] > cfg.limit_dataset) & df_test_in['label'] <= cfg.max_dataset].index
         print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
         real_dataset = deepcopy(testset.x_data)
 
@@ -215,7 +215,7 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
         
         # FID needs
         df_test_out = pd.DataFrame(testset.labels.values, columns=['label'])
-        index_distribution = df_test_out[df_test_out['label']>cfg.limit_dataset].index
+        index_distribution = df_test_out[df_test_out['label'] <= cfg.limit_dataset].index
         print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
         real_dataset = deepcopy(testset.x_data)
 
@@ -228,7 +228,7 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
     # ------------ Compute the se between the target and the forward model predictions ------------
     try:
         y_pred = forward(F.interpolate(images_generated, size=32)).squeeze(1).cpu().detach().numpy()
-        forward_pred = np.array(y_pred)
+        forward_pred = np.array(y_pred).T
 
     except:
         y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(images_generated, size=32), device)
@@ -237,8 +237,7 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
         index_certain = uncertainty_selection(epistemic.squeeze())
         y_pred = y_pred[index_certain]
         epistemic = epistemic[index_certain]
-        forward_pred = np.array([y_pred, epistemic.squeeze(1)])
-        forward_pred = np.swapaxes(forward_pred, 0, 1)
+        forward_pred = np.array([y_pred, epistemic.squeeze(1)]).T
         images_generated = images_generated[index_certain]
         conditions = conditions[index_certain]
 
@@ -271,17 +270,19 @@ def plots_some_results(distribution, images_generated, conditions, forward_pred,
     
     # Real img selection
     random_id = random.sample(index_distribution.tolist(), ncol*nrow)
-    real_imgs = testset.x_data[random_id].numpy()
+    real_imgs = testset.x_data[random_id]
     labels = testset.y_data[random_id].numpy()
-    
+
     try:
-        real_pred = forward(F.interpolate(real_imgs, size=32)).squeeze(1).cpu().detach().numpy()
+        real_pred = forward(F.interpolate(real_imgs.to(device), size=32)).squeeze(1).cpu().detach().numpy()
         bayesian=False
     except:
         real_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(real_imgs, size=32), device)
         bayesian=True
+    
+    real_imgs = real_imgs.squeeze()
 
-    fig, ax = plt.subplots(nrows=nrow, ncols=ncol, figsize=(8,3), dpi=200)
+    fig, ax = plt.subplots(nrows=nrow, ncols=ncol, figsize=(8,4), dpi=300)
     
     for i, row in enumerate(ax):
         if i < 2:
@@ -299,17 +300,17 @@ def plots_some_results(distribution, images_generated, conditions, forward_pred,
                 col.imshow(image)
                 col.axis('off')
                 if bayesian:
-                    col.set_title(f"Forward={np.round(float(forward_pred[j + k][0]),1)} / Cond={np.round(float(conditions[j + k]),1)} / Uncertainty={np.round(float(forward_pred[j + k][1]),4)}", fontsize=6) #/ true={np.round(float(morpho_pred[n_top_index[j + k]]),1)} 
+                    col.set_title(f"Fwd={np.round(float(forward_pred[j + k][0]),1)} / Cond={np.round(float(conditions[j + k]),1)} / epi={np.round(float(forward_pred[j + k][1]),4)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j + k]]),1)} 
                 else:
-                    col.set_title(f"Forward={np.round(float(forward_pred[j + k]),1)} / Cond={np.round(float(conditions[j + k]),1)}", fontsize=6) #/ true={np.round(float(morpho_pred[n_top_index[j + k]]),1)} 
+                    col.set_title(f"Fwd={np.round(float(forward_pred[j + k]),1)} / Cond={np.round(float(conditions[j + k]),1)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j + k]]),1)} 
             else:
                 image = imgs[j + k]
                 col.imshow(image)
                 col.axis('off')
                 if bayesian:
-                    col.set_title(f"Forward={np.round(float(real_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)} / Uncertainty={np.round(float(epistemic[j + k]),4)}", fontsize=6) #/ true={np.round(float(morpho_pred[n_top_index[j + k]]),1)} 
+                    col.set_title(f"Fwd={np.round(float(real_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)} / epi={np.round(float(epistemic[j + k]),4)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j + k]]),1)} 
                 else:
-                    col.set_title(f"Forward={np.round(float(forward_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)}", fontsize=6) #/ true={np.round(float(morpho_pred[n_top_index[j]]),1)}
+                    col.set_title(f"Fwd={np.round(float(forward_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j]]),1)}
     
-    plt.suptitle(f"{distribution} distribution / FID Value : {np.round(fid_value_gen[0])} ± {np.round(fid_value_gen[1])} \ KID Value : {np.around(kid_value_gen[0], decimals=3)}  ± {np.around(kid_value_gen[1], decimals=3)}", fontsize=9)
+    plt.suptitle(f"{distribution} distribution / FID Value : {np.round(fid_value_gen[0])} ± {np.round(fid_value_gen[1])} \ KID Value : {np.around(kid_value_gen[0], decimals=3)}  ± {np.around(kid_value_gen[1], decimals=3)}", fontsize=6)
     plt.show()

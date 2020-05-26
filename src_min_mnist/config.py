@@ -19,4 +19,4 @@ b2=0.999
 #n_cpu=8
 sample_interval=500
 n_row = 10
-fid_kid_sample = 2000
+fid_kid_sample = 1000

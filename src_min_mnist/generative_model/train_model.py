@@ -171,8 +171,8 @@ def train_gan_model(dataloader, testset, path_generator):
     # FID needs
     df_test_in = pd.DataFrame(testset.labels.values, columns=['label'])
     df_test_out = pd.DataFrame(testset.labels.values, columns=['label'])
-    index_in_distribution = df_test_in[df_test_in['label']<=cfg.limit_dataset].index
-    index_out_distribution = df_test_out[df_test_out['label']>cfg.limit_dataset].index
+    index_in_distribution = df_test_in[df_test_in['label'] > cfg.limit_dataset].index
+    index_out_distribution = df_test_out[df_test_out['label'] <= cfg.limit_dataset].index
     print(f'size of in distribution data for fid/kid : {len(index_in_distribution)}')
     print(f'size of out distribution data for fid/kid : {len(index_out_distribution)}')
     real_dataset_in = deepcopy(testset.x_data)
@@ -252,6 +252,10 @@ def train_gan_model(dataloader, testset, path_generator):
             d_loss_check.append(d_loss.item())
 
             batches_done = epoch * len(dataloader) + i
+
+            if epoch == 0:
+                continue
+
             if batches_done % cfg.sample_interval == 0:
 
                 print(
