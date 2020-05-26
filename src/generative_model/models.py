@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict
 
+import src.generative_model.config_gan as cfgan
 import src.config as cfg
 
 def minmaxs(X):
@@ -22,7 +23,7 @@ class Generator(nn.Module):
             return layers
 
         self.model = nn.Sequential(
-            *block(cfg.latent_dim + cfg.label_dim_input, 128, normalize=False),
+            *block(cfgan.latent_dim + cfgan.label_dim_input, 128, normalize=False),
             *block(128, 256),
             *block(256, 512),
             *block(512, 1024),

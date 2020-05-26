@@ -10,7 +10,13 @@ from copy import deepcopy
 from src.metrics import se, compute_thickness_ground_truth
 from src.generative_model.metrics import calculate_fid_given_paths, calculate_kid_given_paths
 from src.forward.uncertainty_estimation import get_uncertainty_per_batch
+
 import src.config as cfg
+import src.generative_model.config as cfgan
+if cfg.experiment == 'min_mnist':
+    import src.data.config_min_mnist as cfg_data
+elif cfg.experiment == 'max_mnist':
+    import src.data.config_max_mnist as cfg_data
 
 import torch 
 from torch.autograd import Variable
@@ -101,7 +107,7 @@ def uncertainty_selection(uncertainty, policy_type='quantile'):
 def monte_carlo_inference(target, generator, forward, testset, ncol = 4, nrow =2, sample_number_fid_kid = 300, size=2000):
 
     # ------------ Sample z from normal gaussian distribution with a bound ------------
-    z = get_truncated_normal((size, cfg.latent_dim), quant=quantile_rate_z_gen)
+    z = get_truncated_normal((size, cfgan.latent_dim), quant=quantile_rate_z_gen)
 
     # ------------ Generate sample from z and y target ------------
     images_generated, conditions = generate_sample_from_GAN(target, z, generator)
@@ -202,25 +208,25 @@ def compute_fid_mnist(gen_img, index_distribution, real_dataset, sample_size):
 def monte_carlo_inference_general(distribution, generator, forward, testset, ncol = 8, nrow =4, sample_number_fid_kid = 300, size=2000):
     
     if distribution == 'in':
-        conditions = np.random.uniform(1, cfg.limit_dataset + 1, size)
+        conditions = np.random.uniform(1, cfg_data.limit_dataset + 1, size)
 
         # FID needs
         df_test_in = pd.DataFrame(testset.labels.values, columns=['label'])
-        index_distribution = df_test_in[df_test_in['label']<=cfg.limit_dataset].index
+        index_distribution = df_test_in[df_test_in['label']<=cfg_data.limit_dataset].index
         print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
         real_dataset = deepcopy(testset.x_data)
 
     if distribution == 'out':
-        conditions = np.random.uniform(cfg.limit_dataset, cfg.max_dataset, size)
+        conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size)
         
         # FID needs
         df_test_out = pd.DataFrame(testset.labels.values, columns=['label'])
-        index_distribution = df_test_out[df_test_out['label']>cfg.limit_dataset].index
+        index_distribution = df_test_out[df_test_out['label']>cfg_data.limit_dataset].index
         print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
         real_dataset = deepcopy(testset.x_data)
 
     # ------------ Sample z from normal gaussian distribution with a bound ------------
-    z = get_truncated_normal((size, cfg.latent_dim), quant=quantile_rate_z_gen)
+    z = get_truncated_normal((size, cfgan.latent_dim), quant=quantile_rate_z_gen)
 
     # ------------ Generate sample from z and y target ------------
     images_generated = generate_sample_from_GAN__(conditions, z, generator)

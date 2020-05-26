@@ -15,11 +15,16 @@ from sklearn.preprocessing import MinMaxScaler
 
 import src.config as cfg
 
+if cfg.experiment == 'min_mnist':
+    import src.data.config_min_mnist as cfg_data
+elif cfg.experiment == 'max_mnist':
+    import src.data.config_max_mnist as cfg_data
+
 class MNISTDataset(Dataset):
     """ MNIST dataset."""
 
     # Initialize your data, download, etc.
-    def __init__(self, dataset, y_feature, data_type = 'morpho_mnist/original'):
+    def __init__(self, dataset, experiment, y_feature, data_type = 'morpho_mnist/original'):
 
         '''Initialise the data type:
         - data_type : original, global, thic, frac, local, plain, swel, thin
@@ -29,8 +34,7 @@ class MNISTDataset(Dataset):
 
             img_file, digit_file, morpho = self.__getdatasets__(dataset, data_type)
             # Get the labels
-            labels, minimum, maximum, index = self.__getlabels__(dataset, morpho, digit_file, y_feature)
-            labels, scaler = self.__get_scaler__(8, labels, y_feature)
+            labels, index = self.__getlabels__(dataset, morpho, digit_file, y_feature)
             print(labels.describe())
             self.maximum = np.max(labels[y_feature])
             self.minimum = np.min(labels[y_feature])
@@ -39,81 +43,16 @@ class MNISTDataset(Dataset):
             images = self.__transform__(load_idx(img_file))[index]
 
             # Select inputs
-            self.x_data = torch.from_numpy(images).unsqueeze(1)#.double()
+            self.x_data = torch.from_numpy(images).unsqueeze(1)
             self.y_data = torch.from_numpy(labels[y_feature].to_numpy())
-            self.labels = labels[y_feature]
-            self.scaler = scaler
-            self.maximum_label = self.__max_labels__()
-            self.minimum_label = self.__min_labels__()
             self.len = self.y_data.shape[0]
 
         if dataset == 'test_in':
 
-            img_file_tr, digit_file_tr, morpho_tr = self.__getdatasets__('train', data_type)
             img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test', data_type)
 
             # Get the labels
-            labels_tr, minimum_tr, maximum_tr, index_tr = self.__getlabels__('train', morpho_tr, digit_file_tr, y_feature)
-            labels_te, minimum_te, maximum_te, index_te = self.__getlabels__('test_in', morpho_te, digit_file_te, y_feature)
-
-            labels_tr, scaler_tr = self.__get_scaler__(8, labels_tr, y_feature)
-            labels_te = self.__scale__(labels_te, y_feature, scaler_tr)
-
-            print(labels_te.describe())
-            self.maximum = np.max(labels_te[y_feature])
-            self.minimum = np.min(labels_te[y_feature])
-
-            # Read images from MNIST
-            images = self.__transform__(load_idx(img_file_te))[index_te]
-
-            # Select inputs
-            self.x_data = torch.from_numpy(images).unsqueeze(1)#.double()
-            self.y_data = torch.from_numpy(labels_te[y_feature].to_numpy())
-            self.labels = labels_te[y_feature]
-            self.scaler = scaler_tr
-            self.maximum_label = self.__max_labels__()
-            self.minimum_label = self.__min_labels__()
-            self.len = self.y_data.shape[0]
-        
-        if dataset == 'test_out':
-
-            img_file_tr, digit_file_tr, morpho_tr = self.__getdatasets__('train', data_type)
-            img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test', data_type)
-
-            # Get the labels
-            labels_tr, minimum_tr, maximum_tr, index_tr = self.__getlabels__('train', morpho_tr, digit_file_tr, y_feature)
-            labels_te, minimum_te, maximum_te, index_te = self.__getlabels__('test_out', morpho_te, digit_file_te, y_feature)
-
-            labels_tr, scaler_tr = self.__get_scaler__(8, labels_tr, y_feature)
-            labels_te = self.__scale__(labels_te, y_feature, scaler_tr)
-
-            print(labels_te.describe())
-            self.maximum = np.max(labels_te[y_feature])
-            self.minimum = np.min(labels_te[y_feature])
-
-            # Read images from MNIST
-            images = self.__transform__(load_idx(img_file_te))[index_te]
-
-            # Select inputs
-            self.x_data = torch.from_numpy(images).unsqueeze(1)#.double()
-            self.y_data = torch.from_numpy(labels_te[y_feature].to_numpy())
-            self.labels = labels_te[y_feature]
-            self.scaler = scaler_tr
-            self.maximum_label = self.__max_labels__()
-            self.minimum_label = self.__min_labels__()
-            self.len = self.y_data.shape[0]
-        
-        if dataset == 'test':
-
-            img_file_tr, digit_file_tr, morpho_tr = self.__getdatasets__('train', data_type)
-            img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test', data_type)
-
-            # Get the labels
-            labels_tr, minimum_tr, maximum_tr, index_tr = self.__getlabels__('train', morpho_tr, digit_file_tr, y_feature)
-            labels_te, minimum_te, maximum_te, index_te = self.__getlabels__('test', morpho_te, digit_file_te, y_feature)
-
-            labels_tr, scaler_tr = self.__get_scaler__(8, labels_tr, y_feature)
-            labels_te = self.__scale__(labels_te, y_feature, scaler_tr)
+            labels_te, index_te = self.__getlabels__(dataset, morpho_te, digit_file_te, y_feature)
 
             print(labels_te.describe())
             self.maximum = np.max(labels_te[y_feature])
@@ -125,10 +64,44 @@ class MNISTDataset(Dataset):
             # Select inputs
             self.x_data = torch.from_numpy(images).unsqueeze(1)
             self.y_data = torch.from_numpy(labels_te[y_feature].to_numpy())
-            self.labels = labels_te[y_feature]
-            self.scaler = scaler_tr
-            self.maximum_label = self.__max_labels__()
-            self.minimum_label = self.__min_labels__()
+            self.len = self.y_data.shape[0]
+        
+        if dataset == 'test_out':
+
+            img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test', data_type)
+
+            # Get the labels
+            labels_te, index_te = self.__getlabels__(dataset, morpho_te, digit_file_te, y_feature)
+
+            print(labels_te.describe())
+            self.maximum = np.max(labels_te[y_feature])
+            self.minimum = np.min(labels_te[y_feature])
+
+            # Read images from MNIST
+            images = self.__transform__(load_idx(img_file_te))[index_te]
+
+            # Select inputs
+            self.x_data = torch.from_numpy(images).unsqueeze(1)
+            self.y_data = torch.from_numpy(labels_te[y_feature].to_numpy())
+            self.len = self.y_data.shape[0]
+        
+        if dataset == 'test':
+
+            img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test', data_type)
+
+            # Get the labels
+            labels_te, index_te = self.__getlabels__('test', morpho_te, digit_file_te, y_feature)
+
+            print(labels_te.describe())
+            self.maximum = np.max(labels_te[y_feature])
+            self.minimum = np.min(labels_te[y_feature])
+
+            # Read images from MNIST
+            images = self.__transform__(load_idx(img_file_te))[index_te]
+
+            # Select inputs
+            self.x_data = torch.from_numpy(images).unsqueeze(1)
+            self.y_data = torch.from_numpy(labels_te[y_feature].to_numpy())
             self.len = self.y_data.shape[0]
 
         if dataset == 'full':
@@ -136,11 +109,7 @@ class MNISTDataset(Dataset):
             img_file_tr, digit_file_tr, morpho_tr = self.__getdatasets__('train', data_type)
 
             # Get the labels
-            labels_tr, minimum_tr, maximum_tr, index_tr = self.__getlabels__('train', morpho_tr, digit_file_tr, y_feature)
-            labels_te, minimum_te, maximum_te, index_te = self.__getlabels__('test', morpho_tr, digit_file_tr, y_feature)
-
-            labels_tr, scaler_tr = self.__get_scaler__(8, labels_tr, y_feature)
-            labels_te = self.__scale__(labels_te, y_feature, scaler_tr)
+            labels_te, index_te = self.__getlabels__('test', morpho_tr, digit_file_tr, y_feature)
 
             print(labels_te.describe())
             self.maximum = np.max(labels_te[y_feature])
@@ -150,19 +119,9 @@ class MNISTDataset(Dataset):
             images = self.__transform__(load_idx(img_file_tr))[index_te]
 
             # Select inputs
-            self.x_data = torch.from_numpy(images).unsqueeze(1)#.double()
+            self.x_data = torch.from_numpy(images).unsqueeze(1)
             self.y_data = torch.from_numpy(labels_te[y_feature].to_numpy())
-            self.labels = labels_te[y_feature]
-            self.scaler = scaler_tr
-            self.maximum_label = self.__max_labels__()
-            self.minimum_label = self.__min_labels__()
             self.len = self.y_data.shape[0]
-
-    def __max_labels__(self,):
-        return np.max(self.labels)
-    
-    def __min_labels__(self,):
-        return np.min(self.labels)
 
     def __getdatasets__(self, dataset, data_type):
 
@@ -171,38 +130,36 @@ class MNISTDataset(Dataset):
 
         if dataset == 'test':
             return os.path.join(folder,'t10k-images-idx3-ubyte.gz'), os.path.join(folder,'t10k-labels-idx1-ubyte.gz'), os.path.join(folder,'t10k-morpho.csv')
-
         if dataset == 'train':
             return os.path.join(folder,'train-images-idx3-ubyte.gz'), os.path.join(folder,'train-labels-idx1-ubyte.gz'), os.path.join(folder,'train-morpho.csv')
 
-    def __getlabels__(self, dataset, file, digit_file, y_feature, in_bound=cfg.limit_dataset, out_bound=cfg.max_dataset):
+    def __getlabels__(self, dataset, file, digit_file, y_feature, in_bound=cfg_data.limit_dataset, out_bound=cfg_data.max_dataset):
         # Get the labels
         labels = pd.read_csv(file)
         labels['digit'] = load_idx(digit_file)
 
         if (dataset == 'train') | (dataset == 'test_in'):
-            #index = labels[(labels[y_feature] < bound) & (labels['digit'] == 1)].index
-            index = labels[labels[y_feature] < in_bound].index
+            if cfg.experience == 'max_mnist':
+                index = labels[labels[y_feature] < in_bound].index
+            elif cfg.experience == 'min_mnist':
+                index = labels[(labels[y_feature] > limit_bound) & (labels[y_feature] < max_bound)].index
             labels = labels.loc[index]
-            print(' ---------------------------------------- CHECK NANS')
-            print(labels[labels[y_feature].isnull()])
 
         elif dataset == 'test_out':
-            #index = labels[(labels[y_feature] < bound) & (labels['digit'] == 1)].index
-            index = labels[(labels[y_feature] >= in_bound) & (labels[y_feature] < out_bound)].index
+            if cfg.experience == 'max_mnist':
+                index = labels[(labels[y_feature] >= in_bound) & (labels[y_feature] < out_bound)].index
+            elif cfg.experience == 'min_mnist':
+                index = labels[labels[y_feature] < limit_bound].index
             labels = labels.loc[index]
-            print(' ---------------------------------------- CHECK NANS')
-            print(labels[labels[y_feature].isnull()])
 
         else:
-            index = labels[labels[y_feature] < out_bound].index
+            if cfg.experience == 'max_mnist':
+                index = labels[labels[y_feature] < out_bound].index
+            elif cfg.experience == 'min_mnist':
+                index = labels[labels[y_feature] < max_bound].index
             labels = labels.loc[index]
-            print(' ---------------------------------------- CHECK NANS')
-            print(labels[labels[y_feature].isnull()])
 
         print(labels.describe())
-        minimum = labels[y_feature].min()
-        maximum = labels[y_feature].max()
         print(f" -------------------- EDA -------------------- ")
         print()
         print(f"The extrem values from our labels:\nMaximum : {maximum}   Minimum : {minimum}")
@@ -212,23 +169,7 @@ class MNISTDataset(Dataset):
         print(check.groupby(y_feature)[y_feature].count())
         print(check.plot.hist(bins=20))
 
-        return labels, minimum, maximum, index
-
-    def __get_scaler__(self, extrem, df, feature):
-
-        # Normalize the labels
-        scaler = MinMaxScaler()
-        df_cons = df.append({feature:float(extrem)}, ignore_index=True)
-        scaler.fit(df_cons[feature].values.reshape(-1,1))
-        df['normalized_label'] = scaler.transform(df[feature].values.reshape(-1,1))
-
-        print(f"The extrem values from our normalized labels:\nMaximum : {df['normalized_label'].max()}   Minimum : {df['normalized_label'].min()}")
-
-        return df, scaler
-
-    def __scale__(self, df, feature, scaler):
-        df['normalized_label'] = scaler.transform(df[feature].values.reshape(-1,1))
-        return df
+        return labels, index
 
     def __transform__(self, X):
         X = X.astype('float32')
