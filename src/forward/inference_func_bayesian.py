@@ -11,7 +11,7 @@ import torch
 from torch.optim import Adam, lr_scheduler
 from torch.nn import functional as F
 
-import src.forward.config_bayesian as cfg
+import src.config_bayesian as cfg
 import src.forward.utils
 from src.forward.metrics import ELBO, calculate_kl, get_beta
 from src.forward.bcnn_models import BBB3Conv3FC, BBBAlexNet, BBBLeNet
@@ -34,7 +34,7 @@ def getModel(net_type, inputs, outputs, priors, layer_type, activation_type):
     else:
         raise ValueError('Network should be either [LeNet / AlexNet / 3Conv3FC')
 
-def train_model(net, optimizer, criterion, trainloader, scaler, num_ens=1, beta_type=0.1, epoch=None, num_epochs=None):
+def train_model(net, optimizer, criterion, trainloader, num_ens=1, beta_type=0.1, epoch=None, num_epochs=None):
     net.train()
     training_loss = 0.0
     accs = []
@@ -69,7 +69,7 @@ def train_model(net, optimizer, criterion, trainloader, scaler, num_ens=1, beta_
     return training_loss/len(trainloader), np.mean(accs), np.mean(kl_list)
 
 
-def validate_model(net, criterion, validloader, scaler, num_ens=1, beta_type=0.1, epoch=None, num_epochs=None):
+def validate_model(net, criterion, validloader, num_ens=1, beta_type=0.1, epoch=None, num_epochs=None):
     """Calculate ensemble accuracy and NLL Loss"""
     net.eval() #net.train()
     valid_loss = 0.0
@@ -111,7 +111,7 @@ def validate_model(net, criterion, validloader, scaler, num_ens=1, beta_type=0.1
     return valid_loss/len(validloader), np.mean(accs_val), np.mean(accs_avr), np.mean(accs_epistemic), np.mean(accs_aleatoric)
 
 
-def test_model(net, criterion, testinloader, testoutloader, scaler, num_ens=1, beta_type=0.1, epoch=None, num_epochs=None):
+def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type=0.1, epoch=None, num_epochs=None):
     """Calculate ensemble accuracy and NLL Loss"""
     net.eval()
 
@@ -200,7 +200,6 @@ def run_bayesian(dataset, net_type, ckpt_dir):
     beta_type = cfg.beta_type
 
     trainset, testset_in, testset_out, inputs, outputs = getDataset(dataset)
-    scaler = trainset.scaler
     train_loader, valid_loader, test_loader_in, test_loader_out = getDataloader(
         trainset, testset_in, testset_out, valid_size, batch_size, num_workers)
     net = getModel(net_type, inputs, outputs, priors, layer_type, activation_type).to(device)
@@ -219,11 +218,11 @@ def run_bayesian(dataset, net_type, ckpt_dir):
 
     for epoch in range(n_epochs+1):  # loop over the dataset multiple times
 
-        train_loss, train_acc, train_kl = train_model(net, optimizer, criterion, train_loader, scaler, num_ens=train_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
-        valid_loss, valid_acc, valid_acc_avr, valid_epi, valid_ale = validate_model(net, criterion, valid_loader, scaler, num_ens=valid_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
+        train_loss, train_acc, train_kl = train_model(net, optimizer, criterion, train_loader, num_ens=train_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
+        valid_loss, valid_acc, valid_acc_avr, valid_epi, valid_ale = validate_model(net, criterion, valid_loader, num_ens=valid_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
         
         if epoch % 5 == 0:
-            df_acc_in, df_acc_out = test_model(net, criterion, test_loader_in, test_loader_out, scaler, num_ens=valid_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
+            df_acc_in, df_acc_out = test_model(net, criterion, test_loader_in, test_loader_out, num_ens=valid_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
             
             # ------------ Uncertainty policy ------------
             index_certain_in = uncertainty_selection(df_acc_in['epistemic'].values)
