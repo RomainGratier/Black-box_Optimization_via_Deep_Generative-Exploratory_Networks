@@ -12,11 +12,11 @@ from src.generative_model.metrics import calculate_fid_given_paths, calculate_ki
 from src.forward.uncertainty_estimation import get_uncertainty_per_batch
 
 import src.config as cfg
-import src.generative_model.config as cfgan
+import src.config_gan as cfgan
 if cfg.experiment == 'min_mnist':
-    import src.data.config_min_mnist as cfg_data
+    import src.config_min_mnist as cfg_data
 elif cfg.experiment == 'max_mnist':
-    import src.data.config_max_mnist as cfg_data
+    import src.config_max_mnist as cfg_data
 
 import torch 
 from torch.autograd import Variable

@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict
 
-import src.generative_model.config_gan as cfgan
+import src.config_gan as cfgan
 import src.config as cfg
 
 def minmaxs(X):

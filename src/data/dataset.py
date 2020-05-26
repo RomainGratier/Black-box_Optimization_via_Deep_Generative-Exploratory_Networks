@@ -16,9 +16,9 @@ from sklearn.preprocessing import MinMaxScaler
 import src.config as cfg
 
 if cfg.experiment == 'min_mnist':
-    import src.data.config_min_mnist as cfg_data
+    import src.config_min_mnist as cfg_data
 elif cfg.experiment == 'max_mnist':
-    import src.data.config_max_mnist as cfg_data
+    import src.config_max_mnist as cfg_data
 
 class MNISTDataset(Dataset):
     """ MNIST dataset."""
