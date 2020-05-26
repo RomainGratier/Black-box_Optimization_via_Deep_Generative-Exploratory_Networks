@@ -9,7 +9,7 @@ from torch.nn import Parameter
 
 from src.forward import utils
 from src.forward.metrics import calculate_kl as KL_DIV
-import src.forward.config_bayesian as cfg
+import src.config_bayesian as cfg
 from ..misc import ModuleWrapper
 
 

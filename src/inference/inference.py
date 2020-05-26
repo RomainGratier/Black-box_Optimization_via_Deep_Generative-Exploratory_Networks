@@ -274,6 +274,8 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
     print(f"Mean FID : {fid_value_gen[0]} ± {fid_value_gen[1]} \t Mean KID : {kid_value_gen[0]} ± {kid_value_gen[1]}")
     
     plots_some_results(distribution, images_generated, conditions, forward_pred, testset, index_distribution, forward, fid_value_gen, kid_value_gen, nrow=4, ncol=8)
+    
+    return [np.mean(se_measure), np.std(se_measure)], fid_value_gen, kid_value_gen
 
 
 def plots_some_results(distribution, images_generated, conditions, forward_pred, testset, index_distribution, forward, fid_value_gen, kid_value_gen, nrow=4, ncol=8):
