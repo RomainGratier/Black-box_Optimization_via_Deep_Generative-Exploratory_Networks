@@ -42,9 +42,13 @@ def generate_sample(minimum, maximum, sample_size, generator):
     return generator(z, labels)
 
 def compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size):
-
-    gen_img_in_distribution = generate_sample(cfg_data.min_dataset, cfg_data.limit_dataset, sample_size, generator)
-    gen_img_out_distribution = generate_sample(cfg_data.limit_dataset, cfg_data.max_dataset, sample_size, generator)
+    
+    if cfg.experiment == 'min_mnist':
+        gen_img_in_distribution = generate_sample(cfg_data.limit_dataset, cfg_data.max_dataset, sample_size, generator)
+        gen_img_out_distribution = generate_sample(cfg_data.min_dataset, cfg_data.limit_dataset, sample_size, generator)
+    elif cfg.experiment == 'max_mnist':
+        gen_img_in_distribution = generate_sample(cfg_data.min_dataset, cfg_data.limit_dataset, sample_size, generator)
+        gen_img_out_distribution = generate_sample(cfg_data.limit_dataset, cfg_data.max_dataset, sample_size, generator)
 
     random_id_in_distribution = random.sample(index_in_distribution.tolist(), sample_size)
     random_id_out_distribution = random.sample(index_out_distribution.tolist(), sample_size)
@@ -104,8 +108,8 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
 
 def save_model_check(dist, df_check, mean_out, best_res, df_acc_gen, path_generator, generator):
     if df_check is not None:
-        if mean_out < df_check[f'mse_{dist}'].iloc[-1]:
-            print(f" ---------- Better Results {dist} distribution of : {df_check[f'mse_{dist}'].iloc[-1] - mean_out} ---------- ")
+        if mean_out < df_check[f'kid_{dist}'].iloc[-1]:
+            print(f" ---------- Better Results {dist} distribution of : {df_check[f'kid_{dist}'].iloc[-1] - mean_out} ---------- ")
             torch.save(generator, os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
             save_obj_csv(df_acc_gen, os.path.join(path_generator, f"results_{dist}_distribution"))
 
@@ -174,19 +178,36 @@ def train_gan_model(dataloader, testset, path_generator):
     os.makedirs("images", exist_ok=True)
 
     # FID needs
-    df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
-    df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
-    index_in_distribution = df_test_in[df_test_in['label']<=cfg_data.limit_dataset].index
-    index_out_distribution = df_test_out[df_test_out['label']>cfg_data.limit_dataset].index
-    print(f'size of in distribution data for fid/kid : {len(index_in_distribution)}')
-    print(f'size of out distribution data for fid/kid : {len(index_out_distribution)}')
-    real_dataset_in = deepcopy(testset.x_data)
-    real_dataset_out = deepcopy(testset.x_data)
+    if cfg.experiment == 'min_mnist':
+        # FID needs
+        df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
+        df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
+        index_in_distribution = df_test_in[df_test_in['label'] > cfg_data.limit_dataset].index
+        index_out_distribution = df_test_out[df_test_out['label'] <= cfg_data.limit_dataset].index
+        print(f'size of in distribution data for fid/kid : {len(index_in_distribution)}')
+        print(f'size of out distribution data for fid/kid : {len(index_out_distribution)}')
+        real_dataset_in = deepcopy(testset.x_data)
+        real_dataset_out = deepcopy(testset.x_data)
 
-    arr = np.around(np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)]), decimals = 2)
-    print(f"Checkup the plots of the displayed labels {arr}")
-    in_distribution_index = np.where(arr <= cfg_data.limit_dataset)
-    out_distribution_index = np.where(arr > cfg_data.limit_dataset)
+        arr = np.around(np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)]), decimals = 2)
+        print(f"Checkup the plots of the displayed labels {arr}")
+        in_distribution_index = np.where(arr > cfg_data.limit_dataset)
+        out_distribution_index = np.where(arr <= cfg_data.limit_dataset)
+    
+    elif cfg.experiment == 'max_mnist':
+        df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
+        df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
+        index_in_distribution = df_test_in[df_test_in['label'] <= cfg_data.limit_dataset].index
+        index_out_distribution = df_test_out[df_test_out['label'] > cfg_data.limit_dataset].index
+        print(f'size of in distribution data for fid/kid : {len(index_in_distribution)}')
+        print(f'size of out distribution data for fid/kid : {len(index_out_distribution)}')
+        real_dataset_in = deepcopy(testset.x_data)
+        real_dataset_out = deepcopy(testset.x_data)
+
+        arr = np.around(np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)]), decimals = 2)
+        print(f"Checkup the plots of the displayed labels {arr}")
+        in_distribution_index = np.where(arr <= cfg_data.limit_dataset)
+        out_distribution_index = np.where(arr > cfg_data.limit_dataset)
 
     best_res_in = 100000
     best_res_out = 100000
@@ -201,9 +222,10 @@ def train_gan_model(dataloader, testset, path_generator):
             print("learning rate change!")
 
         for i, (imgs, labels) in enumerate(dataloader):
+            batch_size = labels.shape[0]
             # Adversarial ground truths
-            valid = Variable(FloatTensor(cfgan.batch_size, 1).fill_(1.0), requires_grad=False)
-            fake = Variable(FloatTensor(cfgan.batch_size, 1).fill_(0.0), requires_grad=False)
+            valid = Variable(FloatTensor(batch_size, 1).fill_(1.0), requires_grad=False)
+            fake = Variable(FloatTensor(batch_size, 1).fill_(0.0), requires_grad=False)
 
             # Configure input
             real_imgs = Variable(imgs.type(FloatTensor))
@@ -216,8 +238,8 @@ def train_gan_model(dataloader, testset, path_generator):
             optimizer_G.zero_grad()
 
             # Sample noise and labels as generator input
-            z = Variable(FloatTensor(np.random.normal(0, 1, (cfgan.batch_size, cfgan.latent_dim))))
-            gen_labels = Variable(FloatTensor(np.random.rand(cfgan.batch_size)*cfg_data.max_dataset)) 
+            z = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, cfgan.latent_dim))))
+            gen_labels = Variable(FloatTensor(np.random.rand(batch_size)*cfg_data.max_dataset)) 
 
             # Generate a batch of images
             gen_imgs = generator(z, gen_labels)
@@ -254,7 +276,10 @@ def train_gan_model(dataloader, testset, path_generator):
             d_loss_check.append(d_loss.item())
 
             batches_done = epoch * len(dataloader) + i
-            if batches_done % cfgan.sample_interval == 0:
+
+            if epoch == 0:
+                pass
+            elif batches_done % cfgan.sample_interval == 0:
 
                 print(
                   "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
@@ -283,7 +308,7 @@ def train_gan_model(dataloader, testset, path_generator):
                 df_acc_gen = df_acc_gen.append(df, ignore_index=True)
 
                 # Check if we have better results
-                df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['mse_in'].values, best_res_in, df_acc_gen, path_generator, generator)
-                df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['mse_out'].values, best_res_out, df_acc_gen, path_generator, generator)
+                df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['kid_in'].values, best_res_in, df_acc_gen, path_generator, generator)
+                df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['kid_out'].values, best_res_out, df_acc_gen, path_generator, generator)
 
     return se_gan_in_distribution, se_gan_out_distribution, df_acc_gen

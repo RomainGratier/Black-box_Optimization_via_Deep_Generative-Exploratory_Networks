@@ -10,7 +10,7 @@ import numpy as np
 import torch.nn as nn
 from torch.optim import Adam, lr_scheduler
 
-import src.forward.config_frequentist as cfg
+import src.config_frequentist as cfg
 from src.forward.cnn_models import AlexNet, LeNet, ThreeConvThreeFC
 from src.data import getDataset, getDataloader
 from src.metrics import se

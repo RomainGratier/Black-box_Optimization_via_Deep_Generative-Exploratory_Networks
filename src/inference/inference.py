@@ -208,22 +208,32 @@ def compute_fid_mnist(gen_img, index_distribution, real_dataset, sample_size):
 def monte_carlo_inference_general(distribution, generator, forward, testset, ncol = 8, nrow =4, sample_number_fid_kid = 300, size=2000):
     
     if distribution == 'in':
-        conditions = np.random.uniform(1, cfg_data.limit_dataset + 1, size)
-
-        # FID needs
-        df_test_in = pd.DataFrame(testset.labels.values, columns=['label'])
-        index_distribution = df_test_in[df_test_in['label']<=cfg_data.limit_dataset].index
-        print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
-        real_dataset = deepcopy(testset.x_data)
+        if cfg.experiment == 'max_mnist':
+            conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size)
+            df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
+            index_distribution = df_test_in[df_test_in['label']<=cfg_data.limit_dataset].index
+            print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
+            real_dataset = deepcopy(testset.x_data)
+        if cfg.experiment == 'min_mnist':
+            conditions = np.random.uniform(cfg_data.limit_dataset , cfg_data.max_dataset , size)
+            df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
+            index_distribution = df_test_in[(df_test_in['label'] > cfg_data.limit_dataset) & df_test_in['label'] <= cfg_data.max_dataset].index
+            print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
+            real_dataset = deepcopy(testset.x_data)
 
     if distribution == 'out':
-        conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size)
-        
-        # FID needs
-        df_test_out = pd.DataFrame(testset.labels.values, columns=['label'])
-        index_distribution = df_test_out[df_test_out['label']>cfg_data.limit_dataset].index
-        print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
-        real_dataset = deepcopy(testset.x_data)
+        if cfg.experiment == 'max_mnist':
+            conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size)
+            df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
+            index_distribution = df_test_out[df_test_out['label']>cfg_data.limit_dataset].index
+            print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
+            real_dataset = deepcopy(testset.x_data)
+        if cfg.experiment == 'min_mnist':
+            conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset , size)
+            df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
+            index_distribution = df_test_out[df_test_out['label'] <= cfg_data.limit_dataset].index
+            print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
+            real_dataset = deepcopy(testset.x_data)
 
     # ------------ Sample z from normal gaussian distribution with a bound ------------
     z = get_truncated_normal((size, cfgan.latent_dim), quant=quantile_rate_z_gen)
@@ -238,7 +248,7 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
 
     except:
         y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(images_generated, size=32), device)
-        
+ 
         # ------------ Uncertainty policy ------------
         index_certain = uncertainty_selection(epistemic.squeeze())
         y_pred = y_pred[index_certain]
@@ -249,7 +259,7 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
 
     # ------------ Compute FID/KID from testset ------------
     fid_value_gen, kid_value_gen = compute_fid_mnist(images_generated, index_distribution, real_dataset, size)
-    
+
     # Move variable to cpu
     images_generated = images_generated.squeeze(1).cpu().detach().numpy()
 
@@ -258,7 +268,7 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
 
     # ------------ Compute the se between the target and the morpho measure predictions ------------
     se_measure = se(thickness, y_pred)
-    
+
     print(f"{distribution} distribution results")
     print(f"The mean squared error : {np.mean(se_measure)} \t The std of the squared error : {np.std(se_measure)}")
     print(f"Mean FID : {fid_value_gen[0]} ± {fid_value_gen[1]} \t Mean KID : {kid_value_gen[0]} ± {kid_value_gen[1]}")
