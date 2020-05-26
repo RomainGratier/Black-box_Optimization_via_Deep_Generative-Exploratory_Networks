@@ -108,8 +108,8 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
 
 def save_model_check(dist, df_check, mean_out, best_res, df_acc_gen, path_generator, generator):
     if df_check is not None:
-        if mean_out < df_check[f'kid_{dist}'].iloc[-1]:
-            print(f" ---------- Better Results {dist} distribution of : {df_check[f'kid_{dist}'].iloc[-1] - mean_out} ---------- ")
+        if mean_out < df_check[f'fid_{dist}'].iloc[-1]:
+            print(f" ---------- Better Results {dist} distribution of : {df_check[f'fid_{dist}'].iloc[-1] - mean_out} ---------- ")
             torch.save(generator, os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
             save_obj_csv(df_acc_gen, os.path.join(path_generator, f"results_{dist}_distribution"))
 
@@ -308,7 +308,7 @@ def train_gan_model(dataloader, testset, path_generator):
                 df_acc_gen = df_acc_gen.append(df, ignore_index=True)
 
                 # Check if we have better results
-                df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['kid_in'].values, best_res_in, df_acc_gen, path_generator, generator)
-                df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['kid_out'].values, best_res_out, df_acc_gen, path_generator, generator)
+                df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['fid_in'].values, best_res_in, df_acc_gen, path_generator, generator)
+                df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['fid_out'].values, best_res_out, df_acc_gen, path_generator, generator)
 
     return se_gan_in_distribution, se_gan_out_distribution, df_acc_gen
