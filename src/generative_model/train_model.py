@@ -14,6 +14,7 @@ cuda = True if torch.cuda.is_available() else False
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
+import src.generative_model.config_gan as cfgan
 import src.config as cfg
 
 from src.metrics import se, compute_thickness_ground_truth
@@ -29,7 +30,7 @@ def save_obj_csv(d, path):
 
 def generate_sample(minimum, maximum, sample_size, generator):
     # Sample noise
-    z = Variable(FloatTensor(np.random.normal(0, 1, (sample_size, cfg.latent_dim))))
+    z = Variable(FloatTensor(np.random.normal(0, 1, (sample_size, cfgan.latent_dim))))
     # Get labels ranging from 0 to n_classes for n rows
     labels = np.random.uniform(minimum, maximum, sample_size)
     labels = Variable(FloatTensor(labels))
@@ -69,7 +70,7 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
 
     ## -------------- In distribution --------------
     # Sample noise
-    z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfg.latent_dim))))
+    z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim))))
     # Get labels ranging from 0 to n_classes for n rows
     labels = np.array([num for _ in range(n_row) for num in np.linspace(cfg.min_dataset, cfg.max_dataset, 10, endpoint=True)])
     labels = Variable(FloatTensor(labels))
@@ -158,8 +159,8 @@ def train_gan_model(dataloader, testset, path_generator):
         adversarial_loss.cuda()
 
     # Optimizers
-    optimizer_G = torch.optim.Adam(generator.parameters(), lr=cfg.lr, betas=(cfg.b1, cfg.b2))
-    optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=cfg.lr, betas=(cfg.b1, cfg.b2))
+    optimizer_G = torch.optim.Adam(generator.parameters(), lr=cfgan.lr, betas=(cfgan.b1, cfgan.b2))
+    optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=cfgan.lr, betas=(cfgan.b1, cfgan.b2))
 
     FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
     LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
@@ -186,7 +187,7 @@ def train_gan_model(dataloader, testset, path_generator):
     best_res_in = 100000
     best_res_out = 100000
 
-    for epoch in range(cfg.n_epochs):
+    for epoch in range(cfgan.n_epochs):
         d_loss_check = []
         g_loss_check = []
 
@@ -196,12 +197,9 @@ def train_gan_model(dataloader, testset, path_generator):
             print("learning rate change!")
 
         for i, (imgs, labels) in enumerate(dataloader):
-            ## Initialization
-            batch_size = imgs.shape[0]
-
             # Adversarial ground truths
-            valid = Variable(FloatTensor(batch_size, 1).fill_(1.0), requires_grad=False)
-            fake = Variable(FloatTensor(batch_size, 1).fill_(0.0), requires_grad=False)
+            valid = Variable(FloatTensor(cfgan.batch_size, 1).fill_(1.0), requires_grad=False)
+            fake = Variable(FloatTensor(cfgan.batch_size, 1).fill_(0.0), requires_grad=False)
 
             # Configure input
             real_imgs = Variable(imgs.type(FloatTensor))
@@ -214,8 +212,8 @@ def train_gan_model(dataloader, testset, path_generator):
             optimizer_G.zero_grad()
 
             # Sample noise and labels as generator input
-            z = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, cfg.latent_dim))))
-            gen_labels = Variable(FloatTensor(np.random.rand(batch_size)*cfg.max_dataset)) 
+            z = Variable(FloatTensor(np.random.normal(0, 1, (cfgan.batch_size, cfgan.latent_dim))))
+            gen_labels = Variable(FloatTensor(np.random.rand(cfgan.batch_size)*cfg.max_dataset)) 
 
             # Generate a batch of images
             gen_imgs = generator(z, gen_labels)
@@ -252,18 +250,18 @@ def train_gan_model(dataloader, testset, path_generator):
             d_loss_check.append(d_loss.item())
 
             batches_done = epoch * len(dataloader) + i
-            if batches_done % cfg.sample_interval == 0:
+            if batches_done % cfgan.sample_interval == 0:
 
                 print(
                   "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
-                  % (epoch, cfg.n_epochs, i, len(dataloader), np.mean(d_loss_check), np.mean(g_loss_check))
+                  % (epoch, cfgan.n_epochs, i, len(dataloader), np.mean(d_loss_check), np.mean(g_loss_check))
                 )
 
                 # Delete useless data from GPU
                 del valid; del fake; del real_imgs; del labels; del z; del gen_labels; del g_loss; del d_loss; del gen_imgs; del validity;
                 torch.cuda.empty_cache()
 
-                se_gan, fid_in, kid_in, fid_out, kid_out = sample_image(cfg.n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, cfg.fid_kid_sample)
+                se_gan, fid_in, kid_in, fid_out, kid_out = sample_image(cfgan.n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, cfgan.fid_kid_sample)
 
                 mean_in_se = np.mean(se_gan[in_distribution_index])
                 mean_out_se = np.mean(se_gan[out_distribution_index])
