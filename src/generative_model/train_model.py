@@ -112,6 +112,7 @@ def save_model_check(dist, df_check, mean_out, best_res, df_acc_gen, path_genera
             print(f" ---------- Better Results {dist} distribution of : {df_check[f'fid_{dist}'].iloc[-1] - mean_out} ---------- ")
             if cuda:
                 torch.save(generator.cpu(), os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
+                generator.cuda()
             else:
                 torch.save(generator, os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
             save_obj_csv(df_acc_gen, os.path.join(path_generator, f"results_{dist}_distribution"))
@@ -124,6 +125,7 @@ def save_model_check(dist, df_check, mean_out, best_res, df_acc_gen, path_genera
             print(f" ---------- Model Improving {dist} distribution of : {best_res - mean_out}---------- ")
             if cuda:
                 torch.save(generator.cpu(), os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
+                generator.cuda()
             else:
                 torch.save(generator, os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
             save_obj_csv(df_acc_gen, os.path.join(path_generator, f"results_{dist}_distribution"))

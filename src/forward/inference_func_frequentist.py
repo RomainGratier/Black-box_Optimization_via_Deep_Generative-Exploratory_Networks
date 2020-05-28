@@ -178,6 +178,7 @@ def run_frequentist(dataset, net_type, ckpt_dir):
                 valid_loss_max, valid_loss))
             if cuda:
                 torch.save(net.cpu(), ckpt_name)
+                net.cuda()
             else:
                 torch.save(net, ckpt_name)
             valid_loss_max = valid_loss
