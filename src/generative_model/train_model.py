@@ -110,7 +110,10 @@ def save_model_check(dist, df_check, mean_out, best_res, df_acc_gen, path_genera
     if df_check is not None:
         if mean_out < df_check[f'fid_{dist}'].iloc[-1]:
             print(f" ---------- Better Results {dist} distribution of : {df_check[f'fid_{dist}'].iloc[-1] - mean_out} ---------- ")
-            torch.save(generator, os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
+            if cuda:
+                torch.save(generator.cpu(), os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
+            else:
+                torch.save(generator, os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
             save_obj_csv(df_acc_gen, os.path.join(path_generator, f"results_{dist}_distribution"))
 
             best_res = mean_out
@@ -119,7 +122,10 @@ def save_model_check(dist, df_check, mean_out, best_res, df_acc_gen, path_genera
     else:
         if mean_out < best_res:
             print(f" ---------- Model Improving {dist} distribution of : {best_res - mean_out}---------- ")
-            torch.save(generator, os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
+            if cuda:
+                torch.save(generator.cpu(), os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
+            else:
+                torch.save(generator, os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
             save_obj_csv(df_acc_gen, os.path.join(path_generator, f"results_{dist}_distribution"))
 
             best_res = mean_out
