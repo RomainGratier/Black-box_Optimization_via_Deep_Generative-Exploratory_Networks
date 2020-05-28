@@ -52,3 +52,6 @@ def compute_thickness_ground_truth(images_generated, feature = 'thickness'):
 
 def se(y_true, y_pred):
     return np.square(np.subtract(y_true, y_pred))
+
+def re(y_true, y_pred):
+    return np.abs(np.subtract(y_true, y_pred))
