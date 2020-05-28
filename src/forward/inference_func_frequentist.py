@@ -20,7 +20,7 @@ from torch.nn import functional as F
 
 # CUDA settings
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+cuda = True if torch.cuda.is_available() else False
 
 def getModel(net_type, inputs, outputs):
     print(inputs)
@@ -176,7 +176,10 @@ def run_frequentist(dataset, net_type, ckpt_dir):
         if valid_loss <= valid_loss_max:
             print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(
                 valid_loss_max, valid_loss))
-            torch.save(net, ckpt_name)
+            if cuda:
+                torch.save(net.cpu(), ckpt_name)
+            else:
+                torch.save(net, ckpt_name)
             valid_loss_max = valid_loss
             df_acc_in['save_flag'] = True
             df_acc_out['save_flag'] = True

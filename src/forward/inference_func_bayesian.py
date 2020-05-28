@@ -23,6 +23,7 @@ from src.uncertainty_policy import uncertainty_selection
 
 # CUDA settings
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+cuda = True if torch.cuda.is_available() else False
 
 def getModel(net_type, inputs, outputs, priors, layer_type, activation_type):
     if (net_type == 'lenet'):
@@ -237,9 +238,16 @@ def run_bayesian(dataset, net_type, ckpt_dir, verbose=False):
         flag_vec_out[index_certain_out] = True
         df_acc_out['uncertainty_flag'] = flag_vec_out
         
-        # Validation flag
+        # ------------ Validation flag ------------
         df_acc_out['save_flag'] = False
         df_acc_in['save_flag'] = False
+        
+        # ------------ Correlation ------------
+        stand = preprocessing.StandardScaler()
+        df_corr_in = pd.DataFrame(stand.fit_transform(df_acc_in[['se_forward_avg', 'epistemic']]))
+        corr_in = list(pearsonr(df_corr_in.iloc[:,0], df_corr_in.iloc[:,1]))
+        df_corr_out = pd.DataFrame(stand.fit_transform(df_acc_out[['se_forward_avg', 'epistemic']]))
+        corr_out = list(pearsonr(df_corr_out.iloc[:,0], df_corr_out.iloc[:,1]))
         
         print('TESTING : IN dist  Forward mse: {:.4f}\tForward avg mse: {:.4f}\tepistemic mean: {:.4f}\taleatoric mean: {:.4f}\tcorrelation uncertainty {:.4f} p_val {:.4f} ||  OUT dist  Forward mse:{:.4f}\tForward avg mse: {:.4f}\tepistemic mean: {:.4f}\taleatoric mean: {:.4f} \tcorrelation uncertainty {:.4f} p_val {:.4f}'.format(
             np.mean(df_acc_in['se_forward']), np.mean(df_acc_in['se_forward_avg']), np.mean(df_acc_in['epistemic']), np.mean(df_acc_in['aleatoric']), corr_in[0], corr_in[1], np.mean(df_acc_out['se_forward']), np.mean(df_acc_out['se_forward_avg']), np.mean(df_acc_out['epistemic']), np.mean(df_acc_out['aleatoric']),  corr_out[0], corr_out[1]))
@@ -250,7 +258,10 @@ def run_bayesian(dataset, net_type, ckpt_dir, verbose=False):
         if valid_loss <= valid_loss_max:
             print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(
                 valid_loss_max, valid_loss))
-            torch.save(net, ckpt_name)
+            if cuda:
+                torch.save(net.cpu(), ckpt_name)
+            else:
+                torch.save(net, ckpt_name)
             valid_loss_max = valid_loss
             df_acc_out['save_flag'] = True
             df_acc_in['save_flag'] = True
@@ -263,13 +274,6 @@ def run_bayesian(dataset, net_type, ckpt_dir, verbose=False):
         df_acc_final_out.to_csv(os.path.join(ckpt_dir,f'results_out_{net_type}_{layer_type}_{activation_type}.csv'))
 
         if verbose:
-            ## --------------------------------------------------------------------------------------------------------------
-            stand = preprocessing.StandardScaler()
-            df_corr_in = pd.DataFrame(stand.fit_transform(df_acc_in[['se_forward_avg', 'epistemic']]))
-            corr_in = list(pearsonr(df_corr_in.iloc[:,0], df_corr_in.iloc[:,1]))
-            df_corr_out = pd.DataFrame(stand.fit_transform(df_acc_out[['se_forward_avg', 'epistemic']]))
-            corr_out = list(pearsonr(df_corr_out.iloc[:,0], df_corr_out.iloc[:,1]))
-
             labels_in = np.around(df_acc_in['label'].values, decimals = 0).squeeze()
             for label in np.unique(labels_in):
                 print(label)
