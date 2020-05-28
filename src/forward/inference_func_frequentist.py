@@ -82,12 +82,12 @@ def validate_model(net, criterion, validloader, num_ens=1, beta_type=0.1, epoch=
     return valid_loss/len(validloader), np.mean(accs_val)
 
 
-def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type=0.1, epoch=None, num_epochs=None):
+def test_model(net, criterion, testinloader, testoutloader, iteration=None, num_ens=1, beta_type=0.1, epoch=None, num_epochs=None):
     """Calculate ensemble accuracy and NLL Loss"""
     net.eval()
 
-    df_acc_in = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'se_forward'])
-    df_acc_out = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'se_forward'])
+    df_acc_in = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'se_forward'])
+    df_acc_out = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'se_forward'])
 
     accs_val = []
     accs_avr = []
@@ -103,11 +103,11 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
         # accuracy measures model's ability
         se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         
-        df = pd.DataFrame(np.full(inputs.shape[0], epoch), columns=['epoch'])
+        df = pd.DataFrame(np.full(inputs.shape[0], iteration), columns=['iteration'])
         df['label'] = labels.cpu().detach().numpy()
         df['val_pred'] = net_out.cpu().detach().numpy()
         df['se_forward'] = se_model
-        df_acc_in = df_acc_in.append(df)
+        df_acc_in = df_acc_in.append(df, ignore_index=True)
     
     for i, (inputs, labels) in enumerate(testoutloader):
         inputs, labels = inputs.to(device), labels.to(device)
@@ -119,11 +119,11 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
         # accuracy measures model's ability
         se_model = se(net_out.cpu().detach().numpy().squeeze(1), labels.cpu().detach().numpy())
         
-        df = pd.DataFrame(np.full(inputs.shape[0], epoch), columns=['epoch'])
+        df = pd.DataFrame(np.full(inputs.shape[0], iteration), columns=['iteration'])
         df['label'] = labels.cpu().detach().numpy()
         df['val_pred'] = net_out.cpu().detach().numpy()
         df['se_forward'] = se_model
-        df_acc_out = df_acc_out.append(df)
+        df_acc_out = df_acc_out.append(df, ignore_index=True)
 
     return df_acc_in, df_acc_out
 
@@ -152,30 +152,25 @@ def run_frequentist(dataset, net_type, ckpt_dir):
     lr_sched = lr_scheduler.ReduceLROnPlateau(optimizer, patience=6, verbose=True)
     valid_loss_max = np.Inf
 
-    df_acc_final_in = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'se_forward'])
-    df_acc_final_out = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'se_forward'])
+    df_acc_final_in = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'se_forward', 'save_flag'])
+    df_acc_final_out = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'se_forward', 'save_flag'])
 
     for epoch in range(n_epochs+1):  # loop over the dataset multiple times
 
         train_loss, train_acc = train_model(net, optimizer, criterion, train_loader, epoch=epoch, num_epochs=n_epochs)
         valid_loss, valid_acc = validate_model(net, criterion, valid_loader, epoch=epoch, num_epochs=n_epochs)
+        df_acc_in, df_acc_out = test_model(net, criterion, test_loader_in, test_loader_out, iteration=epoch*trainset.len, epoch=epoch, num_epochs=n_epochs)
+        
         lr_sched.step(valid_loss)
 
-        if epoch % 1 == 0:
-            df_acc_in, df_acc_out = test_model(net, criterion, test_loader_in, test_loader_out, epoch=epoch, num_epochs=n_epochs)
-            df_acc_final_in = df_acc_final_in.append(df_acc_in)
-            df_acc_final_out = df_acc_final_out.append(df_acc_out)
-
-            print('TESTING : IN dist  Forward mse: {:.4f} ||  OUT dist  Forward mse:{:.4f}'.format(
-                np.mean(df_acc_in['se_forward']), np.mean(df_acc_out['se_forward'])))
-
-            df_acc_final_in.to_csv(os.path.join(ckpt_dir,f'results_in_{net_type}.csv'))
-            df_acc_final_out.to_csv(os.path.join(ckpt_dir,f'results_out_{net_type}.csv'))
-        
+        # Validation flag
+        df_acc_in['save_flag'] = False
+        df_acc_out['save_flag'] = False
         
         print('Epoch: {} \tTraining Loss: {:.4f} \tTraining Accuracy: {:.4f} \tValidation Loss: {:.4f} \tValidation Accuracy: {:.4f}'.format(
             epoch, train_loss, train_acc, valid_loss, valid_acc))
-
+        print('TESTING : IN dist  Forward mse: {:.4f} ||  OUT dist  Forward mse:{:.4f}'.format(
+            np.mean(df_acc_in['se_forward']), np.mean(df_acc_out['se_forward'])))
 
         # save model if validation accuracy has increased
         if valid_loss <= valid_loss_max:
@@ -183,3 +178,12 @@ def run_frequentist(dataset, net_type, ckpt_dir):
                 valid_loss_max, valid_loss))
             torch.save(net, ckpt_name)
             valid_loss_max = valid_loss
+            df_acc_in['save_flag'] = True
+            df_acc_out['save_flag'] = True
+
+        df_acc_final_in = df_acc_final_in.append(df_acc_in, ignore_index=True)
+        df_acc_final_out = df_acc_final_out.append(df_acc_out, ignore_index=True)
+
+        # ------------ Save results ------------
+        df_acc_final_in.to_csv(os.path.join(ckpt_dir,f'results_in_{net_type}.csv'))
+        df_acc_final_out.to_csv(os.path.join(ckpt_dir,f'results_out_{net_type}.csv'))
