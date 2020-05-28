@@ -68,6 +68,76 @@ def compute_fid_mnist(gen_img, index_distribution, real_dataset, sample_size):
 
     return fid_value, kid_value
 
+def compute_global_measures(distribution, images_generated, index_distribution, real_dataset, conditions, forward, size):
+
+    # ------------ Compute Global FID/KID from testset ------------
+    size = np.around(images_generated.shape[0] * cfginf.quantile_rate_uncertainty_policy , decimals=0)
+    random_index = random.sample(np.arange(images_generated.shape[0]).tolist(), int(size))
+    images_generated = images_generated[random_index]
+    
+    # ------------ Compute the forward predictions ------------
+    try:
+        y_pred = forward(F.interpolate(images_generated, size=32)).squeeze(1).cpu().detach().numpy()
+
+    except:
+        y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(images_generated, size=32), device)
+    
+    # ------------ Compute FID/KID from testset ------------
+    fid_value_gen_glob, kid_value_gen_glob = compute_fid_mnist(images_generated, index_distribution, real_dataset, size)
+    
+    # ------------ Compare the forward model and the Measure from morphomnist ------------
+    # Move variable to cpu
+    images_generated = images_generated.squeeze(1).cpu().detach().numpy()
+    thickness = compute_thickness_ground_truth(images_generated)
+    
+    # ------------ Compute the se between the target and the morpho measure predictions ------------
+    se_measure_glob = se(thickness, y_pred)
+    re_measure_glob = re(thickness, y_pred)
+    
+    print(f"{distribution} distribution GLOBAL results")
+    print(f"The mean squared error : {np.mean(se_measure_glob)} \t The std of the squared error : {np.std(se_measure_glob)}")
+    print(f"The mean relative error : {np.mean(re_measure_glob)} \t The std of the squared error : {np.std(re_measure_glob)}")
+    print(f"Mean FID : {fid_value_gen_glob[0]} ± {fid_value_gen_glob[1]} \t Mean KID : {kid_value_gen_glob[0]} ± {kid_value_gen_glob[1]}")
+    
+    return se_measure_glob, re_measure_glob, fid_value_gen_glob, kid_value_gen_glob
+
+def compute_policy_measures(distribution, images_generated, index_distribution, real_dataset, conditions, forward, size):
+    
+    # ------------ Compute the se between the target and the forward model predictions ------------
+    try:
+        y_pred = forward(F.interpolate(images_generated, size=32)).squeeze(1).cpu().detach().numpy()
+        forward_pred = np.array(y_pred).T
+
+    except:
+        y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(images_generated, size=32), device)
+ 
+        # ------------ Uncertainty policy ------------
+        index_certain = uncertainty_selection(epistemic.squeeze())
+        y_pred = y_pred[index_certain]
+        epistemic = epistemic[index_certain]
+        forward_pred = np.array([y_pred, epistemic.squeeze(1)]).T
+        images_generated = images_generated[index_certain]
+        conditions = conditions[index_certain]
+
+    # ------------ Compute FID/KID from testset ------------
+    fid_value_gen, kid_value_gen = compute_fid_mnist(images_generated, index_distribution, real_dataset, size)
+
+    # ------------ Compare the forward model and the Measure from morphomnist ------------
+    # Move variable to cpu
+    images_generated = images_generated.squeeze(1).cpu().detach().numpy()
+    thickness = compute_thickness_ground_truth(images_generated)
+
+    # ------------ Compute the se between the target and the morpho measure predictions ------------
+    se_measure = se(thickness, y_pred)
+    re_measure = re(thickness, y_pred)
+
+    print(f"{distribution} distribution POLICY results")
+    print(f"The mean squared error : {np.mean(se_measure)} \t The std of the squared error : {np.std(se_measure)}")
+    print(f"The mean relative error : {np.mean(re_measure)} \t The std of the squared error : {np.std(re_measure)}")
+    print(f"Mean FID : {fid_value_gen[0]} ± {fid_value_gen[1]} \t Mean KID : {kid_value_gen[0]} ± {kid_value_gen[1]}")
+    
+    return se_measure, re_measure, fid_value_gen, kid_value_gen, forward_pred, images_generated
+
 def plots_some_results(distribution, images_generated, conditions, forward_pred, testset, index_distribution, forward, fid_value_gen, kid_value_gen, nrow=4, ncol=8):
     
     # Gan img selection
@@ -124,74 +194,6 @@ def plots_some_results(distribution, images_generated, conditions, forward_pred,
     plt.suptitle(f"{distribution} distribution / FID Value : {np.round(fid_value_gen[0])} ± {np.round(fid_value_gen[1]/np.sqrt(size))} \ KID Value : {np.around(kid_value_gen[0], decimals=3)}  ± {np.around(kid_value_gen[1]/np.sqrt(size), decimals=3)}", fontsize=6)
     plt.show()
 
-def compute_global_measures(images_generated, index_distribution, real_dataset, conditions, forward, size):
-    # ------------ Compute Global FID/KID from testset ------------
-    size = np.around(images_generated.shape[0] * cfginf.quantile_rate_uncertainty_policy , decimal=0)
-    print(size)
-    random_index = random.sample(np.arange(images_generated.shape[0]).tolist(), size)
-    print(random_index)
-    images_generated = images_generated[random_index]
-    fid_value_gen_glob, kid_value_gen_glob = compute_fid_mnist(images_generated, index_distribution, real_dataset, size)
-    
-    # ------------ Compare the forward model and the Measure from morphomnist ------------
-    thickness = compute_thickness_ground_truth(images_generated)
-    
-    # ------------ Compute the forward predictions ------------
-    try:
-        y_pred = forward(F.interpolate(images_generated, size=32)).squeeze(1).cpu().detach().numpy()
-
-    except:
-        y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(images_generated, size=32), device)
-    
-    # ------------ Compute the se between the target and the morpho measure predictions ------------
-    se_measure_glob = se(thickness, y_pred)
-    re_measure_glob = re(thickness, y_pred)
-    
-    print(f"{distribution} distribution GLOBAL results")
-    print(f"The mean squared error : {np.mean(se_measure_glob)} \t The std of the squared error : {np.std(se_measure_glob)}")
-    print(f"The mean relative error : {np.mean(re_measure_glob)} \t The std of the squared error : {np.std(re_measure_glob)}")
-    print(f"Mean FID : {fid_value_gen_glob[0]} ± {fid_value_gen_glob[1]} \t Mean KID : {kid_value_gen_glob[0]} ± {kid_value_gen_glob[1]}")
-    
-    return se_measure_glob, re_measure_glob, fid_value_gen_glob, kid_value_gen_glob
-
-def compute_policy_measures(images_generated, index_distribution, real_dataset, conditions, forward, size):
-    
-    # ------------ Compute the se between the target and the forward model predictions ------------
-    try:
-        y_pred = forward(F.interpolate(images_generated, size=32)).squeeze(1).cpu().detach().numpy()
-        forward_pred = np.array(y_pred).T
-
-    except:
-        y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(images_generated, size=32), device)
- 
-        # ------------ Uncertainty policy ------------
-        index_certain = uncertainty_selection(epistemic.squeeze())
-        y_pred = y_pred[index_certain]
-        epistemic = epistemic[index_certain]
-        forward_pred = np.array([y_pred, epistemic.squeeze(1)]).T
-        images_generated = images_generated[index_certain]
-        conditions = conditions[index_certain]
-
-    # ------------ Compute FID/KID from testset ------------
-    fid_value_gen, kid_value_gen = compute_fid_mnist(images_generated, index_distribution, real_dataset, sample_number_fid_kid)
-
-    # Move variable to cpu
-    images_generated = images_generated.squeeze(1).cpu().detach().numpy()
-
-    # ------------ Compare the forward model and the Measure from morphomnist ------------
-    thickness = compute_thickness_ground_truth(images_generated)
-
-    # ------------ Compute the se between the target and the morpho measure predictions ------------
-    se_measure = se(thickness, y_pred)
-    re_measure = re(thickness, y_pred)
-
-    print(f"{distribution} distribution POLICY results")
-    print(f"The mean squared error : {np.mean(se_measure)} \t The std of the squared error : {np.std(se_measure)}")
-    print(f"The mean relative error : {np.mean(re_measure)} \t The std of the squared error : {np.std(re_measure)}")
-    print(f"Mean FID : {fid_value_gen[0]} ± {fid_value_gen[1]} \t Mean KID : {kid_value_gen[0]} ± {kid_value_gen[1]}")
-    
-    return se_measure, re_measure, fid_value_gen, kid_value_gen, forward_pred
-
 def monte_carlo_inference_general(distribution, generator, forward, testset, ncol = 8, nrow =4, sample_number_fid_kid = 2000, size=2000):
     
     if distribution == 'in':
@@ -227,18 +229,17 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
 
     # ------------ Generate sample from z and y target ------------
     images_generated = generate_sample_from_GAN(conditions, z, generator)
-    
+
     # ------------ Compute global measures ------------
-    se_measure_glob, re_measure_glob, fid_value_gen_glob, kid_value_gen_glob = compute_global_measures(images_generated, index_distribution, real_dataset, conditions, forward, size)
+    se_measure_glob, re_measure_glob, fid_value_gen_glob, kid_value_gen_glob = compute_global_measures(distribution, images_generated, index_distribution, real_dataset, conditions, forward, size)
 
     # ------------ Compute policy measures ------------
-    se_measure_pol, re_measure_pol, fid_value_gen_pol, kid_value_gen_pol, forward_pred_pol = compute_policy_measures(images_generated, index_distribution, real_dataset, conditions, forward, size)
-    
+    se_measure_pol, re_measure_pol, fid_value_gen_pol, kid_value_gen_pol, forward_pred_pol, images_generated_pol = compute_policy_measures(distribution, images_generated, index_distribution, real_dataset, conditions, forward, size)
+
     # ------------ Global results ------------
     se_ms_glob = [np.mean(se_measure_glob), np.std(se_measure_glob)]; re_ms_glob = [np.mean(re_measure_glob), np.std(re_measure_glob)];
-    se_ms_pol = [np.mean(se_measure_pol), np.std(se_measure_pol)]; re_ms_glob = [np.mean(re_measure_pol), np.std(re_measure_pol)];
-    
-    
-    plots_some_results(distribution, images_generated, conditions, forward_pred_pol, testset, index_distribution, forward, fid_value_gen_pol, kid_value_gen_pol, nrow=4, ncol=8)
-    
+    se_ms_pol = [np.mean(se_measure_pol), np.std(se_measure_pol)]; re_ms_pol = [np.mean(re_measure_pol), np.std(re_measure_pol)];
+
+    plots_some_results(distribution, images_generated_pol, conditions, forward_pred_pol, testset, index_distribution, forward, fid_value_gen_pol, kid_value_gen_pol, nrow=4, ncol=8)
+
     return se_ms_glob, re_ms_glob, fid_value_gen_glob, fid_value_gen_glob, se_ms_pol, re_ms_pol, fid_value_gen_pol, fid_value_gen_pol
