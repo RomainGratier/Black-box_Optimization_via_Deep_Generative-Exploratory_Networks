@@ -10,6 +10,7 @@ from scipy.stats.stats import pearsonr
 import torch
 from torch.optim import Adam, lr_scheduler
 from torch.nn import functional as F
+from sklearn import preprocessing
 
 import src.config_bayesian as cfg
 import src.forward.utils
@@ -18,6 +19,7 @@ from src.forward.bcnn_models import BBB3Conv3FC, BBBAlexNet, BBBLeNet
 from src.data import getDataset, getDataloader
 from src.metrics import se
 from src.forward.uncertainty_estimation import get_uncertainty_per_batch
+from src.uncertainty_policy import uncertainty_selection
 
 # CUDA settings
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -111,12 +113,12 @@ def validate_model(net, criterion, validloader, num_ens=1, beta_type=0.1, epoch=
     return valid_loss/len(validloader), np.mean(accs_val), np.mean(accs_avr), np.mean(accs_epistemic), np.mean(accs_aleatoric)
 
 
-def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type=0.1, epoch=None, num_epochs=None):
+def test_model(net, criterion, testinloader, testoutloader, iteration=None, num_ens=1, beta_type=0.1, epoch=None, num_epochs=None):
     """Calculate ensemble accuracy and NLL Loss"""
     net.eval()
 
-    df_acc_in = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg'])
-    df_acc_out = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg'])
+    df_acc_in = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg'])
+    df_acc_out = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg'])
 
     for i, (inputs, labels) in enumerate(testinloader):
         inputs, labels = inputs.to(device), labels.to(device)
@@ -139,7 +141,7 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
         # accuracy measures model's ability
         se_model_averaged = se(preds, labels.cpu().detach().numpy())
         
-        df = pd.DataFrame(np.full(inputs.shape[0], epoch), columns=['epoch'])
+        df = pd.DataFrame(np.full(inputs.shape[0], iteration), columns=['iteration'])
         df['label'] = labels.cpu().detach().numpy().reshape(-1,1)
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
         df['pred_w_uncertainty'] = preds
@@ -147,7 +149,7 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
         df['aleatoric'] = aleatoric
         df['se_forward'] = se_model
         df['se_forward_avg'] = se_model_averaged
-        df_acc_in = df_acc_in.append(df)
+        df_acc_in = df_acc_in.append(df, ignore_index=True)
     
     for i, (inputs, labels) in enumerate(testoutloader):
         inputs, labels = inputs.to(device), labels.to(device)
@@ -170,7 +172,7 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
         # accuracy measures model's ability
         se_model_averaged = se(preds, labels.cpu().detach().numpy())
 
-        df = pd.DataFrame(np.full(inputs.shape[0], epoch), columns=['epoch'])
+        df = pd.DataFrame(np.full(inputs.shape[0], iteration), columns=['iteration'])
         df['label'] = labels.cpu().detach().numpy().reshape(-1,1)
         df['val_pred'] = net_out.cpu().detach().numpy().reshape(-1,1)
         df['pred_w_uncertainty'] = preds
@@ -178,12 +180,12 @@ def test_model(net, criterion, testinloader, testoutloader, num_ens=1, beta_type
         df['aleatoric'] = aleatoric
         df['se_forward'] = se_model
         df['se_forward_avg'] = se_model_averaged
-        df_acc_out = df_acc_out.append(df)
+        df_acc_out = df_acc_out.append(df, ignore_index=True)
 
     return df_acc_in, df_acc_out
 
 
-def run_bayesian(dataset, net_type, ckpt_dir):
+def run_bayesian(dataset, net_type, ckpt_dir, verbose=False):
 
     # Hyper Parameter settings
     layer_type = cfg.layer_type
@@ -213,37 +215,55 @@ def run_bayesian(dataset, net_type, ckpt_dir):
     optimizer = Adam(net.parameters(), lr=lr_start)
     lr_sched = lr_scheduler.ReduceLROnPlateau(optimizer, patience=6, verbose=True)
     valid_loss_max = np.Inf
-    df_acc_final_in = pd.DataFrame(columns=['epoch','label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg', 'uncertainty_flag'])
-    df_acc_final_out = pd.DataFrame(columns=['epoch', 'label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'mse_forward_avg', 'uncertainty_flag'])
+    df_acc_final_in = pd.DataFrame(columns=['iteration','label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg', 'uncertainty_flag', 'save_flag'])
+    df_acc_final_out = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'mse_forward_avg', 'uncertainty_flag', 'save_flag'])
 
     for epoch in range(n_epochs+1):  # loop over the dataset multiple times
 
         train_loss, train_acc, train_kl = train_model(net, optimizer, criterion, train_loader, num_ens=train_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
         valid_loss, valid_acc, valid_acc_avr, valid_epi, valid_ale = validate_model(net, criterion, valid_loader, num_ens=valid_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
+        df_acc_in, df_acc_out = test_model(net, criterion, test_loader_in, test_loader_out, iteration=epoch*trainset.len, num_ens=valid_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
         
-        if epoch % 5 == 0:
-            df_acc_in, df_acc_out = test_model(net, criterion, test_loader_in, test_loader_out, num_ens=valid_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
-            
-            # ------------ Uncertainty policy ------------
-            index_certain_in = uncertainty_selection(df_acc_in['epistemic'].values)
-            flag_vec_in = np.full(df_acc_in.shape[0], False)
-            flag_vec_in[index_certain_in] = True
-            df_acc_in['uncertainty_flag'] = flag_vec_in
-            
-            index_certain_out = uncertainty_selection(df_acc_out['epistemic'].values)
-            flag_vec_out = np.full(df_acc_out.shape[0], False)
-            flag_vec_out[index_certain_out] = True
-            df_acc_out['uncertainty_flag'] = flag_vec_out
-            
-            df_acc_final_in = df_acc_final_in.append(df_acc_in)
-            df_acc_final_out = df_acc_final_out.append(df_acc_out)
-            
-            # ------------ Save results ------------
-            df_acc_final_in.to_csv(os.path.join(ckpt_dir,f'results_in_{net_type}_{layer_type}_{activation_type}.csv'))
-            df_acc_final_out.to_csv(os.path.join(ckpt_dir,f'results_out_{net_type}_{layer_type}_{activation_type}.csv'))
+        lr_sched.step(valid_loss)
+
+        # ------------ Uncertainty policy ------------
+        index_certain_in = uncertainty_selection(df_acc_in['epistemic'].values)
+        flag_vec_in = np.full(df_acc_in.shape[0], False)
+        flag_vec_in[index_certain_in] = True
+        df_acc_in['uncertainty_flag'] = flag_vec_in
         
+        index_certain_out = uncertainty_selection(df_acc_out['epistemic'].values)
+        flag_vec_out = np.full(df_acc_out.shape[0], False)
+        flag_vec_out[index_certain_out] = True
+        df_acc_out['uncertainty_flag'] = flag_vec_out
+        
+        # Validation flag
+        df_acc_out['save_flag'] = False
+        df_acc_in['save_flag'] = False
+        
+        print('TESTING : IN dist  Forward mse: {:.4f}\tForward avg mse: {:.4f}\tepistemic mean: {:.4f}\taleatoric mean: {:.4f}\tcorrelation uncertainty {:.4f} p_val {:.4f} ||  OUT dist  Forward mse:{:.4f}\tForward avg mse: {:.4f}\tepistemic mean: {:.4f}\taleatoric mean: {:.4f} \tcorrelation uncertainty {:.4f} p_val {:.4f}'.format(
+            np.mean(df_acc_in['se_forward']), np.mean(df_acc_in['se_forward_avg']), np.mean(df_acc_in['epistemic']), np.mean(df_acc_in['aleatoric']), corr_in[0], corr_in[1], np.mean(df_acc_out['se_forward']), np.mean(df_acc_out['se_forward_avg']), np.mean(df_acc_out['epistemic']), np.mean(df_acc_out['aleatoric']),  corr_out[0], corr_out[1]))
+        print('Epoch: {} Training Loss: {:.4f}\tTraining Accuracy: {:.4f}\tValidation Loss: {:.4f}\tValidation Accuracy: {:.4f}\tValidation Accuracy Avr: {:.4f}\ttrain_kl_div: {:.4f}\tepistemic: {:.4f}\taleatoric: {:.4f}'.format(
+            epoch, train_loss, train_acc, valid_loss, valid_acc, valid_acc_avr, train_kl, valid_epi, valid_ale))
+
+        # save model if validation accuracy has increased
+        if valid_loss <= valid_loss_max:
+            print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(
+                valid_loss_max, valid_loss))
+            torch.save(net, ckpt_name)
+            valid_loss_max = valid_loss
+            df_acc_out['save_flag'] = True
+            df_acc_in['save_flag'] = True
+
+        df_acc_final_in = df_acc_final_in.append(df_acc_in, ignore_index=True)
+        df_acc_final_out = df_acc_final_out.append(df_acc_out, ignore_index=True)
+
+        # ------------ Save results ------------
+        df_acc_final_in.to_csv(os.path.join(ckpt_dir,f'results_in_{net_type}_{layer_type}_{activation_type}.csv'))
+        df_acc_final_out.to_csv(os.path.join(ckpt_dir,f'results_out_{net_type}_{layer_type}_{activation_type}.csv'))
+
+        if verbose:
             ## --------------------------------------------------------------------------------------------------------------
-            from sklearn import preprocessing
             stand = preprocessing.StandardScaler()
             df_corr_in = pd.DataFrame(stand.fit_transform(df_acc_in[['se_forward_avg', 'epistemic']]))
             corr_in = list(pearsonr(df_corr_in.iloc[:,0], df_corr_in.iloc[:,1]))
@@ -263,9 +283,9 @@ def run_bayesian(dataset, net_type, ckpt_dir):
                 indexe = np.argwhere(labels_out == label)
                 corr_out_selected = list(pearsonr(df_corr_out.iloc[indexe.squeeze(),0], df_corr_out.iloc[indexe.squeeze(),1]))
                 print(corr_out_selected)
-            
+
             ## --------------------------------------------------------------------------------------------------------------
-            
+
             print()
             print(f"---------- IN distribution epistemic min : {df_acc_in['epistemic'].min()}")
             print(f"---------- IN distribution epistemic max : {df_acc_in['epistemic'].max()}")
@@ -278,25 +298,3 @@ def run_bayesian(dataset, net_type, ckpt_dir):
             print(np.mean(df_acc_out['se_forward_avg']))
             print(f"ACC forward avg OUT dist : {np.mean(df_acc_out['se_forward_avg'].iloc[index_certain_out])}")
             print()
-            print('TESTING : IN dist  Forward mse: {:.4f}\tForward avg mse: {:.4f}\tepistemic mean: {:.4f}\taleatoric mean: {:.4f}\tcorrelation uncertainty {:.4f} p_val {:.4f} ||  OUT dist  Forward mse:{:.4f}\tForward avg mse: {:.4f}\tepistemic mean: {:.4f}\taleatoric mean: {:.4f} \tcorrelation uncertainty {:.4f} p_val {:.4f}'.format(
-                np.mean(df_acc_in['se_forward']), np.mean(df_acc_in['se_forward_avg']), np.mean(df_acc_in['epistemic']), np.mean(df_acc_in['aleatoric']), corr_in[0], corr_in[1], np.mean(df_acc_out['se_forward']), np.mean(df_acc_out['se_forward_avg']), np.mean(df_acc_out['epistemic']), np.mean(df_acc_out['aleatoric']),  corr_out[0], corr_out[1]))
-            
-        print('Epoch: {} Training Loss: {:.4f}\tTraining Accuracy: {:.4f}\tValidation Loss: {:.4f}\tValidation Accuracy: {:.4f}\tValidation Accuracy Avr: {:.4f}\ttrain_kl_div: {:.4f}\tepistemic: {:.4f}\taleatoric: {:.4f}'.format(
-            epoch, train_loss, train_acc, valid_loss, valid_acc, valid_acc_avr, train_kl, valid_epi, valid_ale))
-
-        lr_sched.step(valid_loss)
-
-        # save model if validation accuracy has increased
-        if valid_loss <= valid_loss_max:
-            print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(
-                valid_loss_max, valid_loss))
-            torch.save(net, ckpt_name)
-            valid_loss_max = valid_loss
-
-
-def uncertainty_selection(uncertainty, policy_type='quantile'):
-    if policy_type == 'quantile':
-        quantile = np.quantile(uncertainty, 0.5)
-        print(quantile)
-        new_index = np.argwhere(uncertainty <= quantile)
-    return new_index.squeeze()

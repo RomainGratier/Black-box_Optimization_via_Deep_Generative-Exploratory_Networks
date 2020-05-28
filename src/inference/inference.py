@@ -14,6 +14,7 @@ from src.forward.uncertainty_estimation import get_uncertainty_per_batch
 import src.config as cfg
 import src.config_gan as cfgan
 import src.config_inference as cfginf
+from src.uncertainty_policy import uncertainty_selection
 
 if cfg.experiment == 'min_mnist':
     import src.config_min_mnist as cfg_data
@@ -38,12 +39,6 @@ def get_truncated_normal(form, mean=0, sd=1, quant=0.8):
     low = norm.ppf(1 - quant, mean, sd)
     return truncnorm(
         (low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd).rvs(form)
-
-def uncertainty_selection(uncertainty, policy_type='quantile'):
-    if policy_type == 'quantile':
-        quantile = np.quantile(uncertainty, cfginf.quantile_rate_uncertainty_policy)
-        new_index = np.argwhere(uncertainty < quantile)
-    return new_index.squeeze()
 
 def generate_sample_from_GAN(y_cond, z, generator):
     # Prepare labels
@@ -200,7 +195,7 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
         if cfg.experiment == 'max_mnist':
             conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size)
             df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
-            index_distribution = df_test_in[df_test_in['label']<=cfg_data.limit_dataset].index
+            index_distribution = df_test_in[df_test_in['label'] <= cfg_data.limit_dataset].index
             print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
         if cfg.experiment == 'min_mnist':
@@ -214,7 +209,7 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
         if cfg.experiment == 'max_mnist':
             conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size)
             df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
-            index_distribution = df_test_out[df_test_out['label']>cfg_data.limit_dataset].index
+            index_distribution = df_test_out[df_test_out['label'] > cfg_data.limit_dataset].index
             print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
         if cfg.experiment == 'min_mnist':
