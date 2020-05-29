@@ -45,7 +45,15 @@ def generate_sample_from_GAN(y_cond, z, generator):
     z = Variable(FloatTensor(z))
     cond = Variable(FloatTensor(y_cond))
 
-    return generator(z, cond)
+    if y_cond.shape[0] > 5000:
+        X_gen = FloatTensor(torch.zeros((y_cond.shape[0], 1, cfg.img_size, cfg.img_size)))
+        
+        # Create chunk
+    
+    else:
+        X_gen = generator(z, cond)
+
+    return X_gen
 
 def compute_fid_mnist(gen_img, index_distribution, real_dataset, sample_size):
     random_id = random.sample(index_distribution.tolist(), gen_img.shape[0]) #,sample_size)
