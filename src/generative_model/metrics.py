@@ -277,7 +277,7 @@ def extract_lenet_activation_features(imgs, net):
     return feats
 
 
-def calculate_fid_given_paths(paths, bootstrap=True, n_bootstraps=10):
+def calculate_fid_given_paths(paths, bootstrap=True, n_bootstraps=50):
     """Calculates the FID of two paths"""
     pths = []
     for p in paths:
