@@ -237,4 +237,4 @@ def monte_carlo_inference_general(distribution, generator, forward, testset, nco
 
     plots_some_results(distribution, images_generated_pol, conditions, forward_pred_pol, testset, index_distribution, forward, fid_value_gen_pol, kid_value_gen_pol, nrow=4, ncol=8)
 
-    return se_ms_glob, re_ms_glob, fid_value_gen_glob, fid_value_gen_glob, se_ms_pol, re_ms_pol, fid_value_gen_pol, fid_value_gen_pol
+    return se_ms_glob, re_ms_glob, fid_value_gen_glob, kid_value_gen_glob, se_ms_pol, re_ms_pol, fid_value_gen_pol, kid_value_gen_pol
