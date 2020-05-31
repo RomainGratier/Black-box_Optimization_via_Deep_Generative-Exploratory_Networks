@@ -2,6 +2,7 @@ from scipy.stats import truncnorm, norm
 import random
 import pandas as pd
 import numpy as np 
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os 
 from torch.nn import functional as F
@@ -336,7 +337,7 @@ def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, nco
     
     size = int(sample_number_fid_kid * 1/cfginf.quantile_rate_uncertainty_policy)
     fid_pol = []; fid_rand = []; kid_pol = []; kid_rand = [];
-    for i in range(size_sample):
+    for i in tqdm(range(size_sample)):
     
         if distribution == 'in':
             if cfg.experiment == 'max_mnist':
