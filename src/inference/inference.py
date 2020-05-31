@@ -58,11 +58,15 @@ def generate_sample_from_GAN(y_cond, z, generator):
 
         X_chunk = []
         for i, condition in enumerate(y_cond):
+            print(condition[i].shape)
+            print(z[i].shape)
             X_chunk.append(generator(z[i], condition))
 
         return torch.cat(X_chunk)
     
     else:
+        print(z.shape)
+        print(cond.shape)
         return generator(z, cond)
     
 def predict_forward_model(forward, gen_images, bayesian=True):
@@ -74,14 +78,14 @@ def predict_forward_model(forward, gen_images, bayesian=True):
             pred_chunk = []
             uncertainty_chunk = []
             for i, condition in enumerate(y_cond):
-                pred, epi = get_uncertainty_per_batch(forward, F.interpolate(images_generated, size=32), device)
+                pred, epi = get_uncertainty_per_batch(forward, F.interpolate(gen_images, size=32), device)
                 pred_chunk.append(pred)
                 uncertainty_chunk.append(epi)
             
             return torch.cat(pred_chunk), torch.cat(uncertainty_chunk)
         
-        else
-            y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(images_generated, size=32), device)
+        else:
+            y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(gen_images, size=32), device)
             return y_pred, epistemic
     
     else:
@@ -90,12 +94,12 @@ def predict_forward_model(forward, gen_images, bayesian=True):
             gen_images = np.array_split(gen_images, len(gen_images) // max_size)
             pred_chunk = []
             for i, condition in enumerate(y_cond):
-                pred_chunk.append(forward(F.interpolate(images_generated, size=32)).squeeze(1).cpu().detach().numpy())
+                pred_chunk.append(forward(F.interpolate(gen_images, size=32)).squeeze(1).cpu().detach().numpy())
             
             return torch.cat(y_pred)
 
         else:
-            y_pred = forward(F.interpolate(images_generated, size=32)).squeeze(1).cpu().detach().numpy()
+            y_pred = forward(F.interpolate(gen_images, size=32)).squeeze(1).cpu().detach().numpy()
             return y_pred
     
 
@@ -497,7 +501,7 @@ def monte_carlo_inference_fid_kid_batch(distribution, generator, forward, testse
 
     # ------------ Compute policy measures ------------
     if bayesian:
-        y_pred, epistemic = predict_forward_model(forward, gen_images, bayesian=True)
+        y_pred, epistemic = predict_forward_model(forward, images_generated, bayesian=True)
         # ------------ Uncertainty policy ------------
         index_certain = uncertainty_selection(epistemic.squeeze())
         y_pred = y_pred[index_certain]
@@ -506,7 +510,7 @@ def monte_carlo_inference_fid_kid_batch(distribution, generator, forward, testse
         images_generated = images_generated[index_certain]
         conditions = conditions[index_certain]
     else:
-        y_pred = predict_forward_model(forward, gen_images, bayesian=False)
+        y_pred = predict_forward_model(forward, images_generated, bayesian=False)
         forward_pred = np.array(y_pred).T
     
     # ------------ Compute FID/KID from testset ------------
