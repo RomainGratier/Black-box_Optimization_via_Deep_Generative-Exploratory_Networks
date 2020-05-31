@@ -90,7 +90,7 @@ def get_activations(files, model, batch_size=50, dims=2048,
 
     pred_arr = np.empty((n_used_imgs, dims))
 
-    for i in tqdm(range(n_batches), leave=True):
+    for i in tqdm(range(n_batches)):
         if verbose:
             print('\rPropagating batch %d/%d' % (i + 1, n_batches), end='', flush=True)
         start = i * batch_size
@@ -299,7 +299,7 @@ def calculate_fid_given_paths(paths, bootstrap=True, n_bootstraps=50):
         print(paths[j+1])
         actj = extract_lenet_activation_features(pth, mnist_model)
         fid_values = np.zeros((n_bootstraps))
-        with tqdm(range(n_bootstraps), desc='FID', leave=True) as bar:
+        with tqdm(range(n_bootstraps), desc='FID') as bar:
             for i in bar:
                 act1_bs = act_true[np.random.choice(act_true.shape[0], act_true.shape[0], replace=True)]
                 act2_bs = actj[np.random.choice(actj.shape[0], actj.shape[0], replace=True)]
@@ -357,7 +357,7 @@ def get_activations(files, model, batch_size=50, dims=2048,
 
     pred_arr = np.empty((n_used_imgs, dims))
 
-    for i in tqdm(range(n_batches), leave=True):
+    for i in tqdm(range(n_batches)):
         if verbose:
             print('\rPropagating batch %d/%d' % (i + 1, n_batches), end='', flush=True)
         start = i * batch_size
@@ -446,7 +446,7 @@ def polynomial_mmd_averages(codes_g, codes_r, n_subsets=50, subset_size=100,
         vars = np.zeros(n_subsets)
     choice = np.random.choice
 
-    with tqdm(range(n_subsets), desc='MMD', file=output, leave=True) as bar:
+    with tqdm(range(n_subsets), desc='MMD', file=output) as bar:
         for i in bar:
             g = codes_g[choice(len(codes_g), subset_size, replace=False)]
             r = codes_r[choice(len(codes_r), subset_size, replace=False)]
