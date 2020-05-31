@@ -449,3 +449,67 @@ def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, bay
     stat_kid_pol = [np.mean(kid_pol), np.std(kid_pol)/np.sqrt(size_sample)]
     
     return stat_fid_rand, stat_fid_pol, stat_kid_rand, stat_kid_pol
+
+def monte_carlo_inference_fid_kid_batch(distribution, generator, forward, testset, bayesian=True, ncol = 8, nrow =4, sample_number_fid_kid = 1000):
+
+    size_full = int(sample_number_fid_kid * 1/cfginf.quantile_rate_uncertainty_policy)
+
+    if distribution == 'in':
+        if cfg.experiment == 'max_mnist':
+            conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size_full)
+            df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
+            index_distribution = df_test_in[df_test_in['label'] <= cfg_data.limit_dataset].index
+            print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
+            real_dataset = deepcopy(testset.x_data)
+        if cfg.experiment == 'min_mnist':
+            conditions = np.random.uniform(cfg_data.limit_dataset , cfg_data.max_dataset , size_full)
+            df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
+            index_distribution = df_test_in[(df_test_in['label'] > cfg_data.limit_dataset) & df_test_in['label'] <= cfg_data.max_dataset].index
+            print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
+            real_dataset = deepcopy(testset.x_data)
+
+    if distribution == 'out':
+        if cfg.experiment == 'max_mnist':
+            conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
+            df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
+            index_distribution = df_test_out[df_test_out['label'] > cfg_data.limit_dataset].index
+            print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
+            real_dataset = deepcopy(testset.x_data)
+        if cfg.experiment == 'min_mnist':
+            conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset , size_full)
+            df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
+            index_distribution = df_test_out[df_test_out['label'] <= cfg_data.limit_dataset].index
+            print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
+            real_dataset = deepcopy(testset.x_data)
+    
+    # ------------ Sample z from normal gaussian distribution with a bound ------------
+    z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+    
+    # ------------ Generate sample from z and y target ------------
+    images_generated = generate_sample_from_GAN(conditions, z, generator)
+    
+    # ------------ random sample ------------
+    random_index = random.sample(np.arange(images_generated.shape[0]).tolist(), sample_number_fid_kid)
+    images_generated_rand = images_generated[random_index]
+    
+    # ------------ Compute FID/KID from testset ------------
+    fid_value_gen_rand, kid_value_gen_rand = compute_fid_mnist(images_generated_rand, index_distribution, real_dataset)
+
+    # ------------ Compute policy measures ------------
+    if bayesian:
+        y_pred, epistemic = predict_forward_model(forward, gen_images, bayesian=True)
+        # ------------ Uncertainty policy ------------
+        index_certain = uncertainty_selection(epistemic.squeeze())
+        y_pred = y_pred[index_certain]
+        epistemic = epistemic[index_certain]
+        forward_pred = np.array([y_pred, epistemic.squeeze(1)]).T
+        images_generated = images_generated[index_certain]
+        conditions = conditions[index_certain]
+    else:
+        y_pred = predict_forward_model(forward, gen_images, bayesian=False)
+        forward_pred = np.array(y_pred).T
+    
+    # ------------ Compute FID/KID from testset ------------
+    fid_value_gen_pol, kid_value_gen_pol = compute_fid_mnist(images_generated, index_distribution, real_dataset)
+    
+    return fid_value_gen_rand, fid_value_gen_pol, kid_value_gen_rand, kid_value_gen_pol
