@@ -31,6 +31,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
+max_size = 2000
+
 def save_numpy_arr(path, arr):
     np.save(path, arr)
     return path
@@ -46,15 +48,56 @@ def generate_sample_from_GAN(y_cond, z, generator):
     z = Variable(FloatTensor(z))
     cond = Variable(FloatTensor(y_cond))
 
-    if y_cond.shape[0] > 5000:
-        X_gen = FloatTensor(torch.zeros((y_cond.shape[0], 1, cfg.img_size, cfg.img_size)))
-        
-        # Create chunk
+    if (y_cond.shape[0] > 5000) & (z.shape[0] > 5000):
+
+        y_cond = np.array_split(y_cond, len(y_cond) // max_size)
+        z = np.array_split(z, len(z) // max_size)
+
+        if len(y_cond) != len(z):
+            print('WARNING PIPELINE BROKEN WHEN GENERATION')
+
+        X_chunk = []
+        for i, condition in enumerate(y_cond):
+            X_chunk.append(generator(z[i], condition))
+
+        return torch.cat(X_chunk)
     
     else:
-        X_gen = generator(z, cond)
+        return generator(z, cond)
+    
+def predict_forward_model(forward, gen_images, bayesian=True):
+        
+    if bayesian:
 
-    return X_gen
+        if gen_images.shape[0] > 5000:
+            gen_images = np.array_split(gen_images, len(gen_images) // max_size)
+            pred_chunk = []
+            uncertainty_chunk = []
+            for i, condition in enumerate(y_cond):
+                pred, epi = get_uncertainty_per_batch(forward, F.interpolate(images_generated, size=32), device)
+                pred_chunk.append(pred)
+                uncertainty_chunk.append(epi)
+            
+            return torch.cat(pred_chunk), torch.cat(uncertainty_chunk)
+        
+        else
+            y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(images_generated, size=32), device)
+            return y_pred, epistemic
+    
+    else:
+        
+        if gen_images.shape[0] > 5000:
+            gen_images = np.array_split(gen_images, len(gen_images) // max_size)
+            pred_chunk = []
+            for i, condition in enumerate(y_cond):
+                pred_chunk.append(forward(F.interpolate(images_generated, size=32)).squeeze(1).cpu().detach().numpy())
+            
+            return torch.cat(y_pred)
+
+        else:
+            y_pred = forward(F.interpolate(images_generated, size=32)).squeeze(1).cpu().detach().numpy()
+            return y_pred
+    
 
 def compute_fid_mnist(gen_img, index_distribution, real_dataset):
     random_id = random.sample(index_distribution.tolist(), gen_img.shape[0])
@@ -333,7 +376,7 @@ def monte_carlo_inference_mse(distribution, generator, forward, ncol = 8, nrow =
     
     return stat_ms_glob, stat_ms_pol, stat_mr_glob, stat_mr_pol
 
-def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, ncol = 8, nrow =4, sample_number_fid_kid = 1000, size_sample=50):
+def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, bayesian=True, ncol = 8, nrow =4, sample_number_fid_kid = 1000, size_sample=50):
     
     size_full = int(sample_number_fid_kid * 1/cfginf.quantile_rate_uncertainty_policy)
     fid_pol = []; fid_rand = []; kid_pol = []; kid_rand = [];
@@ -381,13 +424,8 @@ def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, nco
         fid_value_gen_rand, kid_value_gen_rand = compute_fid_mnist(images_generated_rand, index_distribution, real_dataset)
 
         # ------------ Compute policy measures ------------
-        try:
-            y_pred = forward(F.interpolate(images_generated, size=32)).squeeze(1).cpu().detach().numpy()
-            forward_pred = np.array(y_pred).T
-    
-        except:
-            y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(images_generated, size=32), device)
-     
+        if bayesian:
+            y_pred, epistemic = predict_forward_model(forward, gen_images, bayesian=True)
             # ------------ Uncertainty policy ------------
             index_certain = uncertainty_selection(epistemic.squeeze())
             y_pred = y_pred[index_certain]
@@ -395,6 +433,9 @@ def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, nco
             forward_pred = np.array([y_pred, epistemic.squeeze(1)]).T
             images_generated = images_generated[index_certain]
             conditions = conditions[index_certain]
+        else:
+            y_pred = predict_forward_model(forward, gen_images, bayesian=False)
+            forward_pred = np.array(y_pred).T
     
         # ------------ Compute FID/KID from testset ------------
         fid_value_gen_pol, kid_value_gen_pol = compute_fid_mnist(images_generated, index_distribution, real_dataset)
