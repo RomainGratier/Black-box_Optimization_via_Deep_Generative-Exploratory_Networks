@@ -56,8 +56,8 @@ def generate_sample_from_GAN(y_cond, z, generator):
 
     return X_gen
 
-def compute_fid_mnist(gen_img, index_distribution, real_dataset, sample_size):
-    random_id = random.sample(index_distribution.tolist(), gen_img.shape[0]) #,sample_size)
+def compute_fid_mnist(gen_img, index_distribution, real_dataset):
+    random_id = random.sample(index_distribution.tolist(), gen_img.shape[0])
     real_imgs = real_dataset[random_id].numpy()
 
     folder = 'save_data'
@@ -87,7 +87,7 @@ def compute_global_measures(distribution, images_generated, index_distribution, 
         y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(images_generated, size=32), device)
     
     # ------------ Compute FID/KID from testset ------------
-    fid_value_gen_glob, kid_value_gen_glob = compute_fid_mnist(images_generated, index_distribution, real_dataset, size)
+    fid_value_gen_glob, kid_value_gen_glob = compute_fid_mnist(images_generated, index_distribution, real_dataset)
     
     # ------------ Compare the forward model and the Measure from morphomnist ------------
     # Move variable to cpu
@@ -124,7 +124,7 @@ def compute_policy_measures(distribution, images_generated, index_distribution, 
         conditions = conditions[index_certain]
 
     # ------------ Compute FID/KID from testset ------------
-    fid_value_gen, kid_value_gen = compute_fid_mnist(images_generated, index_distribution, real_dataset, size)
+    fid_value_gen, kid_value_gen = compute_fid_mnist(images_generated, index_distribution, real_dataset)
 
     # ------------ Compare the forward model and the Measure from morphomnist ------------
     # Move variable to cpu
@@ -335,19 +335,19 @@ def monte_carlo_inference_mse(distribution, generator, forward, ncol = 8, nrow =
 
 def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, ncol = 8, nrow =4, sample_number_fid_kid = 1000, size_sample=50):
     
-    size = int(sample_number_fid_kid * 1/cfginf.quantile_rate_uncertainty_policy)
+    size_full = int(sample_number_fid_kid * 1/cfginf.quantile_rate_uncertainty_policy)
     fid_pol = []; fid_rand = []; kid_pol = []; kid_rand = [];
     for i in tqdm(range(size_sample)):
     
         if distribution == 'in':
             if cfg.experiment == 'max_mnist':
-                conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size)
+                conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size_full)
                 df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
                 index_distribution = df_test_in[df_test_in['label'] <= cfg_data.limit_dataset].index
                 print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
                 real_dataset = deepcopy(testset.x_data)
             if cfg.experiment == 'min_mnist':
-                conditions = np.random.uniform(cfg_data.limit_dataset , cfg_data.max_dataset , size)
+                conditions = np.random.uniform(cfg_data.limit_dataset , cfg_data.max_dataset , size_full)
                 df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
                 index_distribution = df_test_in[(df_test_in['label'] > cfg_data.limit_dataset) & df_test_in['label'] <= cfg_data.max_dataset].index
                 print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
@@ -355,32 +355,31 @@ def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, nco
     
         if distribution == 'out':
             if cfg.experiment == 'max_mnist':
-                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size)
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
                 df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
                 index_distribution = df_test_out[df_test_out['label'] > cfg_data.limit_dataset].index
                 print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
                 real_dataset = deepcopy(testset.x_data)
             if cfg.experiment == 'min_mnist':
-                conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset , size)
+                conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset , size_full)
                 df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
                 index_distribution = df_test_out[df_test_out['label'] <= cfg_data.limit_dataset].index
                 print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
                 real_dataset = deepcopy(testset.x_data)
     
         # ------------ Sample z from normal gaussian distribution with a bound ------------
-        z = get_truncated_normal((size, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+        z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
     
         # ------------ Generate sample from z and y target ------------
         images_generated = generate_sample_from_GAN(conditions, z, generator)
         
         # ------------ random sample ------------
-        size = np.around(images_generated.shape[0] * cfginf.quantile_rate_uncertainty_policy , decimals=0)
-        random_index = random.sample(np.arange(images_generated.shape[0]).tolist(), int(size))
+        random_index = random.sample(np.arange(images_generated.shape[0]).tolist(), sample_number_fid_kid)
         images_generated_rand = images_generated[random_index]
     
         # ------------ Compute FID/KID from testset ------------
-        fid_value_gen_rand, kid_value_gen_rand = compute_fid_mnist(images_generated, index_distribution, real_dataset, size)
-    
+        fid_value_gen_rand, kid_value_gen_rand = compute_fid_mnist(images_generated, index_distribution, real_dataset)
+
         # ------------ Compute policy measures ------------
         try:
             y_pred = forward(F.interpolate(images_generated, size=32)).squeeze(1).cpu().detach().numpy()
@@ -398,7 +397,7 @@ def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, nco
             conditions = conditions[index_certain]
     
         # ------------ Compute FID/KID from testset ------------
-        fid_value_gen_pol, kid_value_gen_pol = compute_fid_mnist(images_generated, index_distribution, real_dataset, size)
+        fid_value_gen_pol, kid_value_gen_pol = compute_fid_mnist(images_generated, index_distribution, real_dataset)
         
         # Update values
         fid_pol.append(fid_value_gen_pol[0]); fid_rand.append(fid_value_gen_rand[0]); kid_pol.append(kid_value_gen_pol[0]); kid_rand.append(kid_value_gen_rand[0]);
