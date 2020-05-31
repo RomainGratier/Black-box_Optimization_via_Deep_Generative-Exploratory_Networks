@@ -328,17 +328,17 @@ def monte_carlo_inference_mse(distribution, generator, forward, ncol = 8, nrow =
     print(f"Mean FID : {fid_value_gen[0]} ± {fid_value_gen[1]} \t Mean KID : {kid_value_gen[0]} ± {kid_value_gen[1]}")
     
     # ------------ Global results ------------
-    se_ms_glob = [np.mean(se_measure_glob), np.std(se_measure_glob)]; re_ms_glob = [np.mean(re_measure_glob), np.std(re_measure_glob)];
-    se_ms_pol = [np.mean(se_measure_pol), np.std(se_measure_pol)]; re_ms_pol = [np.mean(re_measure_pol), np.std(re_measure_pol)];
+    stat_ms_glob = [np.mean(se_measure_glob), np.std(se_measure_glob)]; stat_mr_glob = [np.mean(re_measure_glob), np.std(re_measure_glob)];
+    stat_ms_pol = [np.mean(se_measure_pol), np.std(se_measure_pol)]; stat_mr_pol = [np.mean(re_measure_pol), np.std(re_measure_pol)];
     
-    return se_ms_glob, re_ms_glob, se_ms_pol, re_ms_pol
+    return stat_ms_glob, stat_ms_pol, stat_mr_glob, stat_mr_pol
 
 def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, ncol = 8, nrow =4, sample_number_fid_kid = 1000, size_sample=50):
     
     size_full = int(sample_number_fid_kid * 1/cfginf.quantile_rate_uncertainty_policy)
     fid_pol = []; fid_rand = []; kid_pol = []; kid_rand = [];
-    for i in tqdm(range(size_sample)):
-    
+    for i in range(size_sample):
+        print(f'Iteration : {i}/{size_sample}')
         if distribution == 'in':
             if cfg.experiment == 'max_mnist':
                 conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size_full)
@@ -378,7 +378,7 @@ def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, nco
         images_generated_rand = images_generated[random_index]
     
         # ------------ Compute FID/KID from testset ------------
-        fid_value_gen_rand, kid_value_gen_rand = compute_fid_mnist(images_generated, index_distribution, real_dataset)
+        fid_value_gen_rand, kid_value_gen_rand = compute_fid_mnist(images_generated_rand, index_distribution, real_dataset)
 
         # ------------ Compute policy measures ------------
         try:
@@ -398,7 +398,7 @@ def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, nco
     
         # ------------ Compute FID/KID from testset ------------
         fid_value_gen_pol, kid_value_gen_pol = compute_fid_mnist(images_generated, index_distribution, real_dataset)
-        
+
         # Update values
         fid_pol.append(fid_value_gen_pol[0]); fid_rand.append(fid_value_gen_rand[0]); kid_pol.append(kid_value_gen_pol[0]); kid_rand.append(kid_value_gen_rand[0]);
         
