@@ -181,11 +181,11 @@ def train_gan_model():
     path_generator = os.path.join(cfg.models_path, cfg.gan_path)
 
     if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'min_mnist'):
-        dataset = MNISTDataset('train', data_path=cfg_data.data_path)
-        testset = MNISTDataset('full', data_path=data_path)
-    elif cfg.experiment == 'rotation_data':
-        dataset = RotationDataset('train', data_path=cfg_data.data_path)
-        testset = RotationDataset('full', data_path=data_path)
+        dataset = MNISTDataset('train', data_path=cfg.data_path)
+        testset = MNISTDataset('full', data_path=cfg.data_path)
+    elif cfg.experiment == 'rotation_dataset':
+        dataset = RotationDataset('train', data_path=cfg.data_path)
+        testset = RotationDataset('full', data_path=cfg.data_path)
 
     dataloader = DataLoader(dataset=dataset,
                               batch_size=cfg_data.batch_size,
@@ -244,7 +244,7 @@ def train_gan_model():
         in_distribution_index = np.where(arr > cfg_data.limit_dataset)
         out_distribution_index = np.where(arr <= cfg_data.limit_dataset)
     
-    elif (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_data'):
+    elif (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
         df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
         df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
         index_in_distribution = df_test_in[df_test_in['label'] <= cfg_data.limit_dataset].index
@@ -340,7 +340,7 @@ def train_gan_model():
                 del valid; del fake; del real_imgs; del labels; del z; del gen_labels; del g_loss; del d_loss; del gen_imgs; del validity;
                 torch.cuda.empty_cache()
                 
-                if cfg.experiment == 'rotation_data':
+                if cfg.experiment == 'rotation_dataset':
                     fid_in, kid_in, fid_out, kid_out = sample_image_rotation(cfgan.n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, cfgan.fid_kid_sample)
 
                     df = pd.DataFrame([fid_in[0]], columns=['fid_in'])
@@ -350,7 +350,7 @@ def train_gan_model():
 
                     df_acc_gen = df_acc_gen.append(df, ignore_index=True)
                 
-                elif (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_data'):
+                elif (cfg.experiment == 'max_mnist') | (cfg.experiment == 'min_mnist'):
 
                     se_gan, fid_in, kid_in, fid_out, kid_out = sample_image_mnist(cfgan.n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, cfgan.fid_kid_sample)
     

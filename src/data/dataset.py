@@ -397,9 +397,9 @@ class RotationDataset(Dataset):
 
     def __getdatasets__(self, dataset, data_path):
 
-        #folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
-        #folder = os.path.join(folder, data_path)
-        folder = data_path
+        folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
+        folder = os.path.join(folder, data_path)
+
         if dataset == 'test':
             return os.path.join(folder,'test_images_ubyte.gz'), os.path.join(folder,'test_labels_ubyte.gz')
         if dataset == 'train':
