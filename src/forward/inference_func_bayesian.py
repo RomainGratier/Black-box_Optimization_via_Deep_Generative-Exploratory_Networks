@@ -185,7 +185,6 @@ def test_model(net, criterion, testinloader, testoutloader, iteration=None, num_
 
     return df_acc_in, df_acc_out
 
-
 def run_bayesian(net_type='lenet', verbose=False):
     
     ckpt_dir = os.path.join(cfg.models_path, cfg.forward_path)

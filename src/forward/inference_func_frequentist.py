@@ -130,8 +130,6 @@ def test_model(net, criterion, testinloader, testoutloader, iteration=None, num_
 
 def run_frequentist(net_type='lenet'):
 
-    ckpt_dir = os.path.join(cfg.models_path, cfg.forward_path)
-
     # Hyper Parameter settings
     n_epochs = cfg.n_epochs
     lr = cfg.lr
