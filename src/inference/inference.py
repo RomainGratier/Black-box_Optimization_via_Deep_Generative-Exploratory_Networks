@@ -7,7 +7,10 @@ import matplotlib.pyplot as plt
 import os 
 from torch.nn import functional as F
 from copy import deepcopy
+import itertools
+from tabulate import tabulate
 
+from src.data import MNISTDataset, RotationDataset
 from src.metrics import se, re, compute_thickness_ground_truth
 from src.generative_model.metrics import calculate_fid_given_paths, calculate_kid_given_paths
 from src.forward.uncertainty_estimation import get_uncertainty_per_batch
@@ -20,6 +23,8 @@ from src.uncertainty_policy import uncertainty_selection
 if cfg.experiment == 'min_mnist':
     import src.config_min_mnist as cfg_data
 elif cfg.experiment == 'max_mnist':
+    import src.config_max_mnist as cfg_data
+elif cfg.experiment == 'rotation_dataset':
     import src.config_max_mnist as cfg_data
 
 import torch 
@@ -45,9 +50,6 @@ def get_truncated_normal(form, mean=0, sd=1, quant=0.8):
 
 def generate_sample_from_GAN(y_cond, z, generator):
     # Prepare labels
-    z = Variable(FloatTensor(z))
-    cond = Variable(FloatTensor(y_cond))
-
     if (y_cond.shape[0] > 5000) & (z.shape[0] > 5000):
 
         y_cond = np.array_split(y_cond, len(y_cond) // max_size)
@@ -58,31 +60,27 @@ def generate_sample_from_GAN(y_cond, z, generator):
 
         X_chunk = []
         for i, condition in enumerate(y_cond):
-            print(condition[i].shape)
-            print(z[i].shape)
-            X_chunk.append(generator(z[i], condition))
+            X_chunk.append(generator(Variable(FloatTensor(z[i])), Variable(FloatTensor(condition))))
 
         return torch.cat(X_chunk)
     
     else:
-        print(z.shape)
-        print(cond.shape)
-        return generator(z, cond)
+        return generator( Variable(FloatTensor(z)), Variable(FloatTensor(y_cond)))
     
 def predict_forward_model(forward, gen_images, bayesian=True):
         
     if bayesian:
 
         if gen_images.shape[0] > 5000:
-            gen_images = np.array_split(gen_images, len(gen_images) // max_size)
+            gen_images = np.array_split(gen_images.cpu().detach(), len(gen_images.cpu().detach()) // max_size)
             pred_chunk = []
             uncertainty_chunk = []
-            for i, condition in enumerate(y_cond):
-                pred, epi = get_uncertainty_per_batch(forward, F.interpolate(gen_images, size=32), device)
+            for i, gen_images_batch in enumerate(gen_images):
+                pred, epi, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(gen_images_batch.to(device), size=32), device)
                 pred_chunk.append(pred)
                 uncertainty_chunk.append(epi)
             
-            return torch.cat(pred_chunk), torch.cat(uncertainty_chunk)
+            return np.concatenate(pred_chunk), np.concatenate(uncertainty_chunk)
         
         else:
             y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(gen_images, size=32), device)
@@ -96,7 +94,7 @@ def predict_forward_model(forward, gen_images, bayesian=True):
             for i, condition in enumerate(y_cond):
                 pred_chunk.append(forward(F.interpolate(gen_images, size=32)).squeeze(1).cpu().detach().numpy())
             
-            return torch.cat(y_pred)
+            return np.concatenate(y_pred)
 
         else:
             y_pred = forward(F.interpolate(gen_images, size=32)).squeeze(1).cpu().detach().numpy()
@@ -387,7 +385,7 @@ def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, bay
     for i in range(size_sample):
         print(f'Iteration : {i}/{size_sample}')
         if distribution == 'in':
-            if cfg.experiment == 'max_mnist':
+            if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
                 conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size_full)
                 df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
                 index_distribution = df_test_in[df_test_in['label'] <= cfg_data.limit_dataset].index
@@ -401,7 +399,7 @@ def monte_carlo_inference_fid_kid(distribution, generator, forward, testset, bay
                 real_dataset = deepcopy(testset.x_data)
     
         if distribution == 'out':
-            if cfg.experiment == 'max_mnist':
+            if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
                 conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
                 df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
                 index_distribution = df_test_out[df_test_out['label'] > cfg_data.limit_dataset].index
@@ -459,7 +457,7 @@ def monte_carlo_inference_fid_kid_batch(distribution, generator, forward, testse
     size_full = int(sample_number_fid_kid * 1/cfginf.quantile_rate_uncertainty_policy)
 
     if distribution == 'in':
-        if cfg.experiment == 'max_mnist':
+        if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
             conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size_full)
             df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_in[df_test_in['label'] <= cfg_data.limit_dataset].index
@@ -473,7 +471,7 @@ def monte_carlo_inference_fid_kid_batch(distribution, generator, forward, testse
             real_dataset = deepcopy(testset.x_data)
 
     if distribution == 'out':
-        if cfg.experiment == 'max_mnist':
+        if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
             conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
             df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_out[df_test_out['label'] > cfg_data.limit_dataset].index
@@ -517,3 +515,63 @@ def monte_carlo_inference_fid_kid_batch(distribution, generator, forward, testse
     fid_value_gen_pol, kid_value_gen_pol = compute_fid_mnist(images_generated, index_distribution, real_dataset)
     
     return fid_value_gen_rand, fid_value_gen_pol, kid_value_gen_rand, kid_value_gen_pol
+
+def compute_results_inference(metric_type='fid_kid', distributions=['in', 'out'], bayesian_model_types=["bbb", "lrt"], activation_types=["relu", "softplus"], sample_number_fid_kid=1000, size_sample=10, output_type='latex', decimals=2):
+    
+    if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'min_mnist'):
+        testset = MNISTDataset('full', data_path=data_path)
+    elif cfg.experiment == 'rotation_data':
+        testset = RotationDataset('full', data_path=data_path)
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    modes = list(itertools.product(bayesian_model_types, activation_types))
+    forward_models = ['_'.join(couple) for couple in modes]
+    forward_models.append('non bayesian')
+
+    if output_type == 'latex':
+        # Each element in the table list is a row in the generated table
+        inter = '$\pm$'
+        if metric_type == 'l1_l2':
+            headers = ["Model", "Distribution", "mse$_r$", "mse$_p$", "mre$_r$", "mre$_p$"]
+        elif metric_type == 'fid_kid':
+            headers = ["Model", "Distribution", "fid$_r$", "fid$_p$", "kid$_r$", "kid$_p$"]
+
+    results = []
+    for forward in forward_models:
+        for distribution in distributions:
+            print(f"Computing inference with forward : {forward}")
+            if forward == 'non bayesian':
+                forward_path = os.path.join(cfg.models_path, 'frequentist_forward_resampled/model_lenet.pth')
+            else:
+                forward_path = os.path.join(cfg.models_path, f'bayesian_forward_resampled/model_lenet_{forward}.pth')
+
+            gan_path = os.path.join(cfg.models_path, f'generative_resampled/best_generator_{distribution}_distribution.pth')
+            if (os.path.isfile(forward_path)) & (os.path.isfile(forward_path)):
+                forward_model = torch.load(forward_path, map_location=device).eval()
+                generator_model = torch.load(gan_path, map_location=device).eval()
+
+                if metric_type == 'l1_l2':
+                    stat1_in_rand, stat1_in_pol, stat2_in_rand, stat2_in_pol = monte_carlo_inference_mse('in', generator_model, forward_model, testset, sample_number_fid_kid = sample_number_fid_kid, size_sample=size_sample)
+                elif metric_type == 'fid_kid':
+                    stat1_in_rand, stat1_in_pol, stat2_in_rand, stat2_in_pol = monte_carlo_inference_fid_kid_batch('in', generator_model, forward_model, testset, sample_number_fid_kid = sample_number_fid_kid)
+
+                if output_type == 'latex':
+                    stat1_in_rand = f"{np.around(stat1_in_rand[0],decimals=decimals)}{inter}{np.around(stat1_in_rand[1],decimals=decimals)}"
+                    stat1_in_pol = f"{np.around(stat1_in_pol[0],decimals=decimals)}{inter}{np.around(stat1_in_pol[1],decimals=decimals)}"
+                    stat2_in_rand = f"{np.around(stat2_in_rand[0],decimals=decimals)}{inter}{np.around(stat2_in_rand[1],decimals=decimals)}"
+                    stat2_in_pol = f"{np.around(stat2_in_pol[0],decimals=decimals)}{inter}{np.around(stat2_in_pol[1],decimals=decimals)}"
+
+                results.append([forward, distribution, stat1_in_rand, stat1_in_pol, stat2_in_rand, stat2_in_pol])
+
+                if output_type == 'latex':
+                    print(tabulate(results, headers, tablefmt='latex_raw'))
+
+            else:
+                print('WARNING: no model was found')
+    
+    if output_type == 'latex':
+        return tabulate(results, headers, tablefmt='latex_raw')
+
+    else:
+        return results 

@@ -8,11 +8,17 @@ from copy import deepcopy
 import torch
 from torch.autograd import Variable
 from torchvision.utils import save_image
+from torch.utils.data import DataLoader
 
 cuda = True if torch.cuda.is_available() else False
 
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
+
+from src.data import MNISTDataset, RotationDataset
+from src.metrics import se, compute_thickness_ground_truth
+from src.generative_model.metrics import calculate_fid_given_paths, calculate_kid_given_paths
+from src.generative_model import Generator, Discriminator, LeNet5
 
 import src.config_gan as cfgan
 import src.config as cfg
@@ -20,10 +26,8 @@ if cfg.experiment == 'min_mnist':
     import src.config_min_mnist as cfg_data
 elif cfg.experiment == 'max_mnist':
     import src.config_max_mnist as cfg_data
-
-from src.metrics import se, compute_thickness_ground_truth
-from .metrics import calculate_fid_given_paths, calculate_kid_given_paths
-from src.generative_model import Generator, Discriminator, LeNet5
+elif cfg.experiment == 'rotation_data':
+    import src.config_rotation as cfg_data
 
 def save_numpy_arr(path, arr):
     np.save(path, arr)
@@ -73,7 +77,7 @@ def compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_ou
 
     return fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution
 
-def sample_image(n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, sample_size):
+def sample_image_mnist(n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, sample_size):
     """Saves a grid of generated digits ranging from 0 to n_classes"""
 
     ## -------------- In distribution --------------
@@ -105,6 +109,30 @@ def sample_image(n_row, batches_done, in_distribution_index, out_distribution_in
     print(f"KID score out distribution : mean = {np.around(kid_value_out_distribution[0], decimals=4)} \ std = {np.around(kid_value_out_distribution[1], decimals=4)}")
 
     return se_generator, fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution
+
+def sample_image_rotation(n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, sample_size):
+    """Saves a grid of generated digits ranging from 0 to n_classes"""
+
+    ## -------------- In distribution --------------
+    # Sample noise
+    z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim))))
+    # Get labels ranging from 0 to n_classes for n rows
+    labels = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)])
+    labels = Variable(FloatTensor(labels))
+
+    gen_imgs = generator(z, labels)
+    save_image(gen_imgs.data, "images/%d.png" % batches_done, nrow=n_row, normalize=True)
+
+    fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size)
+
+    print()
+    print(f"FID score in distribution : mean = {np.around(fid_value_in_distribution[0], decimals=4)} \ std = {np.around(fid_value_in_distribution[1], decimals=4)}")
+    print(f"FID score out distribution : mean = {np.around(fid_value_out_distribution[0], decimals=4)} \ std = {np.around(fid_value_out_distribution[1], decimals=4)}")
+    print()
+    print(f"KID score in distribution : mean = {np.around(kid_value_in_distribution[0], decimals=4)} \ std = {np.around(kid_value_in_distribution[1], decimals=4)}")
+    print(f"KID score out distribution : mean = {np.around(kid_value_out_distribution[0], decimals=4)} \ std = {np.around(kid_value_out_distribution[1], decimals=4)}")
+
+    return fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution
 
 def save_model_check(dist, df_check, mean_out, best_res, df_acc_gen, path_generator, generator):
     if df_check is not None:
@@ -148,8 +176,22 @@ def load_obj_csv(path):
 def save_obj_csv(d, path):
     d.to_csv(path+'.csv', index=False)
 
-def train_gan_model(dataloader, testset, path_generator):
+def train_gan_model():
+    
+    path_generator = os.path.join(cfg.models_path, cfg.gan_path)
 
+    if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'min_mnist'):
+        dataset = MNISTDataset('train', data_path=cfg_data.data_path)
+        testset = MNISTDataset('full', data_path=data_path)
+    elif cfg.experiment == 'rotation_data':
+        dataset = RotationDataset('train', data_path=cfg_data.data_path)
+        testset = RotationDataset('full', data_path=data_path)
+
+    dataloader = DataLoader(dataset=dataset,
+                              batch_size=cfg_data.batch_size,
+                              shuffle=True,
+                              num_workers=4)
+    
     se_gan_in_distribution = []
     se_gan_out_distribution = []
     df_acc_gen = pd.DataFrame(columns=['se_in', 'se_out', 'fid_in', 'fid_out'])
@@ -202,7 +244,7 @@ def train_gan_model(dataloader, testset, path_generator):
         in_distribution_index = np.where(arr > cfg_data.limit_dataset)
         out_distribution_index = np.where(arr <= cfg_data.limit_dataset)
     
-    elif cfg.experiment == 'max_mnist':
+    elif (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_data'):
         df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
         df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
         index_in_distribution = df_test_in[df_test_in['label'] <= cfg_data.limit_dataset].index
@@ -297,26 +339,36 @@ def train_gan_model(dataloader, testset, path_generator):
                 # Delete useless data from GPU
                 del valid; del fake; del real_imgs; del labels; del z; del gen_labels; del g_loss; del d_loss; del gen_imgs; del validity;
                 torch.cuda.empty_cache()
+                
+                if cfg.experiment == 'rotation_data':
+                    fid_in, kid_in, fid_out, kid_out = sample_image_rotation(cfgan.n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, cfgan.fid_kid_sample)
 
-                se_gan, fid_in, kid_in, fid_out, kid_out = sample_image(cfgan.n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, cfgan.fid_kid_sample)
+                    df = pd.DataFrame([fid_in[0]], columns=['fid_in'])
+                    df['fid_out'] = fid_out[0]
+                    df['kid_in'] = kid_in[0]
+                    df['kid_out'] = kid_out[0]
 
-                mean_in_se = np.mean(se_gan[in_distribution_index])
-                mean_out_se = np.mean(se_gan[out_distribution_index])
+                    df_acc_gen = df_acc_gen.append(df, ignore_index=True)
+                
+                elif (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_data'):
 
-                se_gan_in_distribution.append(se_gan[in_distribution_index])
-                se_gan_out_distribution.append(se_gan[out_distribution_index])
-
-                df = pd.DataFrame([mean_in_se], columns=['mse_in'])
-                df['mse_out'] = mean_out_se
-                df['fid_in'] = fid_in[0]
-                df['fid_out'] = fid_out[0]
-                df['kid_in'] = kid_in[0]
-                df['kid_out'] = kid_out[0]
-
-                df_acc_gen = df_acc_gen.append(df, ignore_index=True)
+                    se_gan, fid_in, kid_in, fid_out, kid_out = sample_image_mnist(cfgan.n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, cfgan.fid_kid_sample)
+    
+                    mean_in_se = np.mean(se_gan[in_distribution_index])
+                    mean_out_se = np.mean(se_gan[out_distribution_index])
+    
+                    se_gan_in_distribution.append(se_gan[in_distribution_index])
+                    se_gan_out_distribution.append(se_gan[out_distribution_index])
+    
+                    df = pd.DataFrame([mean_in_se], columns=['mse_in'])
+                    df['mse_out'] = mean_out_se
+                    df['fid_in'] = fid_in[0]
+                    df['fid_out'] = fid_out[0]
+                    df['kid_in'] = kid_in[0]
+                    df['kid_out'] = kid_out[0]
+    
+                    df_acc_gen = df_acc_gen.append(df, ignore_index=True)
 
                 # Check if we have better results
                 df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['fid_in'].values, best_res_in, df_acc_gen, path_generator, generator)
                 df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['fid_out'].values, best_res_out, df_acc_gen, path_generator, generator)
-
-    return se_gan_in_distribution, se_gan_out_distribution, df_acc_gen

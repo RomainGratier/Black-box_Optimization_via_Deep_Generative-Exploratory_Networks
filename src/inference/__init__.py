@@ -1,1 +1,1 @@
-from .inference import monte_carlo_inference_general, monte_carlo_inference_fid_kid, monte_carlo_inference_fid_kid_batch, monte_carlo_inference_mse
+from .inference import compute_results_inference, monte_carlo_inference_general

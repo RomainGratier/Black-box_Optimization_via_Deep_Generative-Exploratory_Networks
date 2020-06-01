@@ -128,7 +128,9 @@ def test_model(net, criterion, testinloader, testoutloader, iteration=None, num_
     return df_acc_in, df_acc_out
 
 
-def run_frequentist(dataset, net_type, ckpt_dir):
+def run_frequentist(net_type='lenet'):
+
+    ckpt_dir = os.path.join(cfg.models_path, cfg.forward_path)
 
     # Hyper Parameter settings
     n_epochs = cfg.n_epochs
@@ -137,7 +139,7 @@ def run_frequentist(dataset, net_type, ckpt_dir):
     valid_size = cfg.valid_size
     batch_size = cfg.batch_size
 
-    trainset, testset_in, testset_out, inputs, outputs = getDataset(dataset)
+    trainset, testset_in, testset_out, inputs, outputs = getDataset(cfg.dataset)
     train_loader, valid_loader, test_loader_in, test_loader_out = getDataloader(
         trainset, testset_in, testset_out, valid_size, batch_size, num_workers)
     net = getModel(net_type, inputs, outputs).to(device)

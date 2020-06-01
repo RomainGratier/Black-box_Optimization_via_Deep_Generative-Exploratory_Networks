@@ -186,7 +186,9 @@ def test_model(net, criterion, testinloader, testoutloader, iteration=None, num_
     return df_acc_in, df_acc_out
 
 
-def run_bayesian(dataset, net_type, ckpt_dir, verbose=False):
+def run_bayesian(net_type='lenet', verbose=False):
+    
+    ckpt_dir = os.path.join(cfg.models_path, cfg.forward_path)
 
     # Hyper Parameter settings
     layer_type = cfg.layer_type
@@ -202,7 +204,7 @@ def run_bayesian(dataset, net_type, ckpt_dir, verbose=False):
     batch_size = cfg.batch_size
     beta_type = cfg.beta_type
 
-    trainset, testset_in, testset_out, inputs, outputs = getDataset(dataset)
+    trainset, testset_in, testset_out, inputs, outputs = getDataset(cfg.dataset)
     train_loader, valid_loader, test_loader_in, test_loader_out = getDataloader(
         trainset, testset_in, testset_out, valid_size, batch_size, num_workers)
     net = getModel(net_type, inputs, outputs, priors, layer_type, activation_type).to(device)
