@@ -219,7 +219,7 @@ class RotationDataset(Dataset):
             labels, index = self.__getlabels__(dataset, label_file)
             
             # Read images
-            images = self.__transform__(load_idx(img_file))[index]
+            images = load_compress_numpy(img_file)[index]
   
             print(labels.describe())
             self.maximum = np.max(labels)
@@ -238,7 +238,7 @@ class RotationDataset(Dataset):
             labels_te, index_te = self.__getlabels__(dataset, label_file_te)
             
             # Read images
-            images = self.__transform__(load_idx(img_file_te))[index_te]
+            images = load_compress_numpy(img_file_te)[index_te]
 
             print(labels_te.describe())
             self.maximum = np.max(labels_te)
@@ -257,7 +257,7 @@ class RotationDataset(Dataset):
             labels_te, index_te = self.__getlabels__(dataset, label_file_te)
             
             # Read images 
-            images = self.__transform__(load_idx(img_file_te))[index_te]
+            images = load_compress_numpy(img_file_te)[index_te]
 
             print(labels_te.describe())
             self.maximum = np.max(labels_te)
@@ -270,13 +270,13 @@ class RotationDataset(Dataset):
         
         if dataset == 'test':
 
-            img_file_te, label_file_te = self.__getdatasets__('test', data_path)
+            img_file_te, label_file_te = self.__getdatasets__(dataset, data_path)
 
             # Get the labels
-            labels_te, index_te = self.__getlabels__('test', label_file_te)
+            labels_te, index_te = self.__getlabels__(dataset, label_file_te)
             
             # Read images 
-            images = self.__transform__(load_idx(img_file_te))[index_te]
+            images = load_compress_numpy(img_file_te)[index_te]
 
             print(labels_te.describe())
             self.maximum = np.max(labels_te)
@@ -294,8 +294,10 @@ class RotationDataset(Dataset):
             # Get the labels
             labels_te, index_te = self.__getlabels__('test', label_file_te)
             
-            # Read images 
-            images = self.__transform__(load_idx(img_file_tr))[index_te]
+            # Read images
+            images = load_compress_numpy(img_file_tr)[index_te]
+            print(f"Check image extremum : max={np.max(images)} | min={np.min(images)}")
+            print(f"Check label extremum : max={np.max(labels_te)} | min={np.min(labels_te)}")
 
             print(labels_te.describe())
             self.maximum = np.max(labels_te)
@@ -318,7 +320,7 @@ class RotationDataset(Dataset):
 
     def __getlabels__(self, dataset, label_file):
         # Get the labels
-        labels = pd.DataFrame(load_idx(label_file),columns=['label'])
+        labels = pd.DataFrame(load_compress_numpy(label_file),columns=['label'])
 
         if (dataset == 'train') | (dataset == 'test_in'):
             index = labels[labels['label'] < cfg_data.limit_dataset].index
@@ -340,19 +342,6 @@ class RotationDataset(Dataset):
         print(check.plot.hist(bins=20))
 
         return labels, index
-    
-    def __transform__(self, X):
-        X = X.astype('float32')
-
-        # Normalize between 0 - 1
-        X = (X - X.min())
-        X = X / (X.max() - X.min())
-
-        # Normalize between -1 - 1
-        X -= 0.5
-        X /= 0.5
-
-        return X
 
     def __getitem__(self, index):
         return self.x_data[index], self.y_data[index]
@@ -384,6 +373,10 @@ def _load_uint8(f):
     buffer_length = int(np.prod(shape))
     data = np.frombuffer(f.read(buffer_length), dtype=np.uint8).reshape(shape)
     return data
+
+def load_compress_numpy(file_name):
+    with gzip.GzipFile(file_name, "r") as f:
+        return np.load(f)
 
 def getDataset(dataset_type):
     

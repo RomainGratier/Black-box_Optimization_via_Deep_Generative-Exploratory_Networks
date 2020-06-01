@@ -1,3 +1,10 @@
+
+
+
+def load_compress_numpy(file_name):
+    with gzip.GzipFile(file_name, "r") as f:
+        return np.load(f)
+
 # -*- coding: utf-8 -*-
 import os
 import time
@@ -8,9 +15,7 @@ import math
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
-
 import kornia.geometry as geometry
-
 import gzip
 import struct
 
@@ -26,30 +31,9 @@ if not cuda:
 device = torch.device("cuda" if cuda else "cpu")
 print(f'Device found : {device}')
 
-def _save_uint8(data, f):
-    data = np.asarray(data, dtype=np.uint8)
-    f.write(struct.pack('BBBB', 0, 0, 0x08, data.ndim))
-    f.write(struct.pack('>' + 'I' * data.ndim, *data.shape))
-    f.write(data.tobytes())
-
-
-def save_idx(data: np.ndarray, path: str):
-    """Writes an array to disk in IDX format.
-
-    Parameters
-    ----------
-    data : array_like
-        Input array of dtype ``uint8`` (will be coerced if different dtype).
-    path : str
-        Path of the output file. Will compress with `gzip` if path ends in '.gz'.
-
-    References
-    ----------
-    http://yann.lecun.com/exdb/mnist/
-    """
-    open_fcn = gzip.open if path.endswith('.gz') else open
-    with open_fcn(path, 'wb') as f:
-        _save_uint8(data, f)
+def save_compress_numpy(arr, file_name):
+    with gzip.GzipFile(file_name, "w") as f:
+        np.save(f, arr)
 
 def gaussian_kernal(kernel_size=3, channels=1, sigma=1, device=None):
 
@@ -126,11 +110,6 @@ def create_t_dataset(save_path, batch_size=1000, len_dataset=100000, split_ratio
 
     for i in tqdm(range(int(round(len_dataset/batch_size)))):
         imgs, batch_rot = batch_sample(batch_size, 0, 360)
-        print(imgs.max())
-        print(imgs.min())
-        '''for i, im in enumerate(imgs):
-            plot_img(imgs[i].squeeze(0), batch_rot[i])'''
-
         imgs_ls.append(imgs.squeeze(1).cpu())
         labels_ls.append(batch_rot.cpu())
 
@@ -145,10 +124,10 @@ def create_t_dataset(save_path, batch_size=1000, len_dataset=100000, split_ratio
 
     os.makedirs(save_path, exist_ok=True)
     
-    save_idx(imgs[indice:], os.path.join(save_path, 'train_images_ubyte.gz'))
-    save_idx(labels[indice:], os.path.join(save_path, 'train_labels_ubyte.gz'))
-    save_idx(imgs[:indice], os.path.join(save_path, 'test_images_ubyte.gz'))
-    save_idx(labels[:indice], os.path.join(save_path, 'test_labels_ubyte.gz'))
+    save_compress_numpy(imgs[indice:], os.path.join(save_path, 'train_images_ubyte.gz'))
+    save_compress_numpy(labels[indice:], os.path.join(save_path, 'train_labels_ubyte.gz'))
+    save_compress_numpy(imgs[:indice], os.path.join(save_path, 'test_images_ubyte.gz'))
+    save_compress_numpy(labels[:indice], os.path.join(save_path, 'test_labels_ubyte.gz'))
 
 def main(path):
     create_t_dataset(path, batch_size=1000, len_dataset=60000)
