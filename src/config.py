@@ -1,10 +1,11 @@
 # --------------------- Dataset ---------------------
-experiment = 'min_mnist'
+experiment = 'rotation_dataset'
 model_fidkid_path = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/models/lenet.pth'
 if (experiment=='min_mnist') | (experiment=='max_mnist'):
     data_path = 'processed/original_thic_resample'
 elif 'rotation_data':
     data_path = 'processed/rotation_dataset'
+print(f'Data path : {data_path}')
 
 gan_path = 'generator'
 forward_path = 'forward'
@@ -14,6 +15,7 @@ elif experiment == 'min_mnist':
     models_path = '/content/drive/My Drive/master_thesis/models_inference_min/'
 elif experiment == 'rotation_dataset':
     models_path = '/content/drive/My Drive/master_thesis/models_inference_rotation/'
+print(f'Model path : {models_path}')
 
 img_size=28
 channels=1

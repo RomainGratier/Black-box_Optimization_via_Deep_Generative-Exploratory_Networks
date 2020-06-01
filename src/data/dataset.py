@@ -13,12 +13,23 @@ import torchvision.transforms as transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 from sklearn.preprocessing import MinMaxScaler
 
+import math
+import numpy as np
+
+import torch
+import torch.nn as nn
+from torch.utils.data import Dataset
+
+import kornia.geometry as geometry
+
 import src.config as cfg
 
 if cfg.experiment == 'min_mnist':
     import src.config_min_mnist as cfg_data
 elif cfg.experiment == 'max_mnist':
     import src.config_max_mnist as cfg_data
+elif cfg.experiment == 'rotation_dataset':
+    import src.config_rotation as cfg_data
 
 class MNISTDataset(Dataset):
     """ MNIST dataset."""
@@ -187,6 +198,168 @@ class MNISTDataset(Dataset):
     def __len__(self):
         return self.len
 
+
+class RotationDataset(Dataset):
+    """ MNIST dataset."""
+
+    # Initialize your data, download, etc.
+    def __init__(self, dataset, data_path = 'sample_data'):
+
+        '''Initialise the data type:
+        - data_type : original, global, thic, frac, local, plain, swel, thin
+        '''
+
+        if dataset == 'train':
+
+            # Get file paths
+            img_file, label_file = self.__getdatasets__(dataset, data_path)
+
+            # Get the labels
+            print(label_file)
+            labels, index = self.__getlabels__(dataset, label_file)
+            
+            # Read images
+            images = self.__transform__(load_idx(img_file))[index]
+  
+            print(labels.describe())
+            self.maximum = np.max(labels)
+            self.minimum = np.min(labels)
+
+            # Select inputs
+            self.x_data = torch.from_numpy(images).unsqueeze(1)
+            self.y_data = torch.from_numpy(labels.to_numpy()).squeeze(1)
+            self.len = self.y_data.shape[0]
+
+        if dataset == 'test_in':
+
+            img_file_te, label_file_te = self.__getdatasets__('test', data_path)
+
+            # Get the labels
+            labels_te, index_te = self.__getlabels__(dataset, label_file_te)
+            
+            # Read images
+            images = self.__transform__(load_idx(img_file_te))[index_te]
+
+            print(labels_te.describe())
+            self.maximum = np.max(labels_te)
+            self.minimum = np.min(labels_te)
+
+            # Select inputs
+            self.x_data = torch.from_numpy(images).unsqueeze(1)
+            self.y_data = torch.from_numpy(labels_te.to_numpy()).squeeze(1)
+            self.len = self.y_data.shape[0]
+        
+        if dataset == 'test_out':
+
+            img_file_te, label_file_te = self.__getdatasets__('test', data_path)
+
+            # Get the labels
+            labels_te, index_te = self.__getlabels__(dataset, label_file_te)
+            
+            # Read images 
+            images = self.__transform__(load_idx(img_file_te))[index_te]
+
+            print(labels_te.describe())
+            self.maximum = np.max(labels_te)
+            self.minimum = np.min(labels_te)
+
+            # Select inputs
+            self.x_data = torch.from_numpy(images).unsqueeze(1)
+            self.y_data = torch.from_numpy(labels_te.to_numpy()).squeeze(1)
+            self.len = self.y_data.shape[0]
+        
+        if dataset == 'test':
+
+            img_file_te, label_file_te = self.__getdatasets__('test', data_path)
+
+            # Get the labels
+            labels_te, index_te = self.__getlabels__('test', label_file_te)
+            
+            # Read images 
+            images = self.__transform__(load_idx(img_file_te))[index_te]
+
+            print(labels_te.describe())
+            self.maximum = np.max(labels_te)
+            self.minimum = np.min(labels_te)
+
+            # Select inputs
+            self.x_data = torch.from_numpy(images).unsqueeze(1)
+            self.y_data = torch.from_numpy(labels_te.to_numpy()).squeeze(1)
+            self.len = self.y_data.shape[0]
+
+        if dataset == 'full':
+
+            img_file_tr, label_file_te = self.__getdatasets__('train', data_path)
+
+            # Get the labels
+            labels_te, index_te = self.__getlabels__('test', label_file_te)
+            
+            # Read images 
+            images = self.__transform__(load_idx(img_file_tr))[index_te]
+
+            print(labels_te.describe())
+            self.maximum = np.max(labels_te)
+            self.minimum = np.min(labels_te)
+
+            # Select inputs
+            self.x_data = torch.from_numpy(images).unsqueeze(1)
+            self.y_data = torch.from_numpy(labels_te.to_numpy()).squeeze(1)
+            self.len = self.y_data.shape[0]
+
+    def __getdatasets__(self, dataset, data_path):
+
+        folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
+        folder = os.path.join(folder, data_path)
+
+        if dataset == 'test':
+            return os.path.join(folder,'test_images_ubyte.gz'), os.path.join(folder,'test_labels_ubyte.gz')
+        if dataset == 'train':
+            return os.path.join(folder,'train_images_ubyte.gz'), os.path.join(folder,'train_labels_ubyte.gz')
+
+    def __getlabels__(self, dataset, label_file):
+        # Get the labels
+        labels = pd.DataFrame(load_idx(label_file),columns=['label'])
+
+        if (dataset == 'train') | (dataset == 'test_in'):
+            index = labels[labels['label'] < cfg_data.limit_dataset].index
+            labels = labels.loc[index]
+
+        elif dataset == 'test_out':
+            index = labels[(labels['label'] >= cfg_data.limit_dataset) & (labels['label'] < cfg_data.max_dataset)].index
+            labels = labels.loc[index]
+
+        else:
+            index = labels[labels['label'] < cfg_data.max_dataset].index
+            labels = labels.loc[index]
+
+        print(labels.describe())
+        print(f" -------------------- EDA -------------------- ")
+        print(f"Check the distribution of our labels")
+        check = pd.DataFrame(np.around(labels['label'].values), columns=['label'])
+        print(check.groupby('label')['label'].count())
+        print(check.plot.hist(bins=20))
+
+        return labels, index
+    
+    def __transform__(self, X):
+        X = X.astype('float32')
+
+        # Normalize between 0 - 1
+        X = (X - X.min())
+        X = X / (X.max() - X.min())
+
+        # Normalize between -1 - 1
+        X -= 0.5
+        X /= 0.5
+
+        return X
+
+    def __getitem__(self, index):
+        return self.x_data[index], self.y_data[index]
+
+    def __len__(self):
+        return self.len
+
 def load_idx(path: str) -> np.ndarray:
     """Reads an array in IDX format from disk.
     Parameters
@@ -244,15 +417,6 @@ def getDataloader(trainset, testset_in, testset_out, valid_size, batch_size, num
 
     return train_loader, valid_loader, test_loader_in, test_loader_out
 
-import math
-import numpy as np
-
-import torch
-import torch.nn as nn
-from torch.utils.data import Dataset
-
-import kornia.geometry as geometry
-
 def gaussian_kernal(kernel_size=3, channels=1, sigma=1, device=None):
 
 	# Create a x, y coordinate grid of shape (kernel_size, kernel_size, 2)
@@ -302,136 +466,3 @@ class SyntheticTesla:
 		batch_sample = self.conv(self.src.repeat(batch_size,1,1,1))
 		batch_sample = torch.clamp(batch_sample / batch_sample.max(), min=0.0, max=1.0)
 		return batch_sample, None
-
-class RotationDataset(Dataset):
-    """ MNIST dataset."""
-
-    # Initialize your data, download, etc.
-    def __init__(self, dataset, data_path = 'sample_data'):
-
-        '''Initialise the data type:
-        - data_type : original, global, thic, frac, local, plain, swel, thin
-        '''
-
-        if dataset == 'train':
-
-            # Get file paths
-            img_file, label_file = self.__getdatasets__(dataset, data_path)
-
-            # Get the labels
-            print(label_file)
-            labels, index = self.__getlabels__(dataset, label_file)
-  
-            print(labels.describe())
-            self.maximum = np.max(labels)
-            self.minimum = np.min(labels)
-
-            # Select inputs
-            self.x_data = torch.from_numpy(load_idx(img_file)[index]).unsqueeze(1)
-            self.y_data = torch.from_numpy(labels.to_numpy()).squeeze(1)
-            self.len = self.y_data.shape[0]
-
-        if dataset == 'test_in':
-
-            img_file_te, label_file_te = self.__getdatasets__('test', data_path)
-
-            # Get the labels
-            labels_te, index_te = self.__getlabels__(dataset, label_file_te)
-
-            print(labels_te.describe())
-            self.maximum = np.max(labels_te)
-            self.minimum = np.min(labels_te)
-
-            # Select inputs
-            self.x_data = torch.from_numpy(load_idx(img_file_te)[index_te]).unsqueeze(1)
-            self.y_data = torch.from_numpy(labels_te.to_numpy()).squeeze(1)
-            self.len = self.y_data.shape[0]
-        
-        if dataset == 'test_out':
-
-            img_file_te, label_file_te = self.__getdatasets__('test', data_path)
-
-            # Get the labels
-            labels_te, index_te = self.__getlabels__(dataset, label_file_te)
-
-            print(labels_te.describe())
-            self.maximum = np.max(labels_te)
-            self.minimum = np.min(labels_te)
-
-            # Select inputs
-            self.x_data = torch.from_numpy(load_idx(img_file_te)[index_te]).unsqueeze(1)
-            self.y_data = torch.from_numpy(labels_te.to_numpy()).squeeze(1)
-            self.len = self.y_data.shape[0]
-        
-        if dataset == 'test':
-
-            img_file_te, label_file_te = self.__getdatasets__('test', data_path)
-
-            # Get the labels
-            labels_te, index_te = self.__getlabels__('test', label_file_te)
-
-            print(labels_te.describe())
-            self.maximum = np.max(labels_te)
-            self.minimum = np.min(labels_te)
-
-            # Select inputs
-            self.x_data = torch.from_numpy(load_idx(img_file_te)[index_te]).unsqueeze(1)
-            self.y_data = torch.from_numpy(labels_te.to_numpy()).squeeze(1)
-            self.len = self.y_data.shape[0]
-
-        if dataset == 'full':
-
-            img_file_tr, label_file_te = self.__getdatasets__('train', data_path)
-
-            # Get the labels
-            labels_te, index_te = self.__getlabels__('test', label_file_te)
-
-            print(labels_te.describe())
-            self.maximum = np.max(labels_te)
-            self.minimum = np.min(labels_te)
-
-            # Select inputs
-            self.x_data = torch.from_numpy(load_idx(img_file_tr)[index_te]).unsqueeze(1)
-            self.y_data = torch.from_numpy(labels_te.to_numpy()).squeeze(1)
-            self.len = self.y_data.shape[0]
-
-    def __getdatasets__(self, dataset, data_path):
-
-        folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
-        folder = os.path.join(folder, data_path)
-
-        if dataset == 'test':
-            return os.path.join(folder,'test_images_ubyte.gz'), os.path.join(folder,'test_labels_ubyte.gz')
-        if dataset == 'train':
-            return os.path.join(folder,'train_images_ubyte.gz'), os.path.join(folder,'train_labels_ubyte.gz')
-
-    def __getlabels__(self, dataset, label_file):
-        # Get the labels
-        labels = pd.DataFrame(load_idx(label_file),columns=['label'])
-
-        if (dataset == 'train') | (dataset == 'test_in'):
-            index = labels[labels['label'] < cfg_data.limit_dataset].index
-            labels = labels.loc[index]
-
-        elif dataset == 'test_out':
-            index = labels[(labels['label'] >= cfg_data.limit_dataset) & (labels['label'] < cfg_data.max_dataset)].index
-            labels = labels.loc[index]
-
-        else:
-            index = labels[labels['label'] < cfg_data.max_dataset].index
-            labels = labels.loc[index]
-
-        print(labels.describe())
-        print(f" -------------------- EDA -------------------- ")
-        print(f"Check the distribution of our labels")
-        check = pd.DataFrame(np.around(labels['label'].values), columns=['label'])
-        print(check.groupby('label')['label'].count())
-        print(check.plot.hist(bins=20))
-
-        return labels, index
-
-    def __getitem__(self, index):
-        return self.x_data[index], self.y_data[index]
-
-    def __len__(self):
-        return self.len

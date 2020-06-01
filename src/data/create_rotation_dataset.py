@@ -126,6 +126,8 @@ def create_t_dataset(save_path, batch_size=1000, len_dataset=100000, split_ratio
 
     for i in tqdm(range(int(round(len_dataset/batch_size)))):
         imgs, batch_rot = batch_sample(batch_size, 0, 360)
+        print(imgs.max())
+        print(imgs.min())
         '''for i, im in enumerate(imgs):
             plot_img(imgs[i].squeeze(0), batch_rot[i])'''
 
@@ -134,6 +136,9 @@ def create_t_dataset(save_path, batch_size=1000, len_dataset=100000, split_ratio
 
     imgs = np.concatenate(imgs_ls)
     labels = np.concatenate(labels_ls)
+    
+    print(f'Check extremum values img : max = {imgs.max()} / min = {imgs.min()}')
+    print(f'Check extremum values labels : max = {labels.max()} / min = {labels.min()}')
 
     indice = int(split_ratio * labels.shape[0])
     print(f'test size equal : {indice}')

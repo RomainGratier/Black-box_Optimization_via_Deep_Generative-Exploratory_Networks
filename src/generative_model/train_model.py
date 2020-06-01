@@ -26,7 +26,7 @@ if cfg.experiment == 'min_mnist':
     import src.config_min_mnist as cfg_data
 elif cfg.experiment == 'max_mnist':
     import src.config_max_mnist as cfg_data
-elif cfg.experiment == 'rotation_data':
+elif cfg.experiment == 'rotation_dataset':
     import src.config_rotation as cfg_data
 
 def save_numpy_arr(path, arr):
@@ -50,7 +50,7 @@ def compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_ou
     if cfg.experiment == 'min_mnist':
         gen_img_in_distribution = generate_sample(cfg_data.limit_dataset, cfg_data.max_dataset, sample_size, generator)
         gen_img_out_distribution = generate_sample(cfg_data.min_dataset, cfg_data.limit_dataset, sample_size, generator)
-    elif cfg.experiment == 'max_mnist':
+    elif (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
         gen_img_in_distribution = generate_sample(cfg_data.min_dataset, cfg_data.limit_dataset, sample_size, generator)
         gen_img_out_distribution = generate_sample(cfg_data.limit_dataset, cfg_data.max_dataset, sample_size, generator)
 
@@ -188,7 +188,7 @@ def train_gan_model():
         testset = RotationDataset('full', data_path=cfg.data_path)
 
     dataloader = DataLoader(dataset=dataset,
-                              batch_size=cfg_data.batch_size,
+                              batch_size=cfgan.batch_size,
                               shuffle=True,
                               num_workers=4)
     

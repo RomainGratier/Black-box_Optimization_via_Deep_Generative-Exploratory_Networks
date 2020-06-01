@@ -11,6 +11,8 @@ if cfg.experiment == 'min_mnist':
     import src.config_min_mnist as cfg_data
 elif cfg.experiment == 'max_mnist':
     import src.config_max_mnist as cfg_data
+elif cfg.experiment == 'rotation_dataset':
+    import src.config_rotation as cfg_data
 
 def minmaxs(X):
     return (X - cfg_data.min_dataset) / (cfg_data.max_dataset - cfg_data.min_dataset)
