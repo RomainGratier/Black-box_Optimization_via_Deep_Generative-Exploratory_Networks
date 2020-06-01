@@ -11,6 +11,9 @@ from torch.utils.data import Dataset
 
 import kornia.geometry as geometry
 
+import gzip
+import struct
+
 seed = 2020
 random.seed(seed)
 np.random.seed(seed)
@@ -22,6 +25,31 @@ if not cuda:
 
 device = torch.device("cuda" if cuda else "cpu")
 print(f'Device found : {device}')
+
+def _save_uint8(data, f):
+    data = np.asarray(data, dtype=np.uint8)
+    f.write(struct.pack('BBBB', 0, 0, 0x08, data.ndim))
+    f.write(struct.pack('>' + 'I' * data.ndim, *data.shape))
+    f.write(data.tobytes())
+
+
+def save_idx(data: np.ndarray, path: str):
+    """Writes an array to disk in IDX format.
+
+    Parameters
+    ----------
+    data : array_like
+        Input array of dtype ``uint8`` (will be coerced if different dtype).
+    path : str
+        Path of the output file. Will compress with `gzip` if path ends in '.gz'.
+
+    References
+    ----------
+    http://yann.lecun.com/exdb/mnist/
+    """
+    open_fcn = gzip.open if path.endswith('.gz') else open
+    with open_fcn(path, 'wb') as f:
+        _save_uint8(data, f)
 
 def gaussian_kernal(kernel_size=3, channels=1, sigma=1, device=None):
 
@@ -111,15 +139,15 @@ def create_t_dataset(save_path, batch_size=1000, len_dataset=100000, split_ratio
     print(f'test size equal : {indice}')
 
     os.makedirs(save_path, exist_ok=True)
-
-    np.save(os.path.join(save_path, 'train_images.npy'), imgs[indice:])
-    np.save(os.path.join(save_path, 'train_labels.npy'), labels[indice:])
-    np.save(os.path.join(save_path, 'test_images.npy'), imgs[:indice])
-    np.save(os.path.join(save_path, 'test_labels.npy'), labels[:indice])
+    
+    save_idx(imgs[indice:], os.path.join(save_path, 'train_images_ubyte.gz'))
+    save_idx(labels[indice:], os.path.join(save_path, 'train_labels_ubyte.gz'))
+    save_idx(imgs[:indice], os.path.join(save_path, 'test_images_ubyte.gz'))
+    save_idx(labels[:indice], os.path.join(save_path, 'test_labels_ubyte.gz'))
 
 def main(path):
     create_t_dataset(path, batch_size=1000, len_dataset=60000)
 
 if __name__ == '__main__':
-    PATH = '../../data/processed/rotation_data/'
+    PATH = '../../data/processed/rotation_dataset/'
     main(PATH)

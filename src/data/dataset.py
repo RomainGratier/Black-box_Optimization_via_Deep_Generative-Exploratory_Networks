@@ -327,7 +327,7 @@ class RotationDataset(Dataset):
             self.minimum = np.min(labels)
 
             # Select inputs
-            self.x_data = torch.from_numpy(np.load(img_file)[index]).unsqueeze(1)
+            self.x_data = torch.from_numpy(load_idx(img_file)[index]).unsqueeze(1)
             self.y_data = torch.from_numpy(labels.to_numpy()).squeeze(1)
             self.len = self.y_data.shape[0]
 
@@ -343,7 +343,7 @@ class RotationDataset(Dataset):
             self.minimum = np.min(labels_te)
 
             # Select inputs
-            self.x_data = torch.from_numpy(np.load(img_file_te)[index_te]).unsqueeze(1)
+            self.x_data = torch.from_numpy(load_idx(img_file_te)[index_te]).unsqueeze(1)
             self.y_data = torch.from_numpy(labels_te.to_numpy()).squeeze(1)
             self.len = self.y_data.shape[0]
         
@@ -359,7 +359,7 @@ class RotationDataset(Dataset):
             self.minimum = np.min(labels_te)
 
             # Select inputs
-            self.x_data = torch.from_numpy(np.load(img_file_te)[index_te]).unsqueeze(1)
+            self.x_data = torch.from_numpy(load_idx(img_file_te)[index_te]).unsqueeze(1)
             self.y_data = torch.from_numpy(labels_te.to_numpy()).squeeze(1)
             self.len = self.y_data.shape[0]
         
@@ -375,7 +375,7 @@ class RotationDataset(Dataset):
             self.minimum = np.min(labels_te)
 
             # Select inputs
-            self.x_data = torch.from_numpy(np.load(img_file_te)[index_te]).unsqueeze(1)
+            self.x_data = torch.from_numpy(load_idx(img_file_te)[index_te]).unsqueeze(1)
             self.y_data = torch.from_numpy(labels_te.to_numpy()).squeeze(1)
             self.len = self.y_data.shape[0]
 
@@ -391,7 +391,7 @@ class RotationDataset(Dataset):
             self.minimum = np.min(labels_te)
 
             # Select inputs
-            self.x_data = torch.from_numpy(np.load(img_file_tr)[index_te]).unsqueeze(1)
+            self.x_data = torch.from_numpy(load_idx(img_file_tr)[index_te]).unsqueeze(1)
             self.y_data = torch.from_numpy(labels_te.to_numpy()).squeeze(1)
             self.len = self.y_data.shape[0]
 
@@ -401,13 +401,13 @@ class RotationDataset(Dataset):
         #folder = os.path.join(folder, data_path)
         folder = data_path
         if dataset == 'test':
-            return os.path.join(folder,'test_images.npy'), os.path.join(folder,'test_labels.npy')
+            return os.path.join(folder,'test_images_ubyte.gz'), os.path.join(folder,'test_labels_ubyte.gz')
         if dataset == 'train':
-            return os.path.join(folder,'train_images.npy'), os.path.join(folder,'train_labels.npy')
+            return os.path.join(folder,'train_images_ubyte.gz'), os.path.join(folder,'train_labels_ubyte.gz')
 
     def __getlabels__(self, dataset, label_file):
         # Get the labels
-        labels = pd.DataFrame(np.load(label_file),columns=['label'])
+        labels = pd.DataFrame(load_idx(label_file),columns=['label'])
 
         if (dataset == 'train') | (dataset == 'test_in'):
             index = labels[labels['label'] < cfg_data.limit_dataset].index
