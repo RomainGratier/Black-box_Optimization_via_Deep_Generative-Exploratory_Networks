@@ -46,10 +46,15 @@ except ImportError:
 from collections import OrderedDict
 
 import src.config as cfg
-from src.generative_model import LeNet5
+from src.generative_model import LeNet5, LeNet5Regressor
 
-mnist_model = LeNet5()
-mnist_model.load_state_dict(torch.load(cfg.model_fidkid_path))
+if (cfg.experiment=='min_mnist')|(cfg.experiment=='max_mnist'):
+    mnist_model = LeNet5()
+    mnist_model.load_state_dict(torch.load(cfg.model_fidkid_path))
+if cfg.experiment=='rotation_dataset':
+    mnist_model = LeNet5Regressor()
+    mnist_model.load_state_dict(torch.load(cfg.model_fidkid_path))
+
 if cuda:
     mnist_model.cuda()
 

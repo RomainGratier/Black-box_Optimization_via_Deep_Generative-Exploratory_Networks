@@ -19,7 +19,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
-
+from torch.nn import functional as F
 import kornia.geometry as geometry
 
 import src.config as cfg
@@ -36,10 +36,6 @@ class MNISTDataset(Dataset):
 
     # Initialize your data, download, etc.
     def __init__(self, dataset, y_feature, data_path = 'morpho_mnist/original'):
-
-        '''Initialise the data type:
-        - data_path : original, global, thic, frac, local, plain, swel, thin
-        '''
 
         if dataset == 'train':
 
@@ -200,14 +196,10 @@ class MNISTDataset(Dataset):
 
 
 class RotationDataset(Dataset):
-    """ MNIST dataset."""
+    """ Rotation dataset."""
 
     # Initialize your data, download, etc.
     def __init__(self, dataset, data_path = 'processed/rotation_dataset'):
-
-        '''Initialise the data type:
-        - data_path : original, global, thic, frac, local, plain, swel, thin
-        '''
 
         if dataset == 'train':
 
@@ -410,20 +402,18 @@ class RotationDatasetLeNet(Dataset):
     """ Rotation dataset."""
 
     # Initialize your data, download, etc.
-    def __init__(self, dataset, data_path = 'morpho_mnist/original'):
+    def __init__(self, dataset, data_path = 'processed/rotation_dataset'):
 
-        '''Initialise the data type:
-        - data_path : original, global, thic, frac, local, plain, swel, thin
-        '''
-        img_file, digit_file = self.__getdatasets__(dataset, data_path)
-        labels = self.__getlabels__(digit_file)
+        # Get file paths
+        img_file, label_file = self.__getdatasets__(dataset, data_path)
 
-        # Read images from MNIST
-        images = load_idx(img_file)
+        # Get the labels
+        labels = load_compress_numpy(label_file)
+        images = self.__transform__(load_compress_numpy(img_file))
 
         # Select inputs
         self.x_data = images.float()
-        self.y_data = torch.from_numpy(labels).long()
+        self.y_data = torch.from_numpy(labels).float()
         self.len = self.y_data.shape[0]
 
     def __getdatasets__(self, dataset, data_path):
@@ -435,10 +425,6 @@ class RotationDatasetLeNet(Dataset):
             return os.path.join(folder,'test_images_ubyte.gz'), os.path.join(folder,'test_labels_ubyte.gz')
         if dataset == 'train':
             return os.path.join(folder,'train_images_ubyte.gz'), os.path.join(folder,'train_labels_ubyte.gz')
-
-    def __getlabels__(self, digit_file):
-        # Get the labels
-        return load_idx(digit_file)
 
     def __transform__(self, X):
         X = X.astype('float32')
@@ -453,6 +439,7 @@ class RotationDatasetLeNet(Dataset):
 
     def __len__(self):
         return self.len
+
 
 def load_idx(path: str) -> np.ndarray:
     """Reads an array in IDX format from disk.

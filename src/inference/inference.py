@@ -553,15 +553,18 @@ def compute_results_inference(metric_type='fid_kid', distributions=['in', 'out']
                 generator_model = torch.load(gan_path, map_location=device).eval()
 
                 if metric_type == 'l1_l2':
-                    stat1_in_rand, stat1_in_pol, stat2_in_rand, stat2_in_pol = monte_carlo_inference_mse('in', generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
+                    stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_mse('in', generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
                 elif metric_type == 'fid_kid':
-                    stat1_in_rand, stat1_in_pol, stat2_in_rand, stat2_in_pol = monte_carlo_inference_fid_kid_batch('in', generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
+                    stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_fid_kid_batch('in', generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
+
+                print((stat1_in_rand[0]-stat1_in_pol[0])/stat1_in_rand[0])
+                print((stat2_out_rand[0]-stat2_out_pol[0])/stat2_out_rand[0])
 
                 if output_type == 'latex':
                     stat1_in_rand = f"{np.around(stat1_in_rand[0],decimals=decimals)}{inter}{np.around(stat1_in_rand[1],decimals=decimals)}"
                     stat1_in_pol = f"{np.around(stat1_in_pol[0],decimals=decimals)}{inter}{np.around(stat1_in_pol[1],decimals=decimals)}"
-                    stat2_in_rand = f"{np.around(stat2_in_rand[0],decimals=decimals)}{inter}{np.around(stat2_in_rand[1],decimals=decimals)}"
-                    stat2_in_pol = f"{np.around(stat2_in_pol[0],decimals=decimals)}{inter}{np.around(stat2_in_pol[1],decimals=decimals)}"
+                    stat2_in_rand = f"{np.around(stat2_out_rand[0],decimals=decimals)}{inter}{np.around(stat2_out_rand[1],decimals=decimals)}"
+                    stat2_in_pol = f"{np.around(stat2_out_pol[0],decimals=decimals)}{inter}{np.around(stat2_out_pol[1],decimals=decimals)}"
 
                 results.append([forward, distribution, stat1_in_rand, stat1_in_pol, stat2_in_rand, stat2_in_pol])
 
