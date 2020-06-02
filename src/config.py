@@ -1,10 +1,14 @@
 # --------------------- Dataset ---------------------
 experiment = 'rotation_dataset'
-model_fidkid_path = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/models/lenet.pth'
+ 
 if (experiment=='min_mnist') | (experiment=='max_mnist'):
     data_path = 'processed/original_thic_resample'
+    model_fidkid_path = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/models_fid_kid/lenet_mnist.pth'
+
 elif 'rotation_data':
     data_path = 'processed/rotation_dataset'
+    model_fidkid_path = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/models_fid_kid/lenet_rot.pth'
+
 print(f'Data path : {data_path}')
 
 gan_path = 'generator'
