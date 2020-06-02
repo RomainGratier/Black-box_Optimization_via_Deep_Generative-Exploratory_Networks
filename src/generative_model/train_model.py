@@ -143,7 +143,6 @@ def save_model_check(dist, df_check, mean_out, best_res, df_acc_gen, path_genera
                 generator.cuda()
             else:
                 torch.save(generator, os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
-            save_obj_csv(df_acc_gen, os.path.join(path_generator, f"results_{dist}_distribution"))
 
             best_res = mean_out
             df_check = None
@@ -156,7 +155,6 @@ def save_model_check(dist, df_check, mean_out, best_res, df_acc_gen, path_genera
                 generator.cuda()
             else:
                 torch.save(generator, os.path.join(path_generator, f"best_generator_{dist}_distribution.pth"))
-            save_obj_csv(df_acc_gen, os.path.join(path_generator, f"results_{dist}_distribution"))
 
             best_res = mean_out
 
@@ -194,7 +192,7 @@ def train_gan_model():
     
     se_gan_in_distribution = []
     se_gan_out_distribution = []
-    df_acc_gen = pd.DataFrame(columns=['se_in', 'se_out', 'fid_in', 'fid_out'])
+    df_acc_gen = pd.DataFrame(columns=['mse_in', 'mse_out', 'fid_in', 'fid_out', 'iteration', 'flag'])
 
     if os.path.exists(path_generator):
         df_check_in_distribution = load_obj_csv(os.path.join(path_generator, 'results_in_distribution'))
@@ -347,6 +345,8 @@ def train_gan_model():
                     df['fid_out'] = fid_out[0]
                     df['kid_in'] = kid_in[0]
                     df['kid_out'] = kid_out[0]
+                    df['iteration'] = batches_done*cfgan.sample_interval
+                    df['flag'] = False
 
                     df_acc_gen = df_acc_gen.append(df, ignore_index=True)
                 
@@ -366,9 +366,18 @@ def train_gan_model():
                     df['fid_out'] = fid_out[0]
                     df['kid_in'] = kid_in[0]
                     df['kid_out'] = kid_out[0]
+                    df['iteration'] = batches_done*cfgan.sample_interval
+                    df['flag'] = False
     
                     df_acc_gen = df_acc_gen.append(df, ignore_index=True)
 
                 # Check if we have better results
+                test_in = best_res_in
+                test_out = best_res_out
+                
                 df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['fid_in'].values, best_res_in, df_acc_gen, path_generator, generator)
                 df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['fid_out'].values, best_res_out, df_acc_gen, path_generator, generator)
+
+                if (test_in!=best_res_in)|(test_out!=best_res_out):
+                    df_acc_gen['flag'] = True
+                save_obj_csv(df_acc_gen, os.path.join(path_generator, f"results_gan"))

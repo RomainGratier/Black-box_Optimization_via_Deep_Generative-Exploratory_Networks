@@ -23,6 +23,53 @@ def visualize_gan_training(acc_gen, sample_interval, batch_size):
     plt.xlabel('iterations')
     plt.legend()
     plt.title("Accuracy without reweighting strategy")
+
+
+import os
+import pandas as pd
+import numpy as np
+from scipy.stats.stats import pearsonr
+import matplotlib.pyplot as plt
+import seaborn as sns
+sns.set(style="darkgrid")
+
+def plot_res(df_acc, dist='out'):
+
+    epochs = df_acc.groupby('iteration')
+    epochs['se_forward_avg'].mean()
+    res = []
+    save_flag = []
+    for epoch in epochs:
+        sub_df = epoch[1]
+        n_ep = sub_df['iteration'].iloc[0]
+        mse_forward = np.mean(sub_df['se_forward_avg'])
+        corr = pearsonr(sub_df['epistemic'], sub_df['se_forward_avg'])[0]
+        selected_pred = sub_df[sub_df['uncertainty_flag']]
+        mse_forward_selected = np.mean(selected_pred['se_forward_avg'])
+
+        if selected_pred['save_flag'].iloc[0]:
+            save_flag.append(True)
+        else:
+            save_flag.append(False)
+
+        res.append([n_ep, corr, mse_forward, mse_forward_selected])
+
+    df_res = pd.DataFrame(res, columns=['iteration', 'corr', 'mse_forward', 'mse_forward_selected'])
+    print(df_res)
+    plt.figure(figsize=(10,5), dpi=200)
+    if dist == 'out':
+        plt.ylim(top=1.5)
+        plt.ylim(bottom=-0.3)
+    if dist == 'in':
+        plt.ylim(top=0.6)
+        plt.ylim(bottom=-0)
+
+    sns.lineplot(x='iteration', y='value', hue='variable', 
+                 data=pd.melt(df_res, ['iteration']))
+    for index, flag in enumerate(save_flag):
+        if flag:
+            plt.plot(df_res.loc[index,'iteration'], df_res.loc[index, 'mse_forward'], 'o', color='red')
+
     
 bayesian_model_types = ["bbb", "lrt"]
 activation_types = ["relu", "softplus"]
@@ -79,4 +126,32 @@ def compute_results_inference(testset, models_path, distributions, bayesian_mode
 
     else:
         return results 
+    
+import src.config as cfg
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from copy import deepcopy
+sns.set()
+
+def plot_fc(df):
+    plt.figure(figsize=(5,4), dpi=300)
+    with sns.axes_style("whitegrid"):
+        sns.lineplot(x='iterations', y='value', hue='variable', 
+                    data=pd.melt(df, ['iterations']))
+
+def plot_gan_results(df):
+    df = df.dropna(axis=1)
+    df_ls = []
+    if 'fid_in' in df.columns:
+        df_fid = df[['iterations', 'fid_in', 'fid_out']]
+        df_ls.append(df_fid)
+    if 'kid_in' in df.columns:
+        df_kid = df[['iterations', 'kid_in', 'kid_out']]
+        df_ls.append(df_kid)
+    if 'mse_in' in df.columns:
+        df_mse = df[['iterations', 'mse_in', 'mse_out']]
+        df_ls.append(df_mse)
+    for df in df_ls:
+        plot_fc(df)
     
