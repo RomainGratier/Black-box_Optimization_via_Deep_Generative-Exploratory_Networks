@@ -13,6 +13,7 @@ from torch.nn import functional as F
 from sklearn import preprocessing
 
 import src.config_bayesian as cfg
+import src.config as cfg_glob
 import src.forward.utils
 from src.forward.metrics import ELBO, calculate_kl, get_beta
 from src.forward.bcnn_models import BBB3Conv3FC, BBBAlexNet, BBBLeNet
@@ -187,7 +188,7 @@ def test_model(net, criterion, testinloader, testoutloader, iteration=None, num_
 
 def run_bayesian(net_type='lenet', verbose=False):
     
-    ckpt_dir = os.path.join(cfg.models_path, cfg.forward_path)
+    ckpt_dir = os.path.join(cfg_glob.models_path, cfg_glob.forward_path)
 
     # Hyper Parameter settings
     layer_type = cfg.layer_type
@@ -203,7 +204,7 @@ def run_bayesian(net_type='lenet', verbose=False):
     batch_size = cfg.batch_size
     beta_type = cfg.beta_type
 
-    trainset, testset_in, testset_out, inputs, outputs = getDataset(cfg.dataset)
+    trainset, testset_in, testset_out, inputs, outputs = getDataset()
     train_loader, valid_loader, test_loader_in, test_loader_out = getDataloader(
         trainset, testset_in, testset_out, valid_size, batch_size, num_workers)
     net = getModel(net_type, inputs, outputs, priors, layer_type, activation_type).to(device)

@@ -5,7 +5,7 @@ import shutil
 import numpy as np
 
 import sys
-sys.path.append("..")
+
 from morphomnist import io, perturb
 from morphomnist.morpho import ImageMorphology
 
@@ -32,8 +32,8 @@ def process_image(args):
                [morph.downscale(pert(morph)) for pert in PERTURBATIONS]
     return out_imgs
 
-raw_dir = "../../data/morpho_mnist/original"
-dataset_root = "../data/processed"
+raw_dir = "/data/morpho_mnist/original"
+dataset_root = "/data/processed"
 #dataset_names = ["thickened05", "thickened10", "thickened15", "thickened20",  "thickened25"]
 dataset_names = ["thinned04", "thinned06", "thinned08"]
 pool = multiprocessing.Pool()

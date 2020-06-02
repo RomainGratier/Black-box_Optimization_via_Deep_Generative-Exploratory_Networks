@@ -27,7 +27,7 @@ import numpy as np
 import torch
 import multiprocessing
 
-from src.morphomnist.measure import measure_batch
+from morphomnist.measure import measure_batch
 
 # ------------ Compare the forward model and the Measure from morphomnist ------------
 def transform_inv(X):

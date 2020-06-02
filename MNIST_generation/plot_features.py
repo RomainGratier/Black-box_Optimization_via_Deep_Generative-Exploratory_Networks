@@ -8,7 +8,6 @@ import seaborn as sns
 sns.set()
 
 import sys
-sys.path.append("..")
 from morphomnist import io
 
 
@@ -72,8 +71,8 @@ def violine_plots(data_path, output_path, cols=['thickness','slant', 'width', 'h
     plt.show()
 
 if __name__ == '__main__':
-    ROOT = "../../data/"
-    OUPUT_PTH = "../fig/"
+    ROOT = "/data/"
+    OUPUT_PTH = "/fig/"
     paths = [os.path.join(ROOT, "processed/original_thic_resample"), os.path.join(ROOT, "morpho_mnist/global"), os.path.join(ROOT, "morpho_mnist/original"), os.path.join(ROOT, "morpho_mnist/thic"), os.path.join(ROOT, "processed/original_thic")]
 
     for path in paths:

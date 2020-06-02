@@ -1,1 +1,1 @@
-from .dataset import MNISTDataset, RotationDataset, getDataset, getDataloader, SyntheticTesla
+from .dataset import MNISTDataset, RotationDataset, MNISTDatasetLeNet, RotationDatasetLeNet, getDataset, getDataloader, SyntheticTesla

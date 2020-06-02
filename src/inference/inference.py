@@ -25,7 +25,7 @@ if cfg.experiment == 'min_mnist':
 elif cfg.experiment == 'max_mnist':
     import src.config_max_mnist as cfg_data
 elif cfg.experiment == 'rotation_dataset':
-    import src.config_max_mnist as cfg_data
+    import src.config_rotation as cfg_data
 
 import torch 
 from torch.autograd import Variable
@@ -89,12 +89,12 @@ def predict_forward_model(forward, gen_images, bayesian=True):
     else:
         
         if gen_images.shape[0] > 5000:
-            gen_images = np.array_split(gen_images, len(gen_images) // max_size)
+            gen_images = np.array_split(gen_images.cpu().detach(), len(gen_images.cpu().detach()) // max_size)
             pred_chunk = []
-            for i, condition in enumerate(y_cond):
-                pred_chunk.append(forward(F.interpolate(gen_images, size=32)).squeeze(1).cpu().detach().numpy())
+            for i, gen_images_batch in enumerate(gen_images):
+                pred_chunk.append(forward(F.interpolate(gen_images_batch.to(device), size=32)).squeeze(1).cpu().detach().numpy())
             
-            return np.concatenate(y_pred)
+            return np.concatenate(pred_chunk)
 
         else:
             y_pred = forward(F.interpolate(gen_images, size=32)).squeeze(1).cpu().detach().numpy()
@@ -516,12 +516,12 @@ def monte_carlo_inference_fid_kid_batch(distribution, generator, forward, testse
     
     return fid_value_gen_rand, fid_value_gen_pol, kid_value_gen_rand, kid_value_gen_pol
 
-def compute_results_inference(metric_type='fid_kid', distributions=['in', 'out'], bayesian_model_types=["bbb", "lrt"], activation_types=["relu", "softplus"], sample_number_fid_kid=1000, size_sample=10, output_type='latex', decimals=2):
+def compute_results_inference(metric_type='fid_kid', distributions=['in', 'out'], bayesian_model_types=["bbb", "lrt"], activation_types=["relu", "softplus"], sample_number_fid_kid=10000, output_type='latex', decimals=2):
     
     if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'min_mnist'):
-        testset = MNISTDataset('full', data_path=data_path)
-    elif cfg.experiment == 'rotation_data':
-        testset = RotationDataset('full', data_path=data_path)
+        testset = MNISTDataset('full', data_path=cfg.data_path)
+    elif cfg.experiment == 'rotation_dataset':
+        testset = RotationDataset('full', data_path=cfg.data_path)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -541,20 +541,21 @@ def compute_results_inference(metric_type='fid_kid', distributions=['in', 'out']
     for forward in forward_models:
         for distribution in distributions:
             print(f"Computing inference with forward : {forward}")
+            gan_path = os.path.join(cfg.models_path, f'generator/best_generator_{distribution}_distribution.pth')
             if forward == 'non bayesian':
-                forward_path = os.path.join(cfg.models_path, 'frequentist_forward_resampled/model_lenet.pth')
+                bayesian = False
+                forward_path = os.path.join(cfg.models_path, 'forward/model_lenet.pth')
             else:
-                forward_path = os.path.join(cfg.models_path, f'bayesian_forward_resampled/model_lenet_{forward}.pth')
-
-            gan_path = os.path.join(cfg.models_path, f'generative_resampled/best_generator_{distribution}_distribution.pth')
+                bayesian = True
+                forward_path = os.path.join(cfg.models_path, f'forward/model_lenet_{forward}.pth')
             if (os.path.isfile(forward_path)) & (os.path.isfile(forward_path)):
                 forward_model = torch.load(forward_path, map_location=device).eval()
                 generator_model = torch.load(gan_path, map_location=device).eval()
 
                 if metric_type == 'l1_l2':
-                    stat1_in_rand, stat1_in_pol, stat2_in_rand, stat2_in_pol = monte_carlo_inference_mse('in', generator_model, forward_model, testset, sample_number_fid_kid = sample_number_fid_kid, size_sample=size_sample)
+                    stat1_in_rand, stat1_in_pol, stat2_in_rand, stat2_in_pol = monte_carlo_inference_mse('in', generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
                 elif metric_type == 'fid_kid':
-                    stat1_in_rand, stat1_in_pol, stat2_in_rand, stat2_in_pol = monte_carlo_inference_fid_kid_batch('in', generator_model, forward_model, testset, sample_number_fid_kid = sample_number_fid_kid)
+                    stat1_in_rand, stat1_in_pol, stat2_in_rand, stat2_in_pol = monte_carlo_inference_fid_kid_batch('in', generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
 
                 if output_type == 'latex':
                     stat1_in_rand = f"{np.around(stat1_in_rand[0],decimals=decimals)}{inter}{np.around(stat1_in_rand[1],decimals=decimals)}"
