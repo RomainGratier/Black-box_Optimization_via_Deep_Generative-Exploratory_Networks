@@ -1,1 +1,1 @@
-from .inference import compute_results_inference, monte_carlo_inference_general
+from .inference import compute_quantitative_and_qualitative_inference
