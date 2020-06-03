@@ -559,7 +559,7 @@ def compute_results_inference(metric_type='fid_kid', distributions=['in', 'out']
     else:
         return results
 
-def monte_carlo_inference_qualitative(distribution, generator_model, forward_model, testset, bayesian=True, sample_number=2000):
+def monte_carlo_inference_qualitative(distribution, forward_type, generator, forward, testset, bayesian=True, sample_number=2000):
     
     size_full = int(sample_number * 1/cfginf.quantile_rate_uncertainty_policy)
 
@@ -617,26 +617,27 @@ def monte_carlo_inference_qualitative(distribution, generator_model, forward_mod
         conditions = conditions[random_index]
         forward_pred = np.array(y_pred).T
 
-    plots_qualitative_results(distribution, images_generated, conditions, forward_pred, testset, index_distribution, forward, bayesian, nrow=4, ncol=8)
+    plots_qualitative_results(distribution, forward_type, images_generated, conditions, forward_pred, testset, index_distribution, forward, bayesian, nrow=4, ncol=8)
 
-def plots_qualitative_results(distribution, images_generated, conditions, forward_pred, testset, index_distribution, forward, bayesian=True, nrow=4, ncol=8):
+def plots_qualitative_results(distribution, forward_type, images_generated, conditions, forward_pred, testset, index_distribution, forward, bayesian=True, nrow=4, ncol=8):
     
     # Gan img selection
     random_gan_index = random.sample(np.arange(images_generated.shape[0]).tolist(), ncol*nrow)
     size = images_generated.shape[0]
-    images_generated = images_generated[random_gan_index]
+    print(images_generated.shape)
+    images_generated = images_generated[random_gan_index].squeeze(1).detach().cpu()
     conditions = conditions[random_gan_index]
     forward_pred = forward_pred[random_gan_index]
     
     # Real img selection
     random_id = random.sample(index_distribution.tolist(), ncol*nrow)
     real_imgs = testset.x_data[random_id]
-    labels = testset.y_data[random_id].numpy()
+    labels = testset.y_data[random_id]
 
     if bayesian:
-        real_pred, epistemic, aleatoric = predict_forward_model(forward, images_generated, bayesian=bayesian)
-    else
-        real_pred = predict_forward_model(forward, images_generated, bayesian=bayesian)
+        real_pred, epistemic = predict_forward_model(forward, F.interpolate(real_imgs.to(device), size=32), bayesian=bayesian)
+    else:
+        real_pred = predict_forward_model(forward, F.interpolate(real_imgs.to(device), size=32), bayesian=bayesian)
     
     real_imgs = real_imgs.squeeze()
 
@@ -670,10 +671,10 @@ def plots_qualitative_results(distribution, images_generated, conditions, forwar
                 else:
                     col.set_title(f"Fwd={np.round(float(forward_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j]]),1)}
     
-    #plt.suptitle(f"{distribution} distribution / FID Value : {np.round(fid_value_gen[0])} ± {np.round(fid_value_gen[1]/np.sqrt(size))} \ KID Value : {np.around(kid_value_gen[0], decimals=3)}  ± {np.around(kid_value_gen[1]/np.sqrt(size), decimals=3)}", fontsize=6)
+    plt.suptitle(f"{distribution} distribution with {forward_type} forward model", fontsize=6)
     plt.show()
 
-def compute_quantitative_and_qualitative_inference(metrics=['fid_kid', 'l1_l2', 'qualitative'], distributions=['in', 'out'], bayesian_model_types=["bbb", "lrt"], activation_types=["relu", "softplus"], sample_number_fid_kid=10000, output_type='latex', decimals=2):
+def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_kid', 'l1_l2'], distributions=['in', 'out'], bayesian_model_types=["bbb", "lrt"], activation_types=["relu", "softplus"], sample_number_fid_kid=10000, output_type='latex', decimals=2):
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f'The pipeline is currently running on {device}')
@@ -688,14 +689,15 @@ def compute_quantitative_and_qualitative_inference(metrics=['fid_kid', 'l1_l2', 
     forward_models = ['_'.join(couple) for couple in modes]
     forward_models.append('non bayesian')
 
-    dict_results = []
+    dict_results = {}
+
+    print()
+    print(f"The models path is : {cfg.models_path}")
+    print()
     
     for metric_type in metrics:
-        
-        if metric_type == 'qualitative':
-            quantitative = False
-            qualitative = True
-            
+        print(f" --------------- Computing {metric_type} results ---------------")
+        print()
         if output_type == 'latex':
             # Each element in the table list is a row in the generated table
             inter = '$\pm$'
@@ -703,28 +705,28 @@ def compute_quantitative_and_qualitative_inference(metrics=['fid_kid', 'l1_l2', 
                 headers = ["Model", "Distribution", "mse$_r$", "mse$_p$", "mre$_r$", "mre$_p$"]
             elif metric_type == 'fid_kid':
                 headers = ["Model", "Distribution", "fid$_r$", "fid$_p$", "kid$_r$", "kid$_p$"]
-        
+
         results = []
-        for forward in forward_models:
+        for forward_type in forward_models:
             for distribution in distributions:
-                print(f"Computing inference with forward : {forward}")
+                print(f"Computing inference with forward : {forward_type}")
                 gan_path = os.path.join(cfg.models_path, f'generator/best_generator_{distribution}_distribution.pth')
-                if forward == 'non bayesian':
+                if forward_type == 'non bayesian':
                     bayesian = False
                     forward_path = os.path.join(cfg.models_path, 'forward/model_lenet.pth')
                 else:
                     bayesian = True
-                    forward_path = os.path.join(cfg.models_path, f'forward/model_lenet_{forward}.pth')
-    
+                    forward_path = os.path.join(cfg.models_path, f'forward/model_lenet_{forward_type}.pth')
+
                 if (os.path.isfile(forward_path)) & (os.path.isfile(forward_path)):
                     forward_model = torch.load(forward_path, map_location=device).eval()
                     generator_model = torch.load(gan_path, map_location=device).eval()
-                    
-                    if quantitative:
+
+                    if (metric_type=='l1_l2')|(metric_type=='fid_kid'):
                         if metric_type == 'l1_l2':
-                            stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_mse_batch('in', generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
+                            stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_mse_batch(distribution, generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
                         elif metric_type == 'fid_kid':
-                            stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_fid_kid_batch('in', generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
+                            stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_fid_kid_batch(distribution, generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
     
                         print((stat1_in_rand[0]-stat1_in_pol[0])/stat1_in_rand[0])
                         print((stat2_out_rand[0]-stat2_out_pol[0])/stat2_out_rand[0])
@@ -735,13 +737,13 @@ def compute_quantitative_and_qualitative_inference(metrics=['fid_kid', 'l1_l2', 
                             stat2_in_rand = f"{np.around(stat2_out_rand[0],decimals=decimals)}{inter}{np.around(stat2_out_rand[1],decimals=decimals)}"
                             stat2_in_pol = f"{np.around(stat2_out_pol[0],decimals=decimals)}{inter}{np.around(stat2_out_pol[1],decimals=decimals)}"
     
-                        results.append([forward, distribution, stat1_in_rand, stat1_in_pol, stat2_in_rand, stat2_in_pol])
+                        results.append([forward_type, distribution, stat1_in_rand, stat1_in_pol, stat2_in_rand, stat2_in_pol])
     
                         if output_type == 'latex':
                             print(tabulate(results, headers, tablefmt='latex_raw'))
-                    
-                    if qualitative:
-                        monte_carlo_inference_qualitative('in', generator_model, forward_model, testset, sample_number=sample_number_fid_kid, bayesian=bayesian)
+
+                    if metric_type=='qualitative':
+                        monte_carlo_inference_qualitative(distribution, forward_type, generator_model, forward_model, testset, sample_number=sample_number_fid_kid, bayesian=bayesian)
     
                 else:
                     print('WARNING: no model was found')
