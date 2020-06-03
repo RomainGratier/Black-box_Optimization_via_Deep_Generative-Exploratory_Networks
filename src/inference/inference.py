@@ -722,7 +722,7 @@ def compute_quantitative_and_qualitative_inference(metrics=['fid_kid', 'l1_l2', 
                     
                     if quantitative:
                         if metric_type == 'l1_l2':
-                            stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_mse('in', generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
+                            stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_mse_batch('in', generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
                         elif metric_type == 'fid_kid':
                             stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_fid_kid_batch('in', generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
     
