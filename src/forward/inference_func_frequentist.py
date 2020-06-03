@@ -16,6 +16,7 @@ from src.forward.cnn_models import AlexNet, LeNet, ThreeConvThreeFC
 from src.data import getDataset, getDataloader
 from src.metrics import se
 import src.forward.utils
+from src.utils import save_ckp, load_ckp_forward
 
 from torch.nn import functional as F
 
@@ -157,8 +158,16 @@ def run_frequentist(net_type='lenet'):
 
     df_acc_final_in = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'se_forward', 'save_flag'])
     df_acc_final_out = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'se_forward', 'save_flag'])
+    
+    epoch_start = 0
+    resume = False
+    ckp_path = cfg.models_path+f'/checkpoints/forward_{net_type}/'
 
-    for epoch in range(n_epochs+1):  # loop over the dataset multiple times
+    if (os.path.isdir(ckp_path)) | (resume == False):
+        net, optimizer, lr_sched, epoch_start, df_acc_final_in, df_acc_final_out = load_ckp_forward(ckp_path, model, optimizer, lr_sched)
+        resume = True
+
+    for epoch in range(epoch_start, n_epochs+1):  # loop over the dataset multiple times
 
         train_loss, train_acc = train_model(net, optimizer, criterion, train_loader, epoch=epoch, num_epochs=n_epochs)
         valid_loss, valid_acc = validate_model(net, criterion, valid_loader, epoch=epoch, num_epochs=n_epochs)
@@ -194,3 +203,13 @@ def run_frequentist(net_type='lenet'):
         # ------------ Save results ------------
         df_acc_final_in.to_csv(os.path.join(ckpt_dir,f'results_in_{net_type}.csv'))
         df_acc_final_out.to_csv(os.path.join(ckpt_dir,f'results_out_{net_type}.csv'))
+        
+        # ------------ Save checkpoints ------------
+        save_ckp({
+            'epoch': epoch + 1,
+            'state_dict_forward': net.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'lr_sched': lr_sched.state_dict(),
+            'df_acc_final_in': df_acc_final_in,
+            'df_acc_final_out': df_acc_final_out,
+            }, ckp_path)

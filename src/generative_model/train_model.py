@@ -29,6 +29,8 @@ elif cfg.experiment == 'max_mnist':
 elif cfg.experiment == 'rotation_dataset':
     import src.config_rotation as cfg_data
 
+from src.utils import save_ckp, load_ckp_gan
+
 def save_numpy_arr(path, arr):
     np.save(path, arr)
     return path
@@ -259,8 +261,15 @@ def train_gan_model():
 
     best_res_in = 100000
     best_res_out = 100000
+    epoch_start = 0
+    resume = False
+    ckp_path = cfg.models_path+'/checkpoints/gan/'
 
-    for epoch in range(cfgan.n_epochs):
+    if (os.path.isdir(ckp_path)) | (resume == False):
+        generator, discriminator, optimizer_G, optimizer_D, epoch_start, df_acc_gen = load_ckp_gan(ckp_path, model, optimizer)
+        resume = True
+
+    for epoch in range(epoch_start, cfgan.n_epochs):
         d_loss_check = []
         g_loss_check = []
 
@@ -327,7 +336,8 @@ def train_gan_model():
 
             if epoch == 0:
                 pass
-            elif batches_done % cfgan.sample_interval == 0:
+
+            elif epoch % 2 == 0:
 
                 print(
                   "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
@@ -380,4 +390,13 @@ def train_gan_model():
 
                 if (test_in!=best_res_in)|(test_out!=best_res_out):
                     df_acc_gen['flag'] = True
+
                 save_obj_csv(df_acc_gen, os.path.join(path_generator, f"results_gan"))
+                save_ckp({
+                    'epoch': epoch + 1,
+                    'state_dict_generator': generator.state_dict(),
+                    'state_dict_discriminator': discriminator.state_dict(),
+                    'optimizer_G': optimizer_G.state_dict(),
+                    'optimizer_D': optimizer_D.state_dict(),
+                    'df_acc_gen': df_acc_gen,
+                }, ckp_path)

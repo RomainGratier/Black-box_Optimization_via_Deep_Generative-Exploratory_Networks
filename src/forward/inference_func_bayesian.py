@@ -21,6 +21,7 @@ from src.data import getDataset, getDataloader
 from src.metrics import se
 from src.forward.uncertainty_estimation import get_uncertainty_per_batch
 from src.uncertainty_policy import uncertainty_selection
+from src.utils import save_ckp, load_ckp_forward
 
 # CUDA settings
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -220,8 +221,16 @@ def run_bayesian(net_type='lenet', verbose=False):
     valid_loss_max = np.Inf
     df_acc_final_in = pd.DataFrame(columns=['iteration','label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg', 'uncertainty_flag', 'save_flag'])
     df_acc_final_out = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'mse_forward_avg', 'uncertainty_flag', 'save_flag'])
+    
+    epoch_start = 0
+    resume = False
+    ckp_path = cfg.models_path+f'/checkpoints/forward_{net_type}_{layer_type}_{activation_type}/'
 
-    for epoch in range(n_epochs+1):  # loop over the dataset multiple times
+    if (os.path.isdir(ckp_path)) | (resume == False):
+        net, optimizer, lr_sched, epoch_start, df_acc_final_in, df_acc_final_out = load_ckp_forward(ckp_path, model, optimizer, lr_sched)
+        resume = True
+
+    for epoch in range(start_epoch, n_epochs+1):  # loop over the dataset multiple times
 
         train_loss, train_acc, train_kl = train_model(net, optimizer, criterion, train_loader, num_ens=train_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
         valid_loss, valid_acc, valid_acc_avr, valid_epi, valid_ale = validate_model(net, criterion, valid_loader, num_ens=valid_ens, beta_type=beta_type, epoch=epoch, num_epochs=n_epochs)
@@ -275,6 +284,16 @@ def run_bayesian(net_type='lenet', verbose=False):
         # ------------ Save results ------------
         df_acc_final_in.to_csv(os.path.join(ckpt_dir,f'results_in_{net_type}_{layer_type}_{activation_type}.csv'))
         df_acc_final_out.to_csv(os.path.join(ckpt_dir,f'results_out_{net_type}_{layer_type}_{activation_type}.csv'))
+        
+        # ------------ Save checkpoints ------------
+        save_ckp({
+            'epoch': epoch + 1,
+            'state_dict_forward': net.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'lr_sched': lr_sched.state_dict(),
+            'df_acc_final_in': df_acc_final_in,
+            'df_acc_final_out': df_acc_final_out,
+            }, ckp_path)
 
         if verbose:
             labels_in = np.around(df_acc_in['label'].values, decimals = 0).squeeze()
