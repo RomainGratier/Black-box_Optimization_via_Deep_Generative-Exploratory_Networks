@@ -14,14 +14,11 @@ def load_ckp_gan(checkpoint_path, generator, discriminator, optimizer_G, optimiz
     discriminator.load_state_dict(checkpoint['state_dict_discriminator'])
     optimizer_G.load_state_dict(checkpoint['optimizer_G'])
     optimizer_D.load_state_dict(checkpoint['optimizer_D'])
-    df_acc_gen = checkpoint['df_acc_gen']
-    return generator, discriminator, optimizer_G, optimizer_D, checkpoint['epoch'], df_acc_gen
+    return generator, discriminator, optimizer_G, optimizer_D, checkpoint['epoch'], checkpoint['df_acc_gen'], checkpoint['best_res_in'], checkpoint['best_res_out']
 
 def load_ckp_forward(checkpoint_path, forward, optimizer, lr_sched):
     checkpoint = torch.load(os.path.join(checkpoint_path, 'checkpoint.pth'))
     forward.load_state_dict(checkpoint['state_dict_forward'])
     optimizer.load_state_dict(checkpoint['optimizer'])
     lr_sched.load_state_dict(checkpoint['lr_sched'])
-    df_acc_final_in = checkpoint['df_acc_final_in'],
-    df_acc_final_out = checkpoint['df_acc_final_out'],
-    return forward, optimizer, lr_sched, checkpoint['epoch'], df_acc_final_in, df_acc_final_out
+    return forward, optimizer, lr_sched, checkpoint['epoch'], checkpoint['df_acc_final_in'], checkpoint['df_acc_final_out'], checkpoint['valid_loss_max']

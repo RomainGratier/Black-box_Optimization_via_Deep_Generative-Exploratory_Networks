@@ -261,6 +261,7 @@ def train_gan_model():
 
     best_res_in = 100000
     best_res_out = 100000
+    stop_check = 'fid'
     epoch_start = 0
     ckp_path = os.path.join(cfg.models_path,'checkpoints/gan')
     print(ckp_path)
@@ -270,7 +271,7 @@ def train_gan_model():
         print("Do you want to resume the training? yes or no")
         resume = str(input())
         if resume == 'yes':
-            generator, discriminator, optimizer_G, optimizer_D, epoch_start, df_acc_gen = load_ckp_gan(ckp_path, generator, discriminator, optimizer_G, optimizer_D)
+            generator, discriminator, optimizer_G, optimizer_D, epoch_start, df_acc_gen, best_res_in, best_res_out = load_ckp_gan(ckp_path, generator, discriminator, optimizer_G, optimizer_D)
 
     for epoch in range(epoch_start, cfgan.n_epochs):
         d_loss_check = []
@@ -388,11 +389,21 @@ def train_gan_model():
             test_in = best_res_in
             test_out = best_res_out
             
-            df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['fid_in'].values, best_res_in, df_acc_gen, path_generator, generator)
-            df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['fid_out'].values, best_res_out, df_acc_gen, path_generator, generator)
-
-            if (test_in!=best_res_in)|(test_out!=best_res_out):
-                df_acc_gen['flag'] = True
+            if stop_check == 'fid':
+                df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['fid_in'].values, best_res_in, df_acc_gen, path_generator, generator)
+                df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['fid_out'].values, best_res_out, df_acc_gen, path_generator, generator)
+                if (test_in!=best_res_in)|(test_out!=best_res_out):
+                    df_acc_gen['flag'] = True
+                    
+            elif stop_check == 'epoch':
+                print(f'Model is saved')
+                if cuda:
+                    torch.save(generator.cpu(), os.path.join(path_generator, f"best_generator_in_distribution.pth"))
+                    torch.save(generator.cpu(), os.path.join(path_generator, f"best_generator_out_distribution.pth"))
+                    generator.cuda()
+                else:
+                    torch.save(generator, os.path.join(path_generator, f"best_generator_in_distribution.pth"))
+                    torch.save(generator, os.path.join(path_generator, f"best_generator_out_distribution.pth"))
 
             save_obj_csv(df_acc_gen, os.path.join(path_generator, f"results_gan"))
             save_ckp({
@@ -402,4 +413,6 @@ def train_gan_model():
                 'optimizer_G': optimizer_G.state_dict(),
                 'optimizer_D': optimizer_D.state_dict(),
                 'df_acc_gen': df_acc_gen,
+                'best_res_in': best_res_in,
+                'best_res_out': best_res_out,
             }, ckp_path)

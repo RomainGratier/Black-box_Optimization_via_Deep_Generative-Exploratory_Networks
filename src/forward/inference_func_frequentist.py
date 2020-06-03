@@ -159,17 +159,17 @@ def run_frequentist(net_type='lenet'):
     df_acc_final_in = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'se_forward', 'save_flag'])
     df_acc_final_out = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'se_forward', 'save_flag'])
     
-    epoch_start = 0
-    ckp_path = os.path.join(cfg.models_path,f'checkpoints/forward_{net_type}')
+    start_epoch = 0
+    ckp_path = os.path.join(cfg_glob.models_path,f'checkpoints/forward_{net_type}')
 
     if os.path.isdir(ckp_path):
         print(F'Found a valid check point !')
         print("Do you want to resume the training? yes or no")
         resume = str(input())
         if resume == 'yes':
-            net, optimizer, lr_sched, epoch_start, df_acc_final_in, df_acc_final_out = load_ckp_forward(ckp_path, model, optimizer, lr_sched)
+            net, optimizer, lr_sched, start_epoch, df_acc_final_in, df_acc_final_out, valid_loss_max = load_ckp_forward(ckp_path, net, optimizer, lr_sched)
 
-    for epoch in range(epoch_start, n_epochs+1):  # loop over the dataset multiple times
+    for epoch in range(start_epoch, n_epochs+1):  # loop over the dataset multiple times
 
         train_loss, train_acc = train_model(net, optimizer, criterion, train_loader, epoch=epoch, num_epochs=n_epochs)
         valid_loss, valid_acc = validate_model(net, criterion, valid_loader, epoch=epoch, num_epochs=n_epochs)
@@ -214,4 +214,5 @@ def run_frequentist(net_type='lenet'):
             'lr_sched': lr_sched.state_dict(),
             'df_acc_final_in': df_acc_final_in,
             'df_acc_final_out': df_acc_final_out,
+            'valid_loss_max': valid_loss_max,
             }, ckp_path)
