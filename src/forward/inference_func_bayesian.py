@@ -223,11 +223,12 @@ def run_bayesian(net_type='lenet', verbose=False):
     df_acc_final_out = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'mse_forward_avg', 'uncertainty_flag', 'save_flag'])
     
     epoch_start = 0
-    ckp_path = cfg.models_path+f'/checkpoints/forward_{net_type}_{layer_type}_{activation_type}/'
+    ckp_path = os.path.join(cfg.models_path,f'checkpoints/forward_{net_type}_{layer_type}_{activation_type}')
 
     if os.path.isdir(ckp_path):
         print(F'Found a valid check point !')
-        resume = str(input("Do you want to resume the training or overwrite it? yes or no"))
+        print("Do you want to resume the training? yes or no")
+        resume = str(input())
         if resume == 'yes':
             net, optimizer, lr_sched, epoch_start, df_acc_final_in, df_acc_final_out = load_ckp_forward(ckp_path, model, optimizer, lr_sched)
 

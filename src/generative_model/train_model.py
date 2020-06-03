@@ -197,8 +197,8 @@ def train_gan_model():
     df_acc_gen = pd.DataFrame(columns=['mse_in', 'mse_out', 'fid_in', 'fid_out', 'iteration', 'flag'])
 
     if os.path.exists(path_generator):
-        df_check_in_distribution = load_obj_csv(os.path.join(path_generator, 'results_in_distribution'))
-        df_check_out_distribution = load_obj_csv(os.path.join(path_generator, 'results_out_distribution'))
+        df_check_in_distribution = None
+        df_check_out_distribution = None
     else:
         os.makedirs(path_generator)
         df_check_in_distribution = None
@@ -262,13 +262,15 @@ def train_gan_model():
     best_res_in = 100000
     best_res_out = 100000
     epoch_start = 0
-    ckp_path = cfg.models_path+'/checkpoints/gan/'
+    ckp_path = os.path.join(cfg.models_path,'checkpoints/gan')
+    print(ckp_path)
 
     if os.path.isdir(ckp_path):
         print(F'Found a valid check point !')
-        resume = str(input("Do you want to resume the training or overwrite it? yes or no"))
+        print("Do you want to resume the training? yes or no")
+        resume = str(input())
         if resume == 'yes':
-            generator, discriminator, optimizer_G, optimizer_D, epoch_start, df_acc_gen = load_ckp_gan(ckp_path, model, optimizer)
+            generator, discriminator, optimizer_G, optimizer_D, epoch_start, df_acc_gen = load_ckp_gan(ckp_path, generator, discriminator, optimizer_G, optimizer_D)
 
     for epoch in range(epoch_start, cfgan.n_epochs):
         d_loss_check = []
@@ -335,69 +337,69 @@ def train_gan_model():
 
             batches_done = epoch * len(dataloader) + i
 
-            if epoch == 0:
-                pass
+        if epoch == 0:
+            pass
 
-            elif epoch % 2 == 0:
+        elif epoch % 2 == 0:
 
-                print(
-                  "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
-                  % (epoch, cfgan.n_epochs, i, len(dataloader), np.mean(d_loss_check), np.mean(g_loss_check))
-                )
+            print(
+              "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
+              % (epoch, cfgan.n_epochs, i, len(dataloader), np.mean(d_loss_check), np.mean(g_loss_check))
+            )
 
-                # Delete useless data from GPU
-                del valid; del fake; del real_imgs; del labels; del z; del gen_labels; del g_loss; del d_loss; del gen_imgs; del validity;
-                torch.cuda.empty_cache()
-                
-                if cfg.experiment == 'rotation_dataset':
-                    fid_in, kid_in, fid_out, kid_out = sample_image_rotation(cfgan.n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, cfgan.fid_kid_sample)
+            # Delete useless data from GPU
+            del valid; del fake; del real_imgs; del labels; del z; del gen_labels; del g_loss; del d_loss; del gen_imgs; del validity;
+            torch.cuda.empty_cache()
+            
+            if cfg.experiment == 'rotation_dataset':
+                fid_in, kid_in, fid_out, kid_out = sample_image_rotation(cfgan.n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, cfgan.fid_kid_sample)
 
-                    df = pd.DataFrame([fid_in[0]], columns=['fid_in'])
-                    df['fid_out'] = fid_out[0]
-                    df['kid_in'] = kid_in[0]
-                    df['kid_out'] = kid_out[0]
-                    df['iteration'] = batches_done*cfgan.sample_interval
-                    df['flag'] = False
+                df = pd.DataFrame([fid_in[0]], columns=['fid_in'])
+                df['fid_out'] = fid_out[0]
+                df['kid_in'] = kid_in[0]
+                df['kid_out'] = kid_out[0]
+                df['iteration'] = batches_done*cfgan.sample_interval
+                df['flag'] = False
 
-                    df_acc_gen = df_acc_gen.append(df, ignore_index=True)
-                
-                elif (cfg.experiment == 'max_mnist') | (cfg.experiment == 'min_mnist'):
+                df_acc_gen = df_acc_gen.append(df, ignore_index=True)
+            
+            elif (cfg.experiment == 'max_mnist') | (cfg.experiment == 'min_mnist'):
 
-                    se_gan, fid_in, kid_in, fid_out, kid_out = sample_image_mnist(cfgan.n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, cfgan.fid_kid_sample)
+                se_gan, fid_in, kid_in, fid_out, kid_out = sample_image_mnist(cfgan.n_row, batches_done, in_distribution_index, out_distribution_index, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, cfgan.fid_kid_sample)
     
-                    mean_in_se = np.mean(se_gan[in_distribution_index])
-                    mean_out_se = np.mean(se_gan[out_distribution_index])
+                mean_in_se = np.mean(se_gan[in_distribution_index])
+                mean_out_se = np.mean(se_gan[out_distribution_index])
     
-                    se_gan_in_distribution.append(se_gan[in_distribution_index])
-                    se_gan_out_distribution.append(se_gan[out_distribution_index])
+                se_gan_in_distribution.append(se_gan[in_distribution_index])
+                se_gan_out_distribution.append(se_gan[out_distribution_index])
     
-                    df = pd.DataFrame([mean_in_se], columns=['mse_in'])
-                    df['mse_out'] = mean_out_se
-                    df['fid_in'] = fid_in[0]
-                    df['fid_out'] = fid_out[0]
-                    df['kid_in'] = kid_in[0]
-                    df['kid_out'] = kid_out[0]
-                    df['iteration'] = batches_done*cfgan.sample_interval
-                    df['flag'] = False
+                df = pd.DataFrame([mean_in_se], columns=['mse_in'])
+                df['mse_out'] = mean_out_se
+                df['fid_in'] = fid_in[0]
+                df['fid_out'] = fid_out[0]
+                df['kid_in'] = kid_in[0]
+                df['kid_out'] = kid_out[0]
+                df['iteration'] = batches_done*cfgan.sample_interval
+                df['flag'] = False
     
-                    df_acc_gen = df_acc_gen.append(df, ignore_index=True)
+                df_acc_gen = df_acc_gen.append(df, ignore_index=True)
 
-                # Check if we have better results
-                test_in = best_res_in
-                test_out = best_res_out
-                
-                df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['fid_in'].values, best_res_in, df_acc_gen, path_generator, generator)
-                df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['fid_out'].values, best_res_out, df_acc_gen, path_generator, generator)
+            # Check if we have better results
+            test_in = best_res_in
+            test_out = best_res_out
+            
+            df_check_in_distribution, best_res_in = save_model_check('in', df_check_in_distribution, df['fid_in'].values, best_res_in, df_acc_gen, path_generator, generator)
+            df_check_out_distribution, best_res_out = save_model_check('out', df_check_out_distribution, df['fid_out'].values, best_res_out, df_acc_gen, path_generator, generator)
 
-                if (test_in!=best_res_in)|(test_out!=best_res_out):
-                    df_acc_gen['flag'] = True
+            if (test_in!=best_res_in)|(test_out!=best_res_out):
+                df_acc_gen['flag'] = True
 
-                save_obj_csv(df_acc_gen, os.path.join(path_generator, f"results_gan"))
-                save_ckp({
-                    'epoch': epoch + 1,
-                    'state_dict_generator': generator.state_dict(),
-                    'state_dict_discriminator': discriminator.state_dict(),
-                    'optimizer_G': optimizer_G.state_dict(),
-                    'optimizer_D': optimizer_D.state_dict(),
-                    'df_acc_gen': df_acc_gen,
-                }, ckp_path)
+            save_obj_csv(df_acc_gen, os.path.join(path_generator, f"results_gan"))
+            save_ckp({
+                'epoch': epoch + 1,
+                'state_dict_generator': generator.state_dict(),
+                'state_dict_discriminator': discriminator.state_dict(),
+                'optimizer_G': optimizer_G.state_dict(),
+                'optimizer_D': optimizer_D.state_dict(),
+                'df_acc_gen': df_acc_gen,
+            }, ckp_path)

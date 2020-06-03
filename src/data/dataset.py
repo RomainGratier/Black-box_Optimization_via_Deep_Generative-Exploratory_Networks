@@ -42,7 +42,7 @@ class MNISTDataset(Dataset):
             img_file, digit_file, morpho = self.__getdatasets__(dataset, data_path)
             # Get the labels
             labels, index = self.__getlabels__(dataset, morpho, digit_file, y_feature)
-            print(labels.describe())
+
             self.maximum = np.max(labels[y_feature])
             self.minimum = np.min(labels[y_feature])
 
@@ -61,7 +61,7 @@ class MNISTDataset(Dataset):
             # Get the labels
             labels_te, index_te = self.__getlabels__(dataset, morpho_te, digit_file_te, y_feature)
 
-            print(labels_te.describe())
+
             self.maximum = np.max(labels_te[y_feature])
             self.minimum = np.min(labels_te[y_feature])
 
@@ -80,7 +80,6 @@ class MNISTDataset(Dataset):
             # Get the labels
             labels_te, index_te = self.__getlabels__(dataset, morpho_te, digit_file_te, y_feature)
 
-            print(labels_te.describe())
             self.maximum = np.max(labels_te[y_feature])
             self.minimum = np.min(labels_te[y_feature])
 
@@ -99,7 +98,6 @@ class MNISTDataset(Dataset):
             # Get the labels
             labels_te, index_te = self.__getlabels__('test', morpho_te, digit_file_te, y_feature)
 
-            print(labels_te.describe())
             self.maximum = np.max(labels_te[y_feature])
             self.minimum = np.min(labels_te[y_feature])
 
@@ -118,7 +116,6 @@ class MNISTDataset(Dataset):
             # Get the labels
             labels_te, index_te = self.__getlabels__('test', morpho_tr, digit_file_tr, y_feature)
 
-            print(labels_te.describe())
             self.maximum = np.max(labels_te[y_feature])
             self.minimum = np.min(labels_te[y_feature])
 
@@ -213,7 +210,6 @@ class RotationDataset(Dataset):
             # Read images
             images = load_compress_numpy(img_file)[index]
   
-            print(labels.describe())
             self.maximum = np.max(labels)
             self.minimum = np.min(labels)
 
@@ -232,7 +228,6 @@ class RotationDataset(Dataset):
             # Read images
             images = load_compress_numpy(img_file_te)[index_te]
 
-            print(labels_te.describe())
             self.maximum = np.max(labels_te)
             self.minimum = np.min(labels_te)
 
@@ -251,7 +246,6 @@ class RotationDataset(Dataset):
             # Read images 
             images = load_compress_numpy(img_file_te)[index_te]
 
-            print(labels_te.describe())
             self.maximum = np.max(labels_te)
             self.minimum = np.min(labels_te)
 
@@ -270,7 +264,6 @@ class RotationDataset(Dataset):
             # Read images 
             images = load_compress_numpy(img_file_te)[index_te]
 
-            print(labels_te.describe())
             self.maximum = np.max(labels_te)
             self.minimum = np.min(labels_te)
 
@@ -291,7 +284,6 @@ class RotationDataset(Dataset):
             print(f"Check image extremum : max={np.max(images)} | min={np.min(images)}")
             print(f"Check label extremum : max={np.max(labels_te)} | min={np.min(labels_te)}")
 
-            print(labels_te.describe())
             self.maximum = np.max(labels_te)
             self.minimum = np.min(labels_te)
 
@@ -571,7 +563,6 @@ def gaussian_kernal(kernel_size=3, channels=1, sigma=1, device=None):
 class SyntheticTesla:
 
 	# Create a synthetic image of 'T'
-
 	def __init__(self, device, sz=28):
 		self.device = device
 		self.src = torch.zeros([1, 1, sz, sz], device=self.device)
