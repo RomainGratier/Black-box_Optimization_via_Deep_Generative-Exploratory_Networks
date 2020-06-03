@@ -160,12 +160,13 @@ def run_frequentist(net_type='lenet'):
     df_acc_final_out = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'se_forward', 'save_flag'])
     
     epoch_start = 0
-    resume = False
     ckp_path = cfg.models_path+f'/checkpoints/forward_{net_type}/'
 
-    if (os.path.isdir(ckp_path)) | (resume == False):
-        net, optimizer, lr_sched, epoch_start, df_acc_final_in, df_acc_final_out = load_ckp_forward(ckp_path, model, optimizer, lr_sched)
-        resume = True
+    if os.path.isdir(ckp_path):
+        print(F'Found a valid check point !')
+        resume = str(input("Do you want to resume the training or overwrite it? yes or no"))
+        if resume == 'yes':
+            net, optimizer, lr_sched, epoch_start, df_acc_final_in, df_acc_final_out = load_ckp_forward(ckp_path, model, optimizer, lr_sched)
 
     for epoch in range(epoch_start, n_epochs+1):  # loop over the dataset multiple times
 

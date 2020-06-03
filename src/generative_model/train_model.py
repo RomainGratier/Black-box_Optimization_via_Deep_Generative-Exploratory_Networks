@@ -262,12 +262,13 @@ def train_gan_model():
     best_res_in = 100000
     best_res_out = 100000
     epoch_start = 0
-    resume = False
     ckp_path = cfg.models_path+'/checkpoints/gan/'
 
-    if (os.path.isdir(ckp_path)) | (resume == False):
-        generator, discriminator, optimizer_G, optimizer_D, epoch_start, df_acc_gen = load_ckp_gan(ckp_path, model, optimizer)
-        resume = True
+    if os.path.isdir(ckp_path):
+        print(F'Found a valid check point !')
+        resume = str(input("Do you want to resume the training or overwrite it? yes or no"))
+        if resume == 'yes':
+            generator, discriminator, optimizer_G, optimizer_D, epoch_start, df_acc_gen = load_ckp_gan(ckp_path, model, optimizer)
 
     for epoch in range(epoch_start, cfgan.n_epochs):
         d_loss_check = []
