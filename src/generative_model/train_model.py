@@ -181,8 +181,8 @@ def train_gan_model():
     path_generator = os.path.join(cfg.models_path, cfg.gan_path)
 
     if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'min_mnist'):
-        dataset = MNISTDataset('train', data_path=cfg.data_path)
-        testset = MNISTDataset('full', data_path=cfg.data_path)
+        dataset = MNISTDataset('train', 'thickness', data_path=cfg.data_path)
+        testset = MNISTDataset('full', 'thickness', data_path=cfg.data_path)
     elif cfg.experiment == 'rotation_dataset':
         dataset = RotationDataset('train', data_path=cfg.data_path)
         testset = RotationDataset('full', data_path=cfg.data_path)
