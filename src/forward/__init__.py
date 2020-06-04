@@ -1,0 +1,2 @@
+from .inference_func_bayesian import run_bayesian
+from .inference_func_frequentist import run_frequentist
