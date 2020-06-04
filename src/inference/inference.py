@@ -254,35 +254,57 @@ def monte_carlo_inference_general(distribution, generator, forward, ncol=8, nrow
         testset = RotationDataset('full', data_path=cfg.data_path)
 
     if distribution == 'in':
-        if cfg.experiment == 'max_mnist':
-            conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size)
+        if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+                
             df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_in[df_test_in['label'] <= cfg_data.limit_dataset].index
             print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
         if cfg.experiment == 'min_mnist':
-            conditions = np.random.uniform(cfg_data.limit_dataset , cfg_data.max_dataset , size)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+
             df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_in[(df_test_in['label'] > cfg_data.limit_dataset) & df_test_in['label'] <= cfg_data.max_dataset].index
             print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
 
     if distribution == 'out':
-        if cfg.experiment == 'max_mnist':
-            conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size)
+        if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+
             df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_out[df_test_out['label'] > cfg_data.limit_dataset].index
             print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
         if cfg.experiment == 'min_mnist':
-            conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset , size)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+
             df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_out[df_test_out['label'] <= cfg_data.limit_dataset].index
             print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
 
-    # ------------ Sample z from normal gaussian distribution with a bound ------------
-    z = get_truncated_normal((size, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
 
     # ------------ Generate sample from z and y target ------------
     images_generated = generate_sample_from_GAN(conditions, z, generator)
@@ -307,13 +329,25 @@ def monte_carlo_inference_mse_batch(distribution, generator, forward, bayesian=T
 
     if distribution == 'in':
         if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
-            conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size_full)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+                
             df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_in[df_test_in['label'] <= cfg_data.limit_dataset].index
             print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
         if cfg.experiment == 'min_mnist':
-            conditions = np.random.uniform(cfg_data.limit_dataset , cfg_data.max_dataset , size_full)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+
             df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_in[(df_test_in['label'] > cfg_data.limit_dataset) & df_test_in['label'] <= cfg_data.max_dataset].index
             print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
@@ -321,20 +355,29 @@ def monte_carlo_inference_mse_batch(distribution, generator, forward, bayesian=T
 
     if distribution == 'out':
         if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
-            conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+
             df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_out[df_test_out['label'] > cfg_data.limit_dataset].index
             print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
         if cfg.experiment == 'min_mnist':
-            conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset , size_full)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+
             df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_out[df_test_out['label'] <= cfg_data.limit_dataset].index
             print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
-    
-    # ------------ Sample z from normal gaussian distribution with a bound ------------
-    z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
     
     # ------------ Generate sample from z and y target ------------
     images_generated = generate_sample_from_GAN(conditions, z, generator)
@@ -418,13 +461,25 @@ def monte_carlo_inference_fid_kid_batch(distribution, generator, forward, testse
 
     if distribution == 'in':
         if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
-            conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size_full)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+                
             df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_in[df_test_in['label'] <= cfg_data.limit_dataset].index
             print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
         if cfg.experiment == 'min_mnist':
-            conditions = np.random.uniform(cfg_data.limit_dataset , cfg_data.max_dataset , size_full)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+
             df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_in[(df_test_in['label'] > cfg_data.limit_dataset) & df_test_in['label'] <= cfg_data.max_dataset].index
             print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
@@ -432,20 +487,29 @@ def monte_carlo_inference_fid_kid_batch(distribution, generator, forward, testse
 
     if distribution == 'out':
         if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
-            conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+
             df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_out[df_test_out['label'] > cfg_data.limit_dataset].index
             print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
         if cfg.experiment == 'min_mnist':
-            conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset , size_full)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+
             df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_out[df_test_out['label'] <= cfg_data.limit_dataset].index
             print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
-    
-    # ------------ Sample z from normal gaussian distribution with a bound ------------
-    z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
     
     # ------------ Generate sample from z and y target ------------
     images_generated = generate_sample_from_GAN(conditions, z, generator)
@@ -565,13 +629,25 @@ def monte_carlo_inference_qualitative(distribution, forward_type, generator, for
 
     if distribution == 'in':
         if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
-            conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size_full)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.min_dataset, cfg_data.limit_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+                
             df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_in[df_test_in['label'] <= cfg_data.limit_dataset].index
             print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
         if cfg.experiment == 'min_mnist':
-            conditions = np.random.uniform(cfg_data.limit_dataset , cfg_data.max_dataset , size_full)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+
             df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_in[(df_test_in['label'] > cfg_data.limit_dataset) & df_test_in['label'] <= cfg_data.max_dataset].index
             print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
@@ -579,20 +655,29 @@ def monte_carlo_inference_qualitative(distribution, forward_type, generator, for
 
     if distribution == 'out':
         if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
-            conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.limit_dataset, cfg_data.max_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+
             df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_out[df_test_out['label'] > cfg_data.limit_dataset].index
             print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
         if cfg.experiment == 'min_mnist':
-            conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset , size_full)
+            if cfg.dcgan:
+                conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset, (size_full, 1, 1, 1))
+                z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+            else:
+                conditions = np.random.uniform(cfg_data.min_dataset , cfg_data.limit_dataset, size_full)
+                z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+
             df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
             index_distribution = df_test_out[df_test_out['label'] <= cfg_data.limit_dataset].index
             print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
-    
-    # ------------ Sample z from normal gaussian distribution with a bound ------------
-    z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
     
     # ------------ Generate sample from z and y target ------------
     images_generated = generate_sample_from_GAN(conditions, z, generator)
@@ -674,7 +759,7 @@ def plots_qualitative_results(distribution, forward_type, images_generated, cond
     plt.suptitle(f"{distribution} distribution with {forward_type} forward model", fontsize=6)
     plt.show()
 
-def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_kid', 'l1_l2'], distributions=['in', 'out'], bayesian_model_types=["bbb", "lrt"], activation_types=["relu", "softplus"], sample_number_fid_kid=20000, output_type='latex', decimals=2):
+def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_kid', 'l1_l2'], distributions=['in', 'out'], bayesian_model_types=["bbb", "lrt"], activation_types=["relu", "softplus"], sample_number_fid_kid=30000, output_type='latex', decimals=2):
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f'The pipeline is currently running on {device}')
@@ -710,7 +795,7 @@ def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_
         for forward_type in forward_models:
             for distribution in distributions:
                 print(f"Computing inference with forward : {forward_type}")
-                gan_path = os.path.join(cfg.models_path, f'generator/best_generator_{distribution}_distribution.pth')
+                gan_path = os.path.join(cfg.models_path, cfg.gan_path, f'best_generator_{distribution}_distribution.pth')
                 if forward_type == 'non bayesian':
                     bayesian = False
                     forward_path = os.path.join(cfg.models_path, 'forward/model_lenet.pth')
@@ -726,8 +811,8 @@ def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_
                         if metric_type == 'l1_l2':
                             stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_mse_batch(distribution, generator_model, forward_model, testset, sample_number=4000, bayesian=bayesian)
                         elif metric_type == 'fid_kid':
-                            stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_fid_kid_batch(distribution, generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
-    
+                            stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_fid_kid_batch(distribution, generator_model, forward_model, testset, sample_number_fid_kid=2000, bayesian=bayesian)
+
                         print((stat1_in_rand[0]-stat1_in_pol[0])/stat1_in_rand[0])
                         print((stat2_out_rand[0]-stat2_out_pol[0])/stat2_out_rand[0])
     
@@ -743,7 +828,7 @@ def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_
                             print(tabulate(results, headers, tablefmt='latex_raw'))
 
                     if metric_type=='qualitative':
-                        monte_carlo_inference_qualitative(distribution, forward_type, generator_model, forward_model, testset, sample_number=sample_number_fid_kid, bayesian=bayesian)
+                        monte_carlo_inference_qualitative(distribution, forward_type, generator_model, forward_model, testset, sample_number=1000, bayesian=bayesian)
     
                 else:
                     print('WARNING: no model was found')
