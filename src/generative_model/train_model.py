@@ -574,8 +574,6 @@ def train_wgan_model():
             print("learning rate change!")
 
         for i, (imgs, labels) in enumerate(dataloader):
-            import time
-            start_time = time.time()
             
             # ---------------------
             #  Configuration
@@ -599,9 +597,6 @@ def train_wgan_model():
             labels_discriminator = torch.zeros_like(fake_imgs)
             labels_discriminator[:,:,:,:] = labels[:,:,:,:]
             
-            print("Conf time :--- %s seconds ---" % (time.time() - start_time))
-            start_time = time.time()
-            
             # ---------------------
             #  Train Discriminator
             # ---------------------
@@ -623,15 +618,15 @@ def train_wgan_model():
             optimizer_D.step()
 
             d_loss_check.append(d_loss.item())
-            
-            print("Discriminator time :--- %s seconds ---" % (time.time() - start_time))
-            start_time = time.time()
 
             # -----------------
             #  Train Generator
             # -----------------
 
             optimizer_G.zero_grad()
+            
+            batches_done = epoch * len(dataloader) + i
+
 
             if i % cfg.n_critic == 0:
 
@@ -642,12 +637,8 @@ def train_wgan_model():
                 optimizer_G.step()
 
                 g_loss_check.append(g_loss.item())
-            
-            print("Generator time :--- %s seconds ---" % (time.time() - start_time))
 
-            batches_done = epoch * len(dataloader) + i
-
-        elif epoch % 1 == 0:
+        if epoch % 1 == 0:
 
             print(
               "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
