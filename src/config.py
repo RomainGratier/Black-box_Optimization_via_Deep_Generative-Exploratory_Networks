@@ -1,5 +1,6 @@
 # --------------------- Dataset ---------------------
 experiment = 'rotation_dataset'
+dcgan = True
  
 if (experiment=='min_mnist') | (experiment=='max_mnist'):
     data_path = 'processed/original_thic_resample'
@@ -11,7 +12,11 @@ elif 'rotation_dataset':
 
 print(f'Data path : {data_path}')
 
-gan_path = 'generator'
+if dcgan:
+    gan_path = 'dcgenerator'
+else:
+    gan_path = 'generator'
+
 forward_path = 'forward'
 if experiment == 'max_mnist':
     models_path = '/content/drive/My Drive/master_thesis/models_inference_max/'

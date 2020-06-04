@@ -18,7 +18,7 @@ LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 from src.data import MNISTDataset, RotationDataset
 from src.metrics import se, compute_thickness_ground_truth
 from src.generative_model.metrics import calculate_fid_given_paths, calculate_kid_given_paths
-from src.generative_model import Generator, Discriminator, LeNet5
+from src.generative_model import Generator, Discriminator, LeNet5, CondDCDiscriminator, CondDCGenerator
 
 import src.config_gan as cfgan
 import src.config as cfg
@@ -39,13 +39,22 @@ def save_obj_csv(d, path):
     d.to_csv(path+'.csv', index=False)
 
 def generate_sample(minimum, maximum, sample_size, generator):
-    # Sample noise
-    z = Variable(FloatTensor(np.random.normal(0, 1, (sample_size, cfgan.latent_dim))))
-    # Get labels ranging from 0 to n_classes for n rows
-    labels = np.random.uniform(minimum, maximum, sample_size)
-    labels = Variable(FloatTensor(labels))
+    if cfg.dcgan:
+        # Sample noise
+        z = Variable(FloatTensor(np.random.normal(0, 1, (sample_size, cfgan.latent_dim, 1, 1))))
+        # Get labels ranging from 0 to n_classes for n rows
+        labels_gan = Variable(FloatTensor(np.random.uniform(minimum, maximum, (sample_size, 1, 1, 1))))
+        
+        img_gen = generator(z, labels)
+    else:
+        # Sample noise
+        z = Variable(FloatTensor(np.random.normal(0, 1, (sample_size, cfgan.latent_dim))))
+        # Get labels ranging from 0 to n_classes for n rows
+        labels = Variable(FloatTensor(np.random.uniform(minimum, maximum, sample_size)))
+        
+        img_gen = generator(z, labels)
 
-    return generator(z, labels)
+    return img_gen
 
 def compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size):
     
@@ -83,13 +92,20 @@ def sample_image_mnist(n_row, batches_done, in_distribution_index, out_distribut
     """Saves a grid of generated digits ranging from 0 to n_classes"""
 
     ## -------------- In distribution --------------
-    # Sample noise
-    z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim))))
-    # Get labels ranging from 0 to n_classes for n rows
-    labels = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)])
-    labels = Variable(FloatTensor(labels))
+    if cfg.dcgan:
+        # Sample noise
+        z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim, 1, 1))))
+        # Get labels ranging from 0 to n_classes for n rows
+        labels = Variable(FloatTensor(np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)]))).unsqueeze(1).unsqueeze(1).unsqueeze(1)
+        gen_imgs = generator(z, labels)
 
-    gen_imgs = generator(z, labels)
+    else:
+        # Sample noise
+        z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim))))
+        # Get labels ranging from 0 to n_classes for n rows
+        labels = Variable(FloatTensor(np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)])))
+        gen_imgs = generator(z, labels)
+
     save_image(gen_imgs.data, "images/%d.png" % batches_done, nrow=n_row, normalize=True)
 
     measure_batch = compute_thickness_ground_truth(gen_imgs.cpu().detach().squeeze(1))
@@ -116,13 +132,20 @@ def sample_image_rotation(n_row, batches_done, in_distribution_index, out_distri
     """Saves a grid of generated digits ranging from 0 to n_classes"""
 
     ## -------------- In distribution --------------
-    # Sample noise
-    z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim))))
-    # Get labels ranging from 0 to n_classes for n rows
-    labels = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)])
-    labels = Variable(FloatTensor(labels))
+    if cfg.dcgan:
+        # Sample noise
+        z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim, 1, 1))))
+        # Get labels ranging from 0 to n_classes for n rows
+        labels = Variable(FloatTensor(np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)]))).unsqueeze(1).unsqueeze(1).unsqueeze(1)
+        gen_imgs = generator(z, labels)
 
-    gen_imgs = generator(z, labels)
+    else:
+        # Sample noise
+        z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim))))
+        # Get labels ranging from 0 to n_classes for n rows
+        labels = Variable(FloatTensor(np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)])))
+        gen_imgs = generator(z, labels)
+
     save_image(gen_imgs.data, "images/%d.png" % batches_done, nrow=n_row, normalize=True)
 
     fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size)
@@ -208,8 +231,13 @@ def train_gan_model():
     adversarial_loss = torch.nn.MSELoss()
 
     # Initialize generator and discriminator
-    generator = Generator()
-    discriminator = Discriminator()
+    if cfg.DCGAN:
+        generator = Generator()
+        discriminator = Discriminator()
+
+    else:
+        generator = Generator()
+        discriminator = Discriminator()
 
     if cuda:
         generator.cuda()
@@ -299,14 +327,31 @@ def train_gan_model():
             optimizer_G.zero_grad()
 
             # Sample noise and labels as generator input
-            z = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, cfgan.latent_dim))))
-            gen_labels = Variable(FloatTensor(np.random.rand(batch_size)*cfg_data.max_dataset)) 
+            if dcgan:
+                z = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, cfgan.latent_dim, 1, 1))))
+                gen_labels = Variable(FloatTensor(np.random.rand(batch_size, 1, 1, 1)*cfg_data.max_dataset))
 
-            # Generate a batch of images
-            gen_imgs = generator(z, gen_labels)
+                # Generate a batch of images
+                gen_imgs = generator(z, gen_labels)
+
+                dis_labels = torch.zeros_like(gen_imgs)
+                dis_labels[:,:,:,:] = gen_labels[:,:,:,:]
+                
+                labels_real = torch.zeros_like(labels)
+                labels_real[:,:,:,:] = labels[:,:,:,:]
+
+            else:
+                z = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, cfgan.latent_dim))))
+                gen_labels = Variable(FloatTensor(np.random.rand(batch_size)*cfg_data.max_dataset)) 
+                
+                # Generate a batch of images
+                gen_imgs = generator(z, gen_labels)
+                
+                dis_labels = gen_labels
+                labels_real = labels
 
             # Loss measures generator's ability to fool the discriminator
-            validity = discriminator(gen_imgs, gen_labels)
+            validity = discriminator(gen_imgs, dis_labels)
             g_loss = adversarial_loss(validity, valid)
 
             g_loss.backward()
@@ -321,11 +366,11 @@ def train_gan_model():
             optimizer_D.zero_grad()
 
             # Loss for real images
-            validity_real = discriminator(real_imgs, labels)
+            validity_real = discriminator(real_imgs, labels_real)
             d_real_loss = adversarial_loss(validity_real, valid)
 
             # Loss for fake images
-            validity_fake = discriminator(gen_imgs.detach(), gen_labels)
+            validity_fake = discriminator(gen_imgs.detach(), dis_labels)
             d_fake_loss = adversarial_loss(validity_fake, fake)
 
             # Total discriminator loss

@@ -93,7 +93,7 @@ class CondDCDiscriminator(nn.Module):
 	# initializers
 	def __init__(self, d=128):
 		super(CondDCDiscriminator, self).__init__()
-		
+
 		self.conv1 = nn.Conv2d(2, d, 4, 2, 1)
 		self.conv2 = nn.Conv2d(d, d*2, 4, 2, 1)
 		self.conv2_bn = nn.BatchNorm2d(d*2)
