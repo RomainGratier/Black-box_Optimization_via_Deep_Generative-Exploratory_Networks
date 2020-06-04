@@ -9,6 +9,7 @@ import torch
 from torch.autograd import Variable
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
+import torch.autograd as autograd
 
 cuda = True if torch.cuda.is_available() else False
 
@@ -30,6 +31,8 @@ elif cfg.experiment == 'rotation_dataset':
     import src.config_rotation as cfg_data
 
 from src.utils import save_ckp, load_ckp_gan
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def save_numpy_arr(path, arr):
     np.save(path, arr)
@@ -363,7 +366,7 @@ def train_gan_model():
         if epoch == 0:
             pass
 
-        elif epoch % 2 == 0:
+        elif epoch % 1 == 0:
 
             print(
               "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
@@ -445,12 +448,12 @@ def compute_gradient_penalty(discriminator, real_samples, fake_samples, labels):
        the interpolated real and fake samples, as in the WGAN GP paper.
     """
     # Random weight term for interpolation between real and fake samples
-    alpha = Tensor(np.random.random((real_samples.size(0), 1, 1, 1)))
-    labels = LongTensor(labels)
+    alpha = FloatTensor(np.random.random((real_samples.size(0), 1, 1, 1)))
+    labels = FloatTensor(labels)
     # Get random interpolation between real and fake samples
     interpolates = (alpha * real_samples + ((1 - alpha) * fake_samples)).requires_grad_(True)
-    d_interpolates = discriminator(interpolates, labels)
-    fake = Tensor(real_samples.shape[0], 1).fill_(1.0)
+    d_interpolates = discriminator(interpolates, labels).view(-1,1)
+    fake = FloatTensor(real_samples.shape[0], 1).fill_(1.0)
     fake.requires_grad = False
     # Get gradient w.r.t. interpolates
     gradients = autograd.grad(
@@ -493,17 +496,16 @@ def train_wgan_model():
         df_check_in_distribution = None
         df_check_out_distribution = None
 
-    # Loss functions
-    adversarial_loss = torch.nn.MSELoss()
-
     # Initialize generator and discriminator
     generator = CondDCGenerator()
     discriminator = CondDCDiscriminator()
 
+    lambda_gp = cfg.lambda_gp
+
     if cuda:
         generator.cuda()
         discriminator.cuda()
-        adversarial_loss.cuda()
+        torch.tensor(lambda_gp).cuda()
 
     # Optimizers
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=cfgan.lr, betas=(cfgan.b1, cfgan.b2))
@@ -572,6 +574,8 @@ def train_wgan_model():
             print("learning rate change!")
 
         for i, (imgs, labels) in enumerate(dataloader):
+            import time
+            start_time = time.time()
             
             # ---------------------
             #  Configuration
@@ -591,28 +595,37 @@ def train_wgan_model():
 
             # Generate a batch of images
             fake_imgs = generator(z, labels)
+
+            labels_discriminator = torch.zeros_like(fake_imgs)
+            labels_discriminator[:,:,:,:] = labels[:,:,:,:]
+            
+            print("Conf time :--- %s seconds ---" % (time.time() - start_time))
+            start_time = time.time()
             
             # ---------------------
             #  Train Discriminator
             # ---------------------
-
             optimizer_D.zero_grad()
 
             # Loss for real images
-            validity_real = discriminator(real_imgs, labels)
+            validity_real = discriminator(real_imgs, labels_discriminator)
 
             # Loss for fake images
-            validity_fake = discriminator(fake_imgs.detach(), labels)
+            validity_fake = discriminator(fake_imgs.detach(), labels_discriminator)
 
-            
             # Gradient penalty
-            gradient_penalty = compute_gradient_penalty(discriminator, real_imgs.data, fake_imgs.data, labels.data)
+            gradient_penalty = compute_gradient_penalty(discriminator, real_imgs.data, fake_imgs.data, labels_discriminator.data)
+
             # Adversarial loss
-            d_loss = -torch.mean(validity_real) + torch.mean(validity_fake) + cfg.lambda_gp * gradient_penalty
+            d_loss = -torch.mean(validity_real) + torch.mean(validity_fake) + lambda_gp * gradient_penalty
+
             d_loss.backward()
             optimizer_D.step()
 
             d_loss_check.append(d_loss.item())
+            
+            print("Discriminator time :--- %s seconds ---" % (time.time() - start_time))
+            start_time = time.time()
 
             # -----------------
             #  Train Generator
@@ -623,20 +636,18 @@ def train_wgan_model():
             if i % cfg.n_critic == 0:
 
                 # Loss measures generator's ability to fool the discriminator
-                fake_validity = discriminator(fake_imgs, labels)
+                fake_validity = discriminator(fake_imgs, labels_discriminator)
                 g_loss = -torch.mean(fake_validity)
                 g_loss.backward()
                 optimizer_G.step()
 
                 g_loss_check.append(g_loss.item())
-
+            
+            print("Generator time :--- %s seconds ---" % (time.time() - start_time))
 
             batches_done = epoch * len(dataloader) + i
 
-        if epoch == 0:
-            pass
-
-        elif epoch % 2 == 0:
+        elif epoch % 1 == 0:
 
             print(
               "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
