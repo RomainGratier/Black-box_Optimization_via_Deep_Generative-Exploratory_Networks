@@ -21,8 +21,13 @@ from src.metrics import se, compute_thickness_ground_truth
 from src.generative_model.metrics import calculate_fid_given_paths, calculate_kid_given_paths
 from src.generative_model import Generator, Discriminator, LeNet5, CondDCDiscriminator, CondDCGenerator
 
-import src.config_gan as cfgan
 import src.config as cfg
+
+if cfg.dcgan:
+    import src.config_dcgan as cfgan
+else:
+    import src.config_gan as cfgan
+
 if cfg.experiment == 'min_mnist':
     import src.config_min_mnist as cfg_data
 elif cfg.experiment == 'max_mnist':

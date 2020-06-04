@@ -5,8 +5,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict
 
-import src.config_gan as cfgan
 import src.config as cfg
+
+if cfg.dcgan:
+    import src.config_dcgan as cfgan
+else:
+    import src.config_gan as cfgan
+
 if cfg.experiment == 'min_mnist':
     import src.config_min_mnist as cfg_data
 elif cfg.experiment == 'max_mnist':

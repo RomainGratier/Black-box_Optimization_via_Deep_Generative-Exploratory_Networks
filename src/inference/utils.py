@@ -3,6 +3,8 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os 
+import torch 
+from torch.autograd import Variable
 from torch.nn import functional as F
 from copy import deepcopy
 import itertools
@@ -14,7 +16,12 @@ from src.generative_model.metrics import calculate_fid_given_paths, calculate_ki
 from src.forward.uncertainty_estimation import get_uncertainty_per_batch
 
 import src.config as cfg
-import src.config_gan as cfgan
+
+if cfg.dcgan:
+    import src.config_dcgan as cfgan
+else:
+    import src.config_gan as cfgan
+
 import src.config_inference as cfginf
 from src.uncertainty_policy import uncertainty_selection
 
@@ -24,9 +31,6 @@ elif cfg.experiment == 'max_mnist':
     import src.config_max_mnist as cfg_data
 elif cfg.experiment == 'rotation_dataset':
     import src.config_rotation as cfg_data
-
-import torch 
-from torch.autograd import Variable
 
 cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
