@@ -249,7 +249,7 @@ def monte_carlo_inference_general(distribution, generator, forward, ncol=8, nrow
     print(f'The pipeline is currently running on {device}')
 
     if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'min_mnist'):
-        testset = MNISTDataset('full', data_path=cfg.data_path)
+        testset = MNISTDataset('full', 'thickness', data_path=cfg.data_path)
     elif cfg.experiment == 'rotation_dataset':
         testset = RotationDataset('full', data_path=cfg.data_path)
 
@@ -500,7 +500,7 @@ def compute_results_inference(metric_type='fid_kid', distributions=['in', 'out']
     print(f'The pipeline is currently running on {device}')
 
     if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'min_mnist'):
-        testset = MNISTDataset('full', data_path=cfg.data_path)
+        testset = MNISTDataset('full', 'thickness', data_path=cfg.data_path)
     elif cfg.experiment == 'rotation_dataset':
         testset = RotationDataset('full', data_path=cfg.data_path)
 
@@ -680,7 +680,7 @@ def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_
     print(f'The pipeline is currently running on {device}')
 
     if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'min_mnist'):
-        testset = MNISTDataset('full', data_path=cfg.data_path)
+        testset = MNISTDataset('full', 'thickness', data_path=cfg.data_path)
     elif cfg.experiment == 'rotation_dataset':
         testset = RotationDataset('full', data_path=cfg.data_path)
         metrics.remove('l1_l2')
