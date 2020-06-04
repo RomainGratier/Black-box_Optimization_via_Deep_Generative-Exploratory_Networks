@@ -82,7 +82,7 @@ class CondDCGenerator(nn.Module):
 
 	# forward method
 	def forward(self, ipt, label):
-		x = torch.cat([ipt, label], 1)
+		x = torch.cat([ipt, minmaxs(label)], 1)
 		x = F.relu(self.deconv1_bn(self.deconv1(x)))
 		x = F.relu(self.deconv2_bn(self.deconv2(x)))
 		x = F.relu(self.deconv3_bn(self.deconv3(x)))
@@ -103,7 +103,7 @@ class CondDCDiscriminator(nn.Module):
 
 	# forward method
 	def forward(self, ipt, label):
-		x = torch.cat([ipt, label], 1)
+		x = torch.cat([ipt, minmaxs(label)], 1)
 		x = F.leaky_relu(self.conv1(x), 0.2)
 		x = F.leaky_relu(self.conv2_bn(self.conv2(x)), 0.2)
 		x = F.leaky_relu(self.conv3_bn(self.conv3(x)), 0.2)
@@ -203,3 +203,4 @@ class LeNet5(nn.Module):
         output = output.view(img.size(0), -1)
         output = self.fc[1](self.fc[0](output))
         return output
+    

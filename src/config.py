@@ -14,6 +14,8 @@ print(f'Data path : {data_path}')
 
 if dcgan:
     gan_path = 'dcgenerator'
+    lambda_gp = 10
+    n_critic = 1
 else:
     gan_path = 'generator'
 
