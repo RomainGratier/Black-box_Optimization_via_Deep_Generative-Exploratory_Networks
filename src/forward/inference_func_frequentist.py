@@ -15,7 +15,6 @@ import src.config as cfg_glob
 from src.forward.cnn_models import AlexNet, LeNet, ThreeConvThreeFC
 from src.data import getDataset, getDataloader
 from src.metrics import se
-import src.forward.utils
 from src.utils import save_ckp, load_ckp_forward
 
 from torch.nn import functional as F

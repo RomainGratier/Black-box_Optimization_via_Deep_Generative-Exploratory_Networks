@@ -157,34 +157,66 @@ def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, i
     """Saves a grid of generated digits ranging from 0 to n_classes"""
     # Sample noise
     z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim))))
+    
+    if experiment == 'max_dataset':
 
-    # ---------------------- In distribution sample ----------------------
-    condition_in = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
-    gen_imgs_in = generate_sample_from_z_condition(generator, z, condition_in)
-
-    grid_in = torchvision.utils.make_grid(gen_imgs_in.data, nrow=n_row)
-    title = [round(num, 2) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)]
-    show(grid_in, title, batches_done, 'in')
-
-    measure_batch = compute_thickness_ground_truth(gen_imgs_in.cpu().detach().squeeze(1))
-    thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
-
-    label_target = np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
-    se_generator_in = se(label_target, thickness)
-
-    # ---------------------- Out distribution sample ----------------------
-    condition_out = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
-    gen_imgs_out = generate_sample_from_z_condition(generator, z, condition_out)
-
-    grid_out = torchvision.utils.make_grid(gen_imgs_out.data, nrow=n_row)
-    title = [round(num, 2) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)]
-    show(grid_out, title, batches_done, 'out')
-
-    measure_batch = compute_thickness_ground_truth(gen_imgs_out.cpu().detach().squeeze(1))
-    thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
-
-    label_target = np.array([num for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
-    se_generator_out = se(label_target, thickness)
+        # ---------------------- In distribution sample ----------------------
+        condition_in = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
+        gen_imgs_in = generate_sample_from_z_condition(generator, z, condition_in)
+    
+        grid_in = torchvision.utils.make_grid(gen_imgs_in.data, nrow=n_row)
+        title = [round(num, 2) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)]
+        show(grid_in, title, batches_done, 'in')
+    
+        measure_batch = compute_thickness_ground_truth(gen_imgs_in.cpu().detach().squeeze(1))
+        thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
+    
+        label_target = np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
+        se_generator_in = se(label_target, thickness)
+    
+        # ---------------------- Out distribution sample ----------------------
+        condition_out = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
+        gen_imgs_out = generate_sample_from_z_condition(generator, z, condition_out)
+    
+        grid_out = torchvision.utils.make_grid(gen_imgs_out.data, nrow=n_row)
+        title = [round(num, 2) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)]
+        show(grid_out, title, batches_done, 'out')
+    
+        measure_batch = compute_thickness_ground_truth(gen_imgs_out.cpu().detach().squeeze(1))
+        thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
+    
+        label_target = np.array([num for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
+        se_generator_out = se(label_target, thickness)
+    
+    elif experiment == 'min_dataset':
+        
+        # ---------------------- In distribution sample ----------------------
+        condition_in = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
+        gen_imgs_in = generate_sample_from_z_condition(generator, z, condition_in)
+    
+        grid_in = torchvision.utils.make_grid(gen_imgs_in.data, nrow=n_row)
+        title = [round(num, 2) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)]
+        show(grid_in, title, batches_done, 'in')
+    
+        measure_batch = compute_thickness_ground_truth(gen_imgs_in.cpu().detach().squeeze(1))
+        thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
+    
+        label_target = np.array([num for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
+        se_generator_in = se(label_target, thickness)
+    
+        # ---------------------- Out distribution sample ----------------------
+        condition_out = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
+        gen_imgs_out = generate_sample_from_z_condition(generator, z, condition_out)
+    
+        grid_out = torchvision.utils.make_grid(gen_imgs_out.data, nrow=n_row)
+        title = [round(num, 2) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)]
+        show(grid_out, title, batches_done, 'out')
+    
+        measure_batch = compute_thickness_ground_truth(gen_imgs_out.cpu().detach().squeeze(1))
+        thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
+    
+        label_target = np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
+        se_generator_out = se(label_target, thickness)
 
     fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size)
 
@@ -328,13 +360,7 @@ def compute_and_store_results(df_acc_gen, epoch, lgt_dataloader, real_dataset_in
 def train_gan_model():
     
     dataset, dataloader, testset, index_in_distribution, index_out_distribution, real_dataset_in, real_dataset_out = get_main_data()
-
     path_generator = os.path.join(cfg.models_path, cfg.gan_path)
-
-    image_generation_path = 'images'
-    if os.path.isdir(image_generation_path):
-        shutil.rmtree(image_generation_path)
-    os.makedirs(image_generation_path, exist_ok=True)
 
     # Loss functions
     adversarial_loss = torch.nn.MSELoss()
@@ -538,11 +564,6 @@ def train_wgan_model():
 
     dataset, dataloader, testset, index_in_distribution, index_out_distribution, real_dataset_in, real_dataset_out = get_main_data()
     path_generator = os.path.join(cfg.models_path, cfg.gan_path)
-
-    image_generation_path = 'images'
-    if os.path.isdir(image_generation_path):
-        shutil.rmtree(image_generation_path)
-    os.makedirs(image_generation_path, exist_ok=True)
 
     # Initialize generator and discriminator
     if cfg.dcgan:

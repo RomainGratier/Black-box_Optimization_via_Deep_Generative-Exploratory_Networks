@@ -9,7 +9,10 @@ from torch.nn import functional as F
 from copy import deepcopy
 import itertools
 from tabulate import tabulate
+from scipy.stats import norm, truncnorm
+import random
 
+from src.data import MNISTDataset, RotationDataset
 from src.metrics import se, re, compute_thickness_ground_truth
 from src.generative_model.metrics import calculate_fid_given_paths, calculate_kid_given_paths
 from src.forward.uncertainty_estimation import get_uncertainty_per_batch
@@ -118,7 +121,7 @@ def compute_fid_mnist(gen_img, index_distribution, real_dataset):
 
     return fid_value, kid_value
 
-def get_main_data():
+def get_main_data(distribution, size_full, testset):
     
     if distribution == 'in':
         if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'rotation_dataset'):
@@ -174,12 +177,12 @@ def get_main_data():
     
     return conditions, z, index_distribution, real_dataset
 
-def monte_carlo_inference_mse_batch(distribution, generator, forward, bayesian=True, sample_number=2000):
+def monte_carlo_inference_mse_batch(distribution, generator, forward, testset, bayesian=True, sample_number=2000):
 
     size_full = int(sample_number * 1/cfginf.quantile_rate_uncertainty_policy)
     
     # ------------ Get data ------------
-    conditions, z, _, _ = get_main_data()
+    conditions, z, _, _ = get_main_data(distribution, size_full, testset)
     
     # ------------ Generate sample from z and y target ------------
     images_generated = generate_sample_from_GAN(conditions, z, generator)
@@ -190,9 +193,9 @@ def monte_carlo_inference_mse_batch(distribution, generator, forward, bayesian=T
 
     # ------------ Compute forward predictions ------------
     if bayesian:
-        y_pred, epistemic = predict_forward_model(forward, images_generated, bayesian=bayesian)
+        y_pred, epistemic = predict_forward_model(forward, images_generated_rand, bayesian=bayesian)
     else:
-        y_pred = predict_forward_model(forward, images_generated, bayesian=bayesian)
+        y_pred = predict_forward_model(forward, images_generated_rand, bayesian=bayesian)
 
     # ------------ Compare the forward model and the Measure from morphomnist ------------
     images_generated_rand = images_generated_rand.squeeze(1).cpu().detach().numpy()
@@ -208,13 +211,14 @@ def monte_carlo_inference_mse_batch(distribution, generator, forward, bayesian=T
     
     # ------------ Global results ------------
     stat_ms_glob = [np.mean(se_measure_glob), np.std(se_measure_glob)]; stat_mr_glob = [np.mean(re_measure_glob), np.std(re_measure_glob)];
-    
-    if Bayesian:
+
+    if bayesian:
         # ------------ Compute forward predictions ------------
-        y_pred, epistemic = predict_forward_model(forward, images_generated, bayesian=Bayesian)
+        y_pred, epistemic = predict_forward_model(forward, images_generated, bayesian=bayesian)
         # ------------ Uncertainty policy ------------
         index_certain = uncertainty_selection(epistemic.squeeze())
         images_generated_sampled = images_generated[index_certain]
+        y_pred = y_pred[index_certain]
 
         # ------------ Compare the forward model and the Measure from morphomnist ------------
         # Move variable to cpu
@@ -222,12 +226,12 @@ def monte_carlo_inference_mse_batch(distribution, generator, forward, bayesian=T
         thickness = compute_thickness_ground_truth(images_generated_sampled)
 
         # ------------ Compute the se between the target and the morpho measure predictions ------------
-        se_measure = se(thickness, y_pred)
-        re_measure = re(thickness, y_pred)
+        se_measure_pol = se(thickness, y_pred)
+        re_measure_pol = re(thickness, y_pred)
 
         print(f"{distribution} distribution POLICY results")
-        print(f"The mean squared error : {np.mean(se_measure)} \t The std of the squared error : {np.std(se_measure)}")
-        print(f"The mean relative error : {np.mean(re_measure)} \t The std of the squared error : {np.std(re_measure)}")
+        print(f"The mean squared error : {np.mean(se_measure_pol)} \t The std of the squared error : {np.std(se_measure_pol)}")
+        print(f"The mean relative error : {np.mean(re_measure_pol)} \t The std of the squared error : {np.std(re_measure_pol)}")
 
         # ------------ Global results ------------
         stat_ms_pol = [np.mean(se_measure_pol), np.std(se_measure_pol)]; stat_mr_pol = [np.mean(re_measure_pol), np.std(re_measure_pol)];
@@ -235,15 +239,16 @@ def monte_carlo_inference_mse_batch(distribution, generator, forward, bayesian=T
         return stat_ms_glob, stat_ms_pol, stat_mr_glob, stat_mr_pol
 
     else:
-        return stat_ms_glob, stat_mr_glob, None, None
+        return stat_ms_glob, stat_mr_glob, [100.0, 100.0], [100.0, 100.0]
 
-def monte_carlo_inference_mse_batch(distribution, generator, forward, bayesian=True, sample_number=2000):
+def monte_carlo_inference_mse_sampling(distribution, generator, forward, testset, bayesian=True, sample_number=2000):
     
     ms_rand = []; ms_pol = []; mr_rand = []; mr_pol = [];
     for i in range(size_sample):
         stat_ms_glob, stat_ms_pol, stat_mr_glob, stat_mr_pol = monte_carlo_inference_mse_batch(distribution, 
                                                                                                generator, 
-                                                                                               forward, 
+                                                                                               forward,
+                                                                                               testset,
                                                                                                bayesian=True, 
                                                                                                sample_number = 1000)
 
@@ -262,7 +267,7 @@ def monte_carlo_inference_fid_kid_batch(distribution, generator, forward, testse
     size_full = int(sample_number_fid_kid * 1/cfginf.quantile_rate_uncertainty_policy)
 
     # ------------ Get data ------------
-    conditions, z, index_distribution, real_dataset = get_main_data()
+    conditions, z, index_distribution, real_dataset = get_main_data(distribution, size_full, testset)
     
     # ------------ Generate sample from z and y target ------------
     images_generated = generate_sample_from_GAN(conditions, z, generator)
@@ -316,7 +321,7 @@ def monte_carlo_inference_qualitative(distribution, forward_type, generator, for
     size_full = int(sample_number * 1/cfginf.quantile_rate_uncertainty_policy)
 
     # ------------ Get data ------------
-    conditions, z, index_distribution, real_dataset = get_main_data()
+    conditions, z, index_distribution, real_dataset = get_main_data(distribution, size_full, testset)
     
     # ------------ Generate sample from z and y target ------------
     images_generated = generate_sample_from_GAN(conditions, z, generator)

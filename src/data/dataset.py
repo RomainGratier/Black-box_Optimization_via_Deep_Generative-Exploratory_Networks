@@ -474,3 +474,5 @@ def getDataloader(trainset, testset_in, testset_out, valid_size, batch_size, num
         num_workers=num_workers)
     test_loader_out = torch.utils.data.DataLoader(testset_out, batch_size=batch_size, 
         num_workers=num_workers)
+    
+    return train_loader, valid_loader, test_loader_in, test_loader_out

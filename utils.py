@@ -7,7 +7,6 @@ import seaborn as sns; sns.set(color_codes=True)
 def visualize_gan_training(acc_gen, sample_interval, batch_size):
     data_in = np.mean(mse_gan_in_distribution,axis=1)
     data_out = np.mean(mse_gan_out_distribution,axis=1)
-
     df=pd.DataFrame({'x': [i * sample_interval * batch_size for i in range(0,len(data_in))], 'y': data_in, 'z': data_out})
 
     # fist line:
@@ -23,7 +22,6 @@ def visualize_gan_training(acc_gen, sample_interval, batch_size):
     plt.xlabel('iterations')
     plt.legend()
     plt.title("Accuracy without reweighting strategy")
-
 
 import os
 import pandas as pd
@@ -70,7 +68,6 @@ def plot_res(df_acc, dist='out'):
         if flag:
             plt.plot(df_res.loc[index,'iteration'], df_res.loc[index, 'mse_forward'], 'o', color='red')
 
-    
 bayesian_model_types = ["bbb", "lrt"]
 activation_types = ["relu", "softplus"]
 models_path = MODELS_PATH
@@ -113,26 +110,26 @@ def compute_results_inference(testset, models_path, distributions, bayesian_mode
                     kid_in_rand = f"{np.around(kid_in_rand[0],decimals=decimals)}{inter}{np.around(kid_in_rand[1],decimals=decimals)}"
                     fid_in_pol = f"{np.around(fid_in_pol[0],decimals=decimals)}{inter}{np.around(fid_in_pol[1],decimals=decimals)}"
                     kid_in_pol = f"{np.around(kid_in_pol[0],decimals=decimals)}{inter}{np.around(kid_in_pol[1],decimals=decimals)}"
-                    
+
                 results.append([forward, distribution, fid_in_rand, fid_in_pol, kid_in_rand, kid_in_pol])
 
             else:
                 print('WARNING: no model was found')
-    
-    
+
     if output_type == 'latex':
         headers = ["Model", "Distribution", "fid$_r$", "fid$_p$", "kid$_r$", "kid$_p$"]
         return tabulate(results, headers, tablefmt='latex_raw')
 
     else:
         return results 
-    
+
 import src.config as cfg
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from copy import deepcopy
+
 sns.set()
 
 def plot_fc(df):
@@ -161,4 +158,3 @@ def plot_gan_results():
         plot_fc(df)
 
 plot_gan_results()
-    

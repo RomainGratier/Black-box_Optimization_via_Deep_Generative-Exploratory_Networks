@@ -1,6 +1,6 @@
 # --------------------- PATHES ---------------------
-experiment = 'max_mnist'
-dcgan = False
+experiment = 'rotation_dataset'
+dcgan = True
 data_folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
 main_model_path = '/content/drive/My Drive/master_thesis/'
 forward_path = 'forward'

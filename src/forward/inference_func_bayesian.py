@@ -14,7 +14,6 @@ from sklearn import preprocessing
 
 import src.config_bayesian as cfg
 import src.config as cfg_glob
-import src.forward.utils
 from src.forward.metrics import ELBO, calculate_kl, get_beta
 from src.forward.bcnn_models import BBB3Conv3FC, BBBAlexNet, BBBLeNet
 from src.data import getDataset, getDataloader
