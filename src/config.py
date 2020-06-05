@@ -1,8 +1,9 @@
 # --------------------- PATHES ---------------------
 experiment = 'max_mnist'
-dcgan = True
+dcgan = False
 data_folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
 main_model_path = '/content/drive/My Drive/master_thesis/'
+forward_path = 'forward'
 
 if (experiment=='min_mnist') | (experiment=='max_mnist'):
     feature = 'thickness'
@@ -17,16 +18,15 @@ print(f'Data path : {data_path}')
 
 if dcgan:
     gan_path = 'dcgenerator'
-    if (experiment=='min_mnist') | (experiment=='max_mnist'):
-        lambda_gp = 0.1
-    elif experimen =='rotation_dataset':
-        lambda_gp = 1
-
-    n_critic = 1
 else:
     gan_path = 'generator'
 
-forward_path = 'forward'
+# --------------------- WASSERSTEIN ---------------------
+if (experiment=='min_mnist') | (experiment=='max_mnist'):
+    lambda_gp = 0.1
+elif experimen =='rotation_dataset':
+    lambda_gp = 1
+n_critic = 1
 
 import os
 if experiment == 'max_mnist':

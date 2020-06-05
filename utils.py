@@ -128,6 +128,7 @@ def compute_results_inference(testset, models_path, distributions, bayesian_mode
         return results 
     
 import src.config as cfg
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -137,21 +138,27 @@ sns.set()
 def plot_fc(df):
     plt.figure(figsize=(5,4), dpi=300)
     with sns.axes_style("whitegrid"):
-        sns.lineplot(x='iterations', y='value', hue='variable', 
-                    data=pd.melt(df, ['iterations']))
+        sns.lineplot(x='iteration', y='value', hue='variable', 
+                    data=pd.melt(df, ['iteration']))
 
-def plot_gan_results(df):
+def plot_gan_results():
+    path_res = os.path.join(cfg.models_path, cfg.gan_path)
+    df = pd.read_csv(os.path.join(path_res, f'results_gan.csv'))
+    print(df)
+    print(df.columns)
     df = df.dropna(axis=1)
     df_ls = []
     if 'fid_in' in df.columns:
-        df_fid = df[['iterations', 'fid_in', 'fid_out']]
+        df_fid = df[['iteration', 'fid_in', 'fid_out']]
         df_ls.append(df_fid)
     if 'kid_in' in df.columns:
-        df_kid = df[['iterations', 'kid_in', 'kid_out']]
+        df_kid = df[['iteration', 'kid_in', 'kid_out']]
         df_ls.append(df_kid)
     if 'mse_in' in df.columns:
-        df_mse = df[['iterations', 'mse_in', 'mse_out']]
+        df_mse = df[['iteration', 'mse_in', 'mse_out']]
         df_ls.append(df_mse)
     for df in df_ls:
         plot_fc(df)
+
+plot_gan_results()
     
