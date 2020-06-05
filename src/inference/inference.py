@@ -15,9 +15,14 @@ def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_
     print(f'The pipeline is currently running on {device}')
 
     if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'min_mnist'):
-        testset = MNISTDataset('full', 'thickness', data_path=cfg.data_path)
+        testset = MNISTDataset('full', 
+                               y_feature=cfg.feature,
+                               folder=cfg.data_folder,
+                               data_path=cfg.data_path)
     elif cfg.experiment == 'rotation_dataset':
-        testset = RotationDataset('full', data_path=cfg.data_path)
+        testset = RotationDataset('full', 
+                                  folder=cfg.data_folder,
+                                  data_path=cfg.data_path)
         metrics.remove('l1_l2')
 
     modes = list(itertools.product(bayesian_model_types, activation_types))

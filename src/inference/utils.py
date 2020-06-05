@@ -10,7 +10,6 @@ from copy import deepcopy
 import itertools
 from tabulate import tabulate
 
-from src.data import MNISTDataset, RotationDataset
 from src.metrics import se, re, compute_thickness_ground_truth
 from src.generative_model.metrics import calculate_fid_given_paths, calculate_kid_given_paths
 from src.forward.uncertainty_estimation import get_uncertainty_per_batch

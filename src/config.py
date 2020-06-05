@@ -1,8 +1,11 @@
-# --------------------- Dataset ---------------------
+# --------------------- PATHES ---------------------
 experiment = 'max_mnist'
 dcgan = True
- 
+data_folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
+main_model_path = '/content/drive/My Drive/master_thesis/'
+
 if (experiment=='min_mnist') | (experiment=='max_mnist'):
+    feature = 'thickness'
     data_path = 'processed/original_thic_resample'
     model_fidkid_path = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/models_fid_kid/lenet_mnist.pth'
 
@@ -24,13 +27,17 @@ else:
     gan_path = 'generator'
 
 forward_path = 'forward'
+
+import os
 if experiment == 'max_mnist':
-    models_path = '/content/drive/My Drive/master_thesis/models_inference_max/'
+    models_path = os.path.join(main_model_path, 'models_inference_max/')
 elif experiment == 'min_mnist':
-    models_path = '/content/drive/My Drive/master_thesis/models_inference_min/'
+    models_path = os.path.join(main_model_path, 'models_inference_min/')
 elif experiment == 'rotation_dataset':
-    models_path = '/content/drive/My Drive/master_thesis/models_inference_rotation/'
+    models_path = os.path.join(main_model_path, 'models_inference_rotation/')
 print(f'Model path : {models_path}')
+
+# --------------------- DATA ---------------------
 
 img_size=28
 channels=1

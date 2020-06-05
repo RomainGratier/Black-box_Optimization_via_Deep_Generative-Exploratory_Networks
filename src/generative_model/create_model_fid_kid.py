@@ -100,38 +100,51 @@ def train_and_test_regressor(epoch, net, trainloader, testloader, optimizer, cri
 
 def create_model_fid_kid():
 
-    path_lenet = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/models_fid_kid'
+    path_lenet = cfg.model_fidkid_path
     os.makedirs(path_lenet, exist_ok=True)
-    
+
     batch_size = 128
     if (cfg.experiment == 'min_mnist')|(cfg.experiment == 'max_mnist'):
         model_name = 'lenet_mnist'
-        trainloader = DataLoader(MNISTDatasetLeNet('train', data_path=cfg.data_path),
+        trainloader = DataLoader(MNISTDatasetLeNet('train', 
+                                                   folder=cfg.data_folder,
+                                                   data_path=cfg.data_path),
                                  batch_size=batch_size,
                                  shuffle=True,
                                  num_workers=8)
-        testloader = DataLoader(MNISTDatasetLeNet('test', data_path=cfg.data_path),
-                                 batch_size=batch_size,
-                                 shuffle=True,
-                                 num_workers=8)
-        test_size = len(MNISTDatasetLeNet('test', data_path=cfg.data_path))
+        testloader = DataLoader(MNISTDatasetLeNet('test', 
+                                                  folder=cfg.data_folder, 
+                                                  data_path=cfg.data_path),
+                                
+                                batch_size=batch_size,
+                                shuffle=True,
+                                num_workers=8)
+        test_size = len(MNISTDatasetLeNet('test', 
+                                          folder=cfg.data_folder, 
+                                          data_path=cfg.data_path))
 
         criterion = nn.CrossEntropyLoss().to(device)
         net = LeNet5().to(device)
         optimizer = optim.Adam(net.parameters(), lr=2e-3)
         test_fct = train_and_test
-        
+
     elif cfg.experiment == 'rotation_dataset':
         model_name = 'lenet_rot'
-        trainloader = DataLoader(RotationDatasetLeNet('train', data_path=cfg.data_path),
+        trainloader = DataLoader(RotationDatasetLeNet('train',
+                                                      folder=cfg.data_folder,
+                                                      data_path=cfg.data_path),
                                  batch_size=batch_size,
                                  shuffle=True,
                                  num_workers=8)
-        testloader = DataLoader(RotationDatasetLeNet('test', data_path=cfg.data_path),
+        testloader = DataLoader(RotationDatasetLeNet('test', 
+                                                     folder=cfg.data_folder, 
+                                                     data_path=cfg.data_path),
                                  batch_size=batch_size,
                                  shuffle=True,
                                  num_workers=8)
-        test_size = len(RotationDatasetLeNet('test', data_path=cfg.data_path))
+        test_size = len(RotationDatasetLeNet('test', 
+                                             folder=cfg.data_folder, 
+                                             data_path=cfg.data_path))
 
         criterion = nn.MSELoss().to(device)
         net = LeNet5Regressor().to(device)
@@ -152,7 +165,7 @@ def create_model_fid_kid():
                 torch.save(net.state_dict(), os.path.join(path_lenet, f"{model_name}.pth"))
                 res.to_csv(os.path.join(path_lenet, f"results_{model_name}.csv"), index=False)
                 acc_res = test_acc
-        
+
         if cfg.experiment == 'rotation_dataset':
             if test_acc < acc_res_reg:
                 print(f'New accuracy : {test_acc}')

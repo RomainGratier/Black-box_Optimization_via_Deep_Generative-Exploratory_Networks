@@ -187,11 +187,21 @@ def get_main_data():
     path_generator = os.path.join(cfg.models_path, cfg.gan_path)
 
     if (cfg.experiment == 'max_mnist') | (cfg.experiment == 'min_mnist'):
-        dataset = MNISTDataset('train', 'thickness', data_path=cfg.data_path)
-        testset = MNISTDataset('full', 'thickness', data_path=cfg.data_path)
+        dataset = MNISTDataset('train', 
+                               y_feature=cfg.feature, 
+                               folder=cfg.data_folder, 
+                               data_path=cfg.data_path)
+        testset = MNISTDataset('full', 
+                               y_feature=cfg.feature, 
+                               folder=cfg.data_folder, 
+                               data_path=cfg.data_path)
     elif cfg.experiment == 'rotation_dataset':
-        dataset = RotationDataset('train', data_path=cfg.data_path)
-        testset = RotationDataset('full', data_path=cfg.data_path)
+        dataset = RotationDataset('train', 
+                                  folder=cfg.data_folder, 
+                                  data_path=cfg.data_path)
+        testset = RotationDataset('full', 
+                                  folder=cfg.data_folder, 
+                                  data_path=cfg.data_path)
 
     dataloader = DataLoader(dataset=dataset,
                               batch_size=cfgan.batch_size,

@@ -37,11 +37,11 @@ class MNISTDataset(Dataset):
     """ MNIST dataset."""
 
     # Initialize your data, download, etc.
-    def __init__(self, dataset, y_feature, data_path = 'morpho_mnist/original'):
+    def __init__(self, dataset, y_feature='thickness', folder='Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/', data_path = 'processed/original_thic_resample'):
 
         if dataset == 'train':
 
-            img_file, digit_file, morpho = self.__getdatasets__(dataset, data_path)
+            img_file, digit_file, morpho = self.__getdatasets__(dataset, folder, data_path)
             # Get the labels
             labels, index = self.__getlabels__(dataset, morpho, digit_file, y_feature)
 
@@ -58,7 +58,7 @@ class MNISTDataset(Dataset):
 
         if dataset == 'test_in':
 
-            img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test', data_path)
+            img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test', folder, data_path)
 
             # Get the labels
             labels_te, index_te = self.__getlabels__(dataset, morpho_te, digit_file_te, y_feature)
@@ -77,7 +77,7 @@ class MNISTDataset(Dataset):
         
         if dataset == 'test_out':
 
-            img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test', data_path)
+            img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test', folder, data_path)
 
             # Get the labels
             labels_te, index_te = self.__getlabels__(dataset, morpho_te, digit_file_te, y_feature)
@@ -95,7 +95,7 @@ class MNISTDataset(Dataset):
         
         if dataset == 'test':
 
-            img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test', data_path)
+            img_file_te, digit_file_te, morpho_te = self.__getdatasets__('test', folder, data_path)
 
             # Get the labels
             labels_te, index_te = self.__getlabels__('test', morpho_te, digit_file_te, y_feature)
@@ -113,7 +113,7 @@ class MNISTDataset(Dataset):
 
         if dataset == 'full':
 
-            img_file_tr, digit_file_tr, morpho_tr = self.__getdatasets__('train', data_path)
+            img_file_tr, digit_file_tr, morpho_tr = self.__getdatasets__('train', folder, data_path)
 
             # Get the labels
             labels_te, index_te = self.__getlabels__('test', morpho_tr, digit_file_tr, y_feature)
@@ -129,9 +129,7 @@ class MNISTDataset(Dataset):
             self.y_data = torch.from_numpy(labels_te[y_feature].to_numpy())
             self.len = self.y_data.shape[0]
 
-    def __getdatasets__(self, dataset, data_path):
-
-        folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
+    def __getdatasets__(self, dataset, folder, data_path):
         folder = os.path.join(folder, data_path)
 
         if dataset == 'test':
@@ -198,15 +196,14 @@ class RotationDataset(Dataset):
     """ Rotation dataset."""
 
     # Initialize your data, download, etc.
-    def __init__(self, dataset, data_path = 'processed/rotation_dataset'):
+    def __init__(self, dataset, folder='Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/', data_path='processed/rotation_dataset'):
 
         if dataset == 'train':
 
             # Get file paths
-            img_file, label_file = self.__getdatasets__(dataset, data_path)
+            img_file, label_file = self.__getdatasets__(dataset, folder, data_path)
 
             # Get the labels
-            print(label_file)
             labels, index = self.__getlabels__(dataset, label_file)
             
             # Read images
@@ -222,7 +219,7 @@ class RotationDataset(Dataset):
 
         if dataset == 'test_in':
 
-            img_file_te, label_file_te = self.__getdatasets__('test', data_path)
+            img_file_te, label_file_te = self.__getdatasets__('test', folder, data_path)
 
             # Get the labels
             labels_te, index_te = self.__getlabels__(dataset, label_file_te)
@@ -240,7 +237,7 @@ class RotationDataset(Dataset):
         
         if dataset == 'test_out':
 
-            img_file_te, label_file_te = self.__getdatasets__('test', data_path)
+            img_file_te, label_file_te = self.__getdatasets__('test', folder, data_path)
 
             # Get the labels
             labels_te, index_te = self.__getlabels__(dataset, label_file_te)
@@ -258,7 +255,7 @@ class RotationDataset(Dataset):
         
         if dataset == 'test':
 
-            img_file_te, label_file_te = self.__getdatasets__(dataset, data_path)
+            img_file_te, label_file_te = self.__getdatasets__(dataset, folder, data_path)
 
             # Get the labels
             labels_te, index_te = self.__getlabels__(dataset, label_file_te)
@@ -276,7 +273,7 @@ class RotationDataset(Dataset):
 
         if dataset == 'full':
 
-            img_file_tr, label_file_te = self.__getdatasets__('train', data_path)
+            img_file_tr, label_file_te = self.__getdatasets__('train', folder, data_path)
 
             # Get the labels
             labels_te, index_te = self.__getlabels__('test', label_file_te)
@@ -294,9 +291,7 @@ class RotationDataset(Dataset):
             self.y_data = torch.from_numpy(labels_te.to_numpy()).squeeze(1)
             self.len = self.y_data.shape[0]
 
-    def __getdatasets__(self, dataset, data_path):
-
-        folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
+    def __getdatasets__(self, dataset, folder, data_path):
         folder = os.path.join(folder, data_path)
 
         if dataset == 'test':
@@ -339,12 +334,12 @@ class MNISTDatasetLeNet(Dataset):
     """ MNIST dataset."""
 
     # Initialize your data, download, etc.
-    def __init__(self, dataset, data_path = 'morpho_mnist/original'):
+    def __init__(self, dataset, folder='Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/', data_path='morpho_mnist/original'):
 
         '''Initialise the data type:
         - data_path : original, global, thic, frac, local, plain, swel, thin
         '''
-        img_file, digit_file = self.__getdatasets__(dataset, data_path)
+        img_file, digit_file = self.__getdatasets__(dataset, folder, data_path)
         labels = self.__getlabels__(digit_file)
 
         # Read images from MNIST
@@ -355,9 +350,7 @@ class MNISTDatasetLeNet(Dataset):
         self.y_data = torch.from_numpy(labels).long()
         self.len = self.y_data.shape[0]
 
-    def __getdatasets__(self, dataset, data_path):
-
-        folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
+    def __getdatasets__(self, dataset, folder, data_path):
         folder = os.path.join(folder, data_path)
 
         if dataset == 'test':
@@ -396,10 +389,10 @@ class RotationDatasetLeNet(Dataset):
     """ Rotation dataset."""
 
     # Initialize your data, download, etc.
-    def __init__(self, dataset, data_path = 'processed/rotation_dataset'):
+    def __init__(self, dataset, folder='Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/', data_path = 'processed/rotation_dataset'):
 
         # Get file paths
-        img_file, label_file = self.__getdatasets__(dataset, data_path)
+        img_file, label_file = self.__getdatasets__(dataset, folder, data_path)
 
         # Get the labels
         labels = load_compress_numpy(label_file)
@@ -410,9 +403,7 @@ class RotationDatasetLeNet(Dataset):
         self.y_data = torch.from_numpy(labels).float()
         self.len = self.y_data.shape[0]
 
-    def __getdatasets__(self, dataset, data_path):
-
-        folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
+    def __getdatasets__(self, dataset, folder, data_path):
         folder = os.path.join(folder, data_path)
 
         if dataset == 'test':
@@ -450,16 +441,15 @@ class SyntheticTesla:
 		return batch_sample, None
 
 def getDataset():
-
     if (cfg.experiment == 'min_mnist') | (cfg.experiment == 'max_mnist'): 
-        trainset = MNISTDataset('train', 'thickness', data_path='processed/original_thic_resample')
-        testset_in = MNISTDataset('test_in', 'thickness', data_path='processed/original_thic_resample')
-        testset_out = MNISTDataset('test_out', 'thickness', data_path='processed/original_thic_resample')
+        trainset = MNISTDataset('train', y_feature=cfg.feature, folder=cfg.data_folder, data_path=cfg.data_path)
+        testset_in = MNISTDataset('test_in', y_feature=cfg.feature, folder=cfg.data_folder, data_path=cfg.data_path)
+        testset_out = MNISTDataset('test_out', y_feature=cfg.feature, folder=cfg.data_folder, data_path=cfg.data_path)
 
     elif cfg.experiment == 'rotation_dataset':
-        trainset = RotationDataset('train', data_path='processed/rotation_dataset')
-        testset_in = RotationDataset('test_in', data_path='processed/rotation_dataset')
-        testset_out = RotationDataset('test_out', data_path='processed/rotation_dataset')
+        trainset = RotationDataset('train', folder=cfg.data_folder, data_path=cfg.data_path)
+        testset_in = RotationDataset('test_in', folder=cfg.data_folder, data_path=cfg.data_path)
+        testset_out = RotationDataset('test_out', folder=cfg.data_folder, data_path=cfg.data_path)
 
     num_classes = 1
     inputs=1
