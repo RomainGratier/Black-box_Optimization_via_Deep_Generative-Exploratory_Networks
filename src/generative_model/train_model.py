@@ -4,6 +4,8 @@ import os
 import random
 import shutil
 from copy import deepcopy
+import imageio
+from glob import glob
 
 import torch
 from torch.autograd import Variable
@@ -272,13 +274,23 @@ def compute_and_store_results(df_acc_gen, batches_done, in_distribution_index, o
         
     return df_acc_gen
 
+def create_gif_training(image_folder, path_generator):
+    filenames = glob(image_folder+'/*.png')
+    with imageio.get_writer(os.path.join(path_generator, 'gan_training_iterations.gif'), mode='I') as writer:
+        for filename in filenames:
+            image = imageio.imread(filename)
+            writer.append_data(image)
+
 def train_gan_model():
     
     dataset, dataloader, testset, index_in_distribution, index_out_distribution, real_dataset_in, real_dataset_out, in_distribution_index, out_distribution_index = get_main_data()
-    
-    if os.path.isdir("images"):
-        shutil.rmtree("images")
-    os.makedirs("images", exist_ok=True)
+
+    path_generator = os.path.join(cfg.models_path, cfg.gan_path)
+
+    image_generation_path = 'images'
+    if os.path.isdir(image_generation_path):
+        shutil.rmtree(image_generation_path)
+    os.makedirs(image_generation_path, exist_ok=True)
 
     # Loss functions
     adversarial_loss = torch.nn.MSELoss()
@@ -422,6 +434,8 @@ def train_gan_model():
                 'best_res_in': best_res_in,
                 'best_res_out': best_res_out,
             }, ckp_path)
+    # Create gifs of training
+    create_gif_training(image_generation_path, path_generator)
 
 def compute_gradient_penalty(discriminator, real_samples, fake_samples, labels):
     """Calculates the gradient penalty loss for WGAN GP.
@@ -452,6 +466,12 @@ def compute_gradient_penalty(discriminator, real_samples, fake_samples, labels):
 def train_wgan_model():
     
     dataset, dataloader, testset, index_in_distribution, index_out_distribution, real_dataset_in, real_dataset_out, in_distribution_index, out_distribution_index = get_main_data()
+    path_generator = os.path.join(cfg.models_path, cfg.gan_path)
+    
+    image_generation_path = 'images'
+    if os.path.isdir(image_generation_path):
+        shutil.rmtree(image_generation_path)
+    os.makedirs(image_generation_path, exist_ok=True)
 
     # Initialize generator and discriminator
     generator = CondDCGenerator()
@@ -470,10 +490,6 @@ def train_wgan_model():
 
     FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
     LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
-
-    if os.path.isdir("images"):
-        shutil.rmtree("images")
-    os.makedirs("images", exist_ok=True)
 
     df_acc_gen = pd.DataFrame(columns=['mse_in', 'mse_out', 'fid_in', 'fid_out', 'iteration', 'flag'])
     best_res_in = 100000
@@ -604,3 +620,5 @@ def train_wgan_model():
                 'best_res_in': best_res_in,
                 'best_res_out': best_res_out,
             }, ckp_path)
+    # Create gifs of training
+    create_gif_training(image_generation_path, path_generator)
