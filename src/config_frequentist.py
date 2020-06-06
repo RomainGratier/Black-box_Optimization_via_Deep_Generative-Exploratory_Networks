@@ -1,5 +1,5 @@
 ############### Configuration file for Frequentist ###############
-n_epochs = 250
+n_epochs = 150
 lr = 0.001
 num_workers = 4
 valid_size = 0.2

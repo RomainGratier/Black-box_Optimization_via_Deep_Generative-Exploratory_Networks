@@ -45,12 +45,6 @@ def get_uncertainty_per_batch(model, batch, device, T=15, normalized=False):
     for i in range(T):  # for T batches
         net_out, _ = model(batches[i].to(device))
         net_outs.append(net_out)
-        #if normalized:
-            #prediction = F.softplus(net_out)
-            #prediction = prediction / torch.sum(prediction, dim=1).unsqueeze(1)
-        #else:
-            #prediction = F.softmax(net_out, dim=1)
-            #print(f'Before and after softmax : {net_out[0,:]} / {prediction[0,:]}')
         batch_predictions.append(net_out)
     
     for sample in range(batch.shape[0]):

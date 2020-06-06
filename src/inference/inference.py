@@ -7,9 +7,9 @@ from tabulate import tabulate
 from src.data import MNISTDataset, RotationDataset
 import src.config as cfg
 
-from src.inference.utils import monte_carlo_inference_mse_batch, monte_carlo_inference_fid_kid_batch, monte_carlo_inference_qualitative
+from src.inference.utils import monte_carlo_inference_mse_batch, monte_carlo_inference_fid_kid_sampling, monte_carlo_inference_qualitative
 
-def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_kid', 'l1_l2'], distributions=['in', 'out'], bayesian_model_types=["bbb", "lrt"], activation_types=["relu", "softplus"], sample_number_fid_kid=30000, output_type='latex', decimals=2):
+def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_kid', 'l1_l2'], distributions=['in', 'out'], bayesian_model_types=["bbb", "lrt"], activation_types=["relu", "softplus"], output_type='latex', decimals=2):
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f'The pipeline is currently running on {device}')
@@ -49,6 +49,11 @@ def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_
         results = []
         for forward_type in forward_models:
             for distribution in distributions:
+                if distribution=='in':
+                    sample_number_fid_kid=2000
+                elif distribution=='out':
+                    sample_number_fid_kid=2000
+
                 print(f"Computing inference with forward : {forward_type}")
                 gan_path = os.path.join(cfg.models_path, cfg.gan_path, f'best_generator_{distribution}_distribution.pth')
                 if forward_type == 'non bayesian':
@@ -66,7 +71,7 @@ def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_
                         if metric_type == 'l1_l2':
                             stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_mse_batch(distribution, generator_model, forward_model, testset, sample_number=2000, bayesian=bayesian)
                         elif metric_type == 'fid_kid':
-                            stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_fid_kid_batch(distribution, generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
+                            stat1_in_rand, stat1_in_pol, stat2_out_rand, stat2_out_pol = monte_carlo_inference_fid_kid_sampling(distribution, generator_model, forward_model, testset, sample_number_fid_kid=sample_number_fid_kid, bayesian=bayesian)
 
                         print((stat1_in_rand[0]-stat1_in_pol[0])/stat1_in_rand[0])
                         print((stat2_out_rand[0]-stat2_out_pol[0])/stat2_out_rand[0])
@@ -83,7 +88,10 @@ def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_
                             print(tabulate(results, headers, tablefmt='latex_raw'))
 
                     if metric_type=='qualitative':
-                        monte_carlo_inference_qualitative(distribution, forward_type, generator_model, forward_model, testset, sample_number=2000, bayesian=bayesian)
+                        if distribution == 'in':
+                            monte_carlo_inference_qualitative(distribution, forward_type, generator_model, forward_model, testset, sample_number=2000, bayesian=bayesian)
+                        elif distribution == 'out':
+                            monte_carlo_inference_qualitative(distribution, forward_type, generator_model, forward_model, testset, sample_number=2000, bayesian=bayesian, random_certainty=False)
     
                 else:
                     print('WARNING: no model was found')

@@ -69,13 +69,16 @@ def show(img, condition, batches_done, distribution):
     plt.figure(figsize=(10,10), dpi=100)
     title_str = ''
     for i, num in enumerate(condition):
+        if cfg.experiment == 'rotation_dataset':
+          num = np.round(num, 0)
+
         if i+1 == len(condition):
             title_str += str(num)
         else:
             title_str += str(num)+'|'
 
     if cfg.experiment == 'rotation_dataset':
-        plt.title(f'{title_str}', fontsize=18)
+        plt.title(f'{title_str}', fontsize=18.5)
     elif (cfg.experiment == 'min_mnist')|(cfg.experiment == 'max_mnist'):
         plt.title(f'{title_str}', fontsize=22.5)
     plt.xlabel(f"Batch number {batches_done}", fontsize=25)

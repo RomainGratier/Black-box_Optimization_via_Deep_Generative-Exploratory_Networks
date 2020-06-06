@@ -215,7 +215,7 @@ def run_bayesian(net_type='lenet', verbose=False):
     lr_sched = lr_scheduler.ReduceLROnPlateau(optimizer, patience=6, verbose=True)
     valid_loss_max = np.Inf
     df_acc_final_in = pd.DataFrame(columns=['iteration','label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg', 'uncertainty_flag', 'save_flag'])
-    df_acc_final_out = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'mse_forward_avg', 'uncertainty_flag', 'save_flag'])
+    df_acc_final_out = pd.DataFrame(columns=['iteration', 'label', 'val_pred', 'pred_w_uncertainty', 'epistemic', 'aleatoric', 'se_forward', 'se_forward_avg', 'uncertainty_flag', 'save_flag'])
     
     start_epoch = 0
     ckp_path = os.path.join(cfg_glob.models_path,f'checkpoints/forward_{net_type}_{layer_type}_{activation_type}')

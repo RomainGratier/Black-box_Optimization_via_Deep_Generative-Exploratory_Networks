@@ -34,72 +34,109 @@ from glob import glob
 
 sns.set(style="darkgrid")
 
-def plot_forward_results(df_acc, dist='out'):
+def plot_bayesian(df_acc, title, dist):
+    epochs = df_acc.groupby('iteration')
+
+    res = []
+    save_flag = []
+    for epoch in epochs:
+        sub_df = epoch[1]
+        n_ep = sub_df['iteration'].iloc[0]
+        mse_forward = np.mean(sub_df['se_forward_avg'])
+        corr_epistemic = pearsonr(sub_df['epistemic'], sub_df['se_forward_avg'])[0]
+        corr_aleatoric = pearsonr(sub_df['aleatoric'], sub_df['se_forward_avg'])[0]
+        selected_pred = sub_df[sub_df['uncertainty_flag']]
+        mse_forward_selected = np.mean(selected_pred['se_forward_avg'])
+
+        if selected_pred['save_flag'].iloc[0]:
+            save_flag.append(True)
+        else:
+            save_flag.append(False)
+
+        res.append([n_ep, corr_epistemic, corr_aleatoric, mse_forward, mse_forward_selected])
+
+    df_res = pd.DataFrame(res, columns=['iteration', 'epistemic correlation', 'aleatoric correlation', 'mse forward', 'mse forward selected'])
+    print(df_res)
+    plt.figure(figsize=(10,5), dpi=200)
+    if dist == 'out':
+        plt.ylim(top=1.5)
+        plt.ylim(bottom=-0.3)
+    if dist == 'in':
+        plt.ylim(top=0.6)
+        plt.ylim(bottom=-0)
+
+    sns.lineplot(x='iteration', y='value', hue='variable', 
+                 data=pd.melt(df_res, ['iteration']))
+    for index, flag in enumerate(save_flag):
+        if flag:
+            plt.plot(df_res.loc[index,'iteration'], df_res.loc[index, 'mse forward'], 'o', color='red')
+    plt.title(title)
+    plt.show()
+
+def plot_frequentist(df_acc, title, dist):
+    epochs = df_acc.groupby('iteration')
+
+    res = []
+    for epoch in epochs:
+        sub_df = epoch[1]
+        n_ep = sub_df['iteration'].iloc[0]
+        mse_forward = np.mean(sub_df['se_forward'])
+
+        res.append([n_ep, mse_forward])
+
+    df_res = pd.DataFrame(res, columns=['iteration', 'mse forward'])
+    plt.figure(figsize=(10,5), dpi=200)
+    if dist == 'out':
+        plt.ylim(top=1.5)
+        plt.ylim(bottom=-0.3)
+    if dist == 'in':
+        plt.ylim(top=0.6)
+        plt.ylim(bottom=-0)
+
+    sns.lineplot(x='iteration', y='value', hue='variable', 
+                 data=pd.melt(df_res, ['iteration']))
+
+    plt.title(title)
+    plt.show()
+
+def plot_forward_results():
     models_folder = os.path.join(cfg.models_path, cfg.forward_path)
-    list_results_paths = sorted(glob(models_folder+'*.csv'), key=os.path.getctime)
+    list_results_paths = sorted(glob(models_folder+'/*.csv'), key=os.path.getctime)
     
     for path in list_results_paths:
+        print(path)
         
         # Distribution
         if path.split('/')[-1].split('_')[1] == 'in':
             distribution = 'In distribution'
+            dist='in'
         else:
             distribution = 'Out distribution'
+            dist='out'
         
         # Non Bayesian
-        if (path.split('/')[-1] == 'results_in_lenet.csv') | (path.split('/')[-1] == 'results_in_lenet.csv'):
+        if (path.split('/')[-1] == 'results_in_lenet.csv') | (path.split('/')[-1] == 'results_out_lenet.csv'):
             title = f'{distribution} results for non bayesian LeNet'
+            plot_frequentist(pd.read_csv(path), title, dist)
         
         # Bayesian
         elif (path.split('/')[-1] == 'results_in_lenet_lrt_softplus.csv') | (path.split('/')[-1] == 'results_out_lenet_lrt_softplus.csv'):
             title = f'{distribution} results for bayesian LeNet LRT SOFTPLUS'
+            plot_bayesian(pd.read_csv(path), title, dist)
             
         elif (path.split('/')[-1] == 'results_in_lenet_lrt_relu.csv') | (path.split('/')[-1] == 'results_out_lenet_lrt_relu.csv'):
             title = f'{distribution} results for bayesian LeNet LRT RELU' 
+            plot_bayesian(pd.read_csv(path), title, dist)
         
         elif (path.split('/')[-1] == 'results_in_lenet_bbb_relu.csv') | (path.split('/')[-1] == 'results_out_lenet_bbb_relu.csv'):
             title = f'{distribution} results for bayesian LeNet BBB RELU'
+            plot_bayesian(pd.read_csv(path), title, dist)
 
         elif (path.split('/')[-1] == 'results_in_lenet_bbb_softplus.csv') | (path.split('/')[-1] == 'results_out_lenet_bbb_softplus.csv'):
             title = f'{distribution} results for bayesian LeNet BBB SOFTPLUS'
+            plot_bayesian(pd.read_csv(path), title, dist)
 
-        df_acc = pd.read_csv(path)
-
-        epochs = df_acc.groupby('iteration')
-        epochs['se_forward_avg'].mean()
-        res = []
-        save_flag = []
-        for epoch in epochs:
-            sub_df = epoch[1]
-            n_ep = sub_df['iteration'].iloc[0]
-            mse_forward = np.mean(sub_df['se_forward_avg'])
-            corr = pearsonr(sub_df['epistemic'], sub_df['se_forward_avg'])[0]
-            selected_pred = sub_df[sub_df['uncertainty_flag']]
-            mse_forward_selected = np.mean(selected_pred['se_forward_avg'])
-
-            if selected_pred['save_flag'].iloc[0]:
-                save_flag.append(True)
-            else:
-                save_flag.append(False)
-
-            res.append([n_ep, corr, mse_forward, mse_forward_selected])
-
-        df_res = pd.DataFrame(res, columns=['iteration', 'corr', 'mse_forward', 'mse_forward_selected'])
-        print(df_res)
-        plt.figure(figsize=(10,5), dpi=200)
-        if dist == 'out':
-            plt.ylim(top=1.5)
-            plt.ylim(bottom=-0.3)
-        if dist == 'in':
-            plt.ylim(top=0.6)
-            plt.ylim(bottom=-0)
-
-        sns.lineplot(x='iteration', y='value', hue='variable', 
-                     data=pd.melt(df_res, ['iteration']))
-        for index, flag in enumerate(save_flag):
-            if flag:
-                plt.plot(df_res.loc[index,'iteration'], df_res.loc[index, 'mse_forward'], 'o', color='red')
-        plt.show()
+plot_forward_results()
 
 import src.config as cfg
 import os

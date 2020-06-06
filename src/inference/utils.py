@@ -64,17 +64,16 @@ def generate_sample_from_GAN(y_cond, z, generator):
 
         X_chunk = []
         for i, condition in enumerate(y_cond):
-            X_chunk.append(generator(Variable(FloatTensor(z[i])), Variable(FloatTensor(condition))))
+            X_chunk.append(generator(Variable(FloatTensor(z[i])), Variable(FloatTensor(condition))).detach().cpu())
 
         return torch.cat(X_chunk)
     
     else:
-        return generator( Variable(FloatTensor(z)), Variable(FloatTensor(y_cond)))
+        return generator( Variable(FloatTensor(z)), Variable(FloatTensor(y_cond))).detach().cpu()
     
 def predict_forward_model(forward, gen_images, bayesian=True):
         
     if bayesian:
-
         if gen_images.shape[0] > 5000:
             gen_images = np.array_split(gen_images.cpu().detach(), len(gen_images.cpu().detach()) // max_size)
             pred_chunk = []
@@ -91,7 +90,6 @@ def predict_forward_model(forward, gen_images, bayesian=True):
             return y_pred, epistemic
     
     else:
-        
         if gen_images.shape[0] > 5000:
             gen_images = np.array_split(gen_images.cpu().detach(), len(gen_images.cpu().detach()) // max_size)
             pred_chunk = []
@@ -101,7 +99,7 @@ def predict_forward_model(forward, gen_images, bayesian=True):
             return np.concatenate(pred_chunk)
 
         else:
-            y_pred = forward(F.interpolate(gen_images, size=32)).squeeze(1).cpu().detach().numpy()
+            y_pred = forward(F.interpolate(gen_images.to(device), size=32)).squeeze(1).cpu().detach().numpy()
             return y_pred
     
 
@@ -241,7 +239,7 @@ def monte_carlo_inference_mse_batch(distribution, generator, forward, testset, b
     else:
         return stat_ms_glob, stat_mr_glob, [100.0, 100.0], [100.0, 100.0]
 
-def monte_carlo_inference_mse_sampling(distribution, generator, forward, testset, bayesian=True, sample_number=2000):
+def monte_carlo_inference_mse_sampling(distribution, generator, forward, testset, bayesian=True, sample_number=2000, size_sample=10):
     
     ms_rand = []; ms_pol = []; mr_rand = []; mr_pol = [];
     for i in range(size_sample):
@@ -250,15 +248,15 @@ def monte_carlo_inference_mse_sampling(distribution, generator, forward, testset
                                                                                                forward,
                                                                                                testset,
                                                                                                bayesian=True, 
-                                                                                               sample_number = 1000)
+                                                                                               sample_number = 2000)
 
         # Update values
         ms_rand.append(stat_ms_glob[0]); ms_pol.append(stat_ms_pol[0]); mr_rand.append(stat_mr_glob[0]); mr_pol.append(stat_mr_pol[0]);
 
-    stat_se_rand = [np.mean(ms_rand), np.std(ms_rand)/np.sqrt(size_sample)]
-    stat_se_pol = [np.mean(ms_pol), np.std(ms_pol)/np.sqrt(size_sample)]
-    stat_re_rand = [np.mean(mr_rand), np.std(mr_rand)/np.sqrt(size_sample)]
-    stat_re_pol = [np.mean(mr_pol), np.std(mr_pol)/np.sqrt(size_sample)]
+    stat_se_rand = [np.mean(ms_rand), np.std(ms_rand)]
+    stat_se_pol = [np.mean(ms_pol), np.std(ms_pol)]
+    stat_re_rand = [np.mean(mr_rand), np.std(mr_rand)]
+    stat_re_pol = [np.mean(mr_pol), np.std(mr_pol)]
     
     return stat_se_rand, stat_se_pol, stat_re_rand, stat_re_pol
 
@@ -295,7 +293,7 @@ def monte_carlo_inference_fid_kid_batch(distribution, generator, forward, testse
     
     return fid_value_gen_rand, fid_value_gen_pol, kid_value_gen_rand, kid_value_gen_pol
 
-def monte_carlo_inference_fid_kid_sampling(distribution, generator, forward, testset, bayesian=True, sample_number_fid_kid = 2000, size_sample=15):
+def monte_carlo_inference_fid_kid_sampling(distribution, generator, forward, testset, bayesian=True, sample_number_fid_kid = 2000, size_sample=10):
     
     fid_pol = []; fid_rand = []; kid_pol = []; kid_rand = [];
     for i in range(size_sample):
@@ -303,20 +301,20 @@ def monte_carlo_inference_fid_kid_sampling(distribution, generator, forward, tes
                                                                                                                             generator, 
                                                                                                                             forward, 
                                                                                                                             testset, 
-                                                                                                                            bayesian=True, 
-                                                                                                                            sample_number_fid_kid = 1000)
+                                                                                                                            bayesian=bayesian, 
+                                                                                                                            sample_number_fid_kid = sample_number_fid_kid)
 
         # Update values
         fid_pol.append(fid_value_gen_pol[0]); fid_rand.append(fid_value_gen_rand[0]); kid_pol.append(kid_value_gen_pol[0]); kid_rand.append(kid_value_gen_rand[0]);
 
-    stat_fid_rand = [np.mean(fid_rand), np.std(fid_rand)/np.sqrt(size_sample)]
-    stat_fid_pol = [np.mean(fid_pol), np.std(fid_pol)/np.sqrt(size_sample)]
-    stat_kid_rand = [np.mean(kid_rand), np.std(kid_rand)/np.sqrt(size_sample)]
-    stat_kid_pol = [np.mean(kid_pol), np.std(kid_pol)/np.sqrt(size_sample)]
+    stat_fid_rand = [np.mean(fid_rand), np.std(fid_rand)]
+    stat_fid_pol = [np.mean(fid_pol), np.std(fid_pol)]
+    stat_kid_rand = [np.mean(kid_rand), np.std(kid_rand)]
+    stat_kid_pol = [np.mean(kid_pol), np.std(kid_pol)]
     
     return stat_fid_rand, stat_fid_pol, stat_kid_rand, stat_kid_pol
 
-def monte_carlo_inference_qualitative(distribution, forward_type, generator, forward, testset, bayesian=True, sample_number=2000):
+def monte_carlo_inference_qualitative(distribution, forward_type, generator, forward, testset, bayesian=True, sample_number=2000, random_certainty=True):
     
     size_full = int(sample_number * 1/cfginf.quantile_rate_uncertainty_policy)
 
@@ -330,12 +328,22 @@ def monte_carlo_inference_qualitative(distribution, forward_type, generator, for
     if bayesian:
         y_pred, epistemic = predict_forward_model(forward, images_generated, bayesian=bayesian)
         # ------------ Uncertainty policy ------------
-        index_certain = uncertainty_selection(epistemic.squeeze())
-        y_pred = y_pred[index_certain]
-        images_generated = images_generated[index_certain]
-        conditions = conditions[index_certain]
-        epistemic = epistemic[index_certain]
-        forward_pred = np.array([y_pred, epistemic.squeeze(1)]).T
+        if random_certainty:
+            # ------------ Uncertainty policy ------------
+            index_certain = uncertainty_selection(epistemic.squeeze())
+            y_pred = y_pred[index_certain]
+            images_generated = images_generated[index_certain]
+            conditions = conditions[index_certain]
+            epistemic = epistemic[index_certain]
+            forward_pred = np.array([y_pred, epistemic.squeeze(1)]).T
+
+        else:
+            index_certain = np.argsort(epistemic.squeeze())
+            y_pred = y_pred[index_certain]
+            images_generated = images_generated[index_certain]
+            conditions = conditions[index_certain]
+            epistemic = epistemic[index_certain]
+            forward_pred = np.array([y_pred, epistemic.squeeze(1)]).T
 
     else:
         y_pred = predict_forward_model(forward, images_generated, bayesian=bayesian)
@@ -349,15 +357,12 @@ def monte_carlo_inference_qualitative(distribution, forward_type, generator, for
     plots_qualitative_results(distribution, forward_type, images_generated, conditions, forward_pred, testset, index_distribution, forward, bayesian, nrow=4, ncol=8)
 
 def plots_qualitative_results(distribution, forward_type, images_generated, conditions, forward_pred, testset, index_distribution, forward, bayesian=True, nrow=4, ncol=8):
-    
+
     # Gan img selection
-    random_gan_index = random.sample(np.arange(images_generated.shape[0]).tolist(), ncol*nrow)
-    size = images_generated.shape[0]
-    print(images_generated.shape)
-    images_generated = images_generated[random_gan_index].squeeze(1).detach().cpu()
-    conditions = conditions[random_gan_index]
-    forward_pred = forward_pred[random_gan_index]
-    
+    images_generated = images_generated[:ncol*nrow].squeeze(1).detach().cpu()
+    conditions = conditions[:ncol*nrow]
+    forward_pred = forward_pred[:ncol*nrow]
+
     # Real img selection
     random_id = random.sample(index_distribution.tolist(), ncol*nrow)
     real_imgs = testset.x_data[random_id]
