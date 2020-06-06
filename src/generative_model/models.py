@@ -101,17 +101,17 @@ class CondDCDiscriminator(nn.Module):
 
 		self.conv1 = nn.Conv2d(2, d, 4, 2, 1)
 		self.conv2 = nn.Conv2d(d, d*2, 4, 2, 1)
-		self.conv2_bn = nn.BatchNorm2d(d*2)
+		self.layernorm2 = nn.LayerNorm([d * 2, 7, 7])
 		self.conv3 = nn.Conv2d(d*2, d*4, 4, 2, 1)
-		self.conv3_bn = nn.BatchNorm2d(d*4)
+		self.layernorm3 = nn.LayerNorm([d * 4, 3, 3])
 		self.conv4 = nn.Conv2d(d * 4, 1, 3, 1, 0)
 
 	# forward method
 	def forward(self, ipt, label):
 		x = torch.cat([ipt, minmaxs(label)], 1)
 		x = F.leaky_relu(self.conv1(x), 0.2)
-		x = F.leaky_relu(self.conv2_bn(self.conv2(x)), 0.2)
-		x = F.leaky_relu(self.conv3_bn(self.conv3(x)), 0.2)
+		x = F.leaky_relu(self.layernorm2(self.conv2(x)), 0.2)
+		x = F.leaky_relu(self.layernorm3(self.conv3(x)), 0.2)
 		x = self.conv4(x)
 		return x
 

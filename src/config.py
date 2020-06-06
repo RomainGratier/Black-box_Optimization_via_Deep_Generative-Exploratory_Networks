@@ -1,5 +1,5 @@
 # --------------------- PATHES ---------------------
-experiment = 'rotation_dataset'
+experiment = 'max_mnist'
 dcgan = True
 data_folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
 main_model_path = '/content/drive/My Drive/master_thesis/'
@@ -24,9 +24,10 @@ else:
 # --------------------- WASSERSTEIN ---------------------
 if (experiment=='min_mnist') | (experiment=='max_mnist'):
     lambda_gp = 0.1
+    n_critic = 2
 elif experiment =='rotation_dataset':
     lambda_gp = 1
-n_critic = 1
+    n_critic = 1
 
 import os
 if experiment == 'max_mnist':

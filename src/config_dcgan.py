@@ -1,6 +1,6 @@
 # --------------------- GAN ---------------------
-n_epochs = 30
-lr=0.0005 # lr=0.0008 for rotation dataset
+n_epochs = 50
+lr=0.0002 #5e-5 # lr=0.0008 for rotation dataset
 b1=0.5
 b2=0.999
 sample_interval=500

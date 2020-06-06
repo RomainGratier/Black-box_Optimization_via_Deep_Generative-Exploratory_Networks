@@ -160,7 +160,7 @@ def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, i
     # Sample noise
     z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim))))
     
-    if experiment == 'max_dataset':
+    if cfg.experiment == 'max_mnist':
 
         # ---------------------- In distribution sample ----------------------
         condition_in = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
@@ -190,7 +190,7 @@ def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, i
         label_target = np.array([num for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
         se_generator_out = se(label_target, thickness)
 
-    elif experiment == 'min_dataset':
+    elif cfg.experiment == 'min_mnist':
 
         # ---------------------- In distribution sample ----------------------
         condition_in = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
@@ -586,8 +586,11 @@ def train_wgan_model():
         torch.tensor(lambda_gp).cuda()
 
     # Optimizers
+    #optimizer_G = torch.optim.RMSprop(generator.parameters(), lr=cfgan.lr, alpha=0.99)
+    #optimizer_D = torch.optim.RMSprop(discriminator.parameters(), lr=cfgan.lr, alpha=0.99)
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=cfgan.lr, betas=(cfgan.b1, cfgan.b2))
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=cfgan.lr, betas=(cfgan.b1, cfgan.b2))
+
 
     FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
     LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
@@ -668,13 +671,17 @@ def train_wgan_model():
             validity_fake = discriminator(fake_imgs.detach(), labels_discriminator)
 
             # Gradient penalty
-            gradient_penalty = compute_gradient_penalty(discriminator, real_imgs.data, fake_imgs.data, labels_discriminator.data)
+            #gradient_penalty = compute_gradient_penalty(discriminator, real_imgs.data, fake_imgs.data, labels_discriminator.data)
 
             # Adversarial loss
-            d_loss = -torch.mean(validity_real) + torch.mean(validity_fake) + lambda_gp * gradient_penalty
+            d_loss = -torch.mean(validity_real) + torch.mean(validity_fake) #+ lambda_gp * gradient_penalty
 
             d_loss.backward()
             optimizer_D.step()
+            
+            # Weight clipping
+            for p in discriminator.parameters():
+                p.data.clamp_(-0.01, 0.01)
 
             d_loss_check.append(d_loss.item())
 
@@ -694,10 +701,7 @@ def train_wgan_model():
 
                 g_loss_check.append(g_loss.item())
 
-        if epoch == 0:
-            pass
-
-        elif epoch % 1 == 0:
+        if epoch % 1 == 0:
 
             print(
               "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
