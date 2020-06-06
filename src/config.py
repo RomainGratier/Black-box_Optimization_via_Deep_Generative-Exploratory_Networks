@@ -10,7 +10,7 @@ if (experiment=='min_mnist') | (experiment=='max_mnist'):
     data_path = 'processed/original_thic_resample'
     model_fidkid_path = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/models_fid_kid/lenet_mnist.pth'
 
-elif experimen =='rotation_dataset':
+elif experiment =='rotation_dataset':
     data_path = 'processed/rotation_dataset'
     model_fidkid_path = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/models_fid_kid/lenet_rot.pth'
 
@@ -24,7 +24,7 @@ else:
 # --------------------- WASSERSTEIN ---------------------
 if (experiment=='min_mnist') | (experiment=='max_mnist'):
     lambda_gp = 0.1
-elif experimen =='rotation_dataset':
+elif experiment =='rotation_dataset':
     lambda_gp = 1
 n_critic = 1
 

@@ -74,7 +74,10 @@ def show(img, condition, batches_done, distribution):
         else:
             title_str += str(num)+'|'
 
-    plt.title(f'{title_str}', fontsize=22.5)
+    if cfg.experiment == 'rotation_dataset':
+        plt.title(f'{title_str}', fontsize=18)
+    elif (cfg.experiment == 'min_mnist')|(cfg.experiment == 'max_mnist'):
+        plt.title(f'{title_str}', fontsize=22.5)
     plt.xlabel(f"Batch number {batches_done}", fontsize=25)
     plt.xticks([])
     plt.yticks([])
@@ -118,7 +121,6 @@ def generate_sample_from_uniform_condition_gaussian_latent(minimum, maximum, sam
     z = np.random.normal(0, 1, (sample_size, cfgan.latent_dim))
     # Get labels ranging from 0 to n_classes for n rows
     condition = np.random.uniform(minimum, maximum, sample_size)
-
     return generate_sample_from_z_condition(generator, z, condition)
 
 def compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size):
@@ -163,58 +165,58 @@ def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, i
         # ---------------------- In distribution sample ----------------------
         condition_in = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
         gen_imgs_in = generate_sample_from_z_condition(generator, z, condition_in)
-    
+
         grid_in = torchvision.utils.make_grid(gen_imgs_in.data, nrow=n_row)
         title = [round(num, 2) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)]
         show(grid_in, title, batches_done, 'in')
-    
+
         measure_batch = compute_thickness_ground_truth(gen_imgs_in.cpu().detach().squeeze(1))
         thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
-    
+
         label_target = np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
         se_generator_in = se(label_target, thickness)
-    
+
         # ---------------------- Out distribution sample ----------------------
         condition_out = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
         gen_imgs_out = generate_sample_from_z_condition(generator, z, condition_out)
-    
+
         grid_out = torchvision.utils.make_grid(gen_imgs_out.data, nrow=n_row)
         title = [round(num, 2) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)]
         show(grid_out, title, batches_done, 'out')
-    
+
         measure_batch = compute_thickness_ground_truth(gen_imgs_out.cpu().detach().squeeze(1))
         thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
-    
+
         label_target = np.array([num for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
         se_generator_out = se(label_target, thickness)
-    
+
     elif experiment == 'min_dataset':
-        
+
         # ---------------------- In distribution sample ----------------------
         condition_in = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
         gen_imgs_in = generate_sample_from_z_condition(generator, z, condition_in)
-    
+
         grid_in = torchvision.utils.make_grid(gen_imgs_in.data, nrow=n_row)
         title = [round(num, 2) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)]
         show(grid_in, title, batches_done, 'in')
-    
+
         measure_batch = compute_thickness_ground_truth(gen_imgs_in.cpu().detach().squeeze(1))
         thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
-    
+
         label_target = np.array([num for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
         se_generator_in = se(label_target, thickness)
-    
+
         # ---------------------- Out distribution sample ----------------------
         condition_out = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
         gen_imgs_out = generate_sample_from_z_condition(generator, z, condition_out)
-    
+
         grid_out = torchvision.utils.make_grid(gen_imgs_out.data, nrow=n_row)
         title = [round(num, 2) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)]
         show(grid_out, title, batches_done, 'out')
-    
+
         measure_batch = compute_thickness_ground_truth(gen_imgs_out.cpu().detach().squeeze(1))
         thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
-    
+
         label_target = np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
         se_generator_out = se(label_target, thickness)
 
@@ -388,7 +390,10 @@ def train_gan_model():
     df_acc_gen = pd.DataFrame(columns=['mse_in', 'mse_out', 'fid_in', 'fid_out', 'iteration', 'flag'])
     best_res_in = 100000
     best_res_out = 100000
-    stop_check = 'fid'
+    if cfg.experiment == 'rotation':
+        stop_check = 'epoch'
+    else:
+        stop_check = 'fid'
     epoch_start = 0
     ckp_path = os.path.join(cfg.models_path,'checkpoints/gan')
     print(ckp_path)
@@ -590,7 +595,10 @@ def train_wgan_model():
     df_acc_gen = pd.DataFrame(columns=['mse_in', 'mse_out', 'fid_in', 'fid_out', 'iteration', 'flag'])
     best_res_in = 100000
     best_res_out = 100000
-    stop_check = 'fid'
+    if cfg.experiment == 'rotation':
+        stop_check = 'epoch'
+    else:
+        stop_check = 'fid'
     epoch_start = 0
     ckp_path = os.path.join(cfg.models_path,'checkpoints/gan')
     print(ckp_path)

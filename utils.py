@@ -29,99 +29,77 @@ import numpy as np
 from scipy.stats.stats import pearsonr
 import matplotlib.pyplot as plt
 import seaborn as sns
+import src.config as cfg
+from glob import glob
+
 sns.set(style="darkgrid")
 
-def plot_res(df_acc, dist='out'):
-
-    epochs = df_acc.groupby('iteration')
-    epochs['se_forward_avg'].mean()
-    res = []
-    save_flag = []
-    for epoch in epochs:
-        sub_df = epoch[1]
-        n_ep = sub_df['iteration'].iloc[0]
-        mse_forward = np.mean(sub_df['se_forward_avg'])
-        corr = pearsonr(sub_df['epistemic'], sub_df['se_forward_avg'])[0]
-        selected_pred = sub_df[sub_df['uncertainty_flag']]
-        mse_forward_selected = np.mean(selected_pred['se_forward_avg'])
-
-        if selected_pred['save_flag'].iloc[0]:
-            save_flag.append(True)
+def plot_forward_results(df_acc, dist='out'):
+    models_folder = os.path.join(cfg.models_path, cfg.forward_path)
+    list_results_paths = sorted(glob(models_folder+'*.csv'), key=os.path.getctime)
+    
+    for path in list_results_paths:
+        
+        # Distribution
+        if path.split('/')[-1].split('_')[1] == 'in':
+            distribution = 'In distribution'
         else:
-            save_flag.append(False)
+            distribution = 'Out distribution'
+        
+        # Non Bayesian
+        if (path.split('/')[-1] == 'results_in_lenet.csv') | (path.split('/')[-1] == 'results_in_lenet.csv'):
+            title = f'{distribution} results for non bayesian LeNet'
+        
+        # Bayesian
+        elif (path.split('/')[-1] == 'results_in_lenet_lrt_softplus.csv') | (path.split('/')[-1] == 'results_out_lenet_lrt_softplus.csv'):
+            title = f'{distribution} results for bayesian LeNet LRT SOFTPLUS'
+            
+        elif (path.split('/')[-1] == 'results_in_lenet_lrt_relu.csv') | (path.split('/')[-1] == 'results_out_lenet_lrt_relu.csv'):
+            title = f'{distribution} results for bayesian LeNet LRT RELU' 
+        
+        elif (path.split('/')[-1] == 'results_in_lenet_bbb_relu.csv') | (path.split('/')[-1] == 'results_out_lenet_bbb_relu.csv'):
+            title = f'{distribution} results for bayesian LeNet BBB RELU'
 
-        res.append([n_ep, corr, mse_forward, mse_forward_selected])
+        elif (path.split('/')[-1] == 'results_in_lenet_bbb_softplus.csv') | (path.split('/')[-1] == 'results_out_lenet_bbb_softplus.csv'):
+            title = f'{distribution} results for bayesian LeNet BBB SOFTPLUS'
 
-    df_res = pd.DataFrame(res, columns=['iteration', 'corr', 'mse_forward', 'mse_forward_selected'])
-    print(df_res)
-    plt.figure(figsize=(10,5), dpi=200)
-    if dist == 'out':
-        plt.ylim(top=1.5)
-        plt.ylim(bottom=-0.3)
-    if dist == 'in':
-        plt.ylim(top=0.6)
-        plt.ylim(bottom=-0)
+        df_acc = pd.read_csv(path)
 
-    sns.lineplot(x='iteration', y='value', hue='variable', 
-                 data=pd.melt(df_res, ['iteration']))
-    for index, flag in enumerate(save_flag):
-        if flag:
-            plt.plot(df_res.loc[index,'iteration'], df_res.loc[index, 'mse_forward'], 'o', color='red')
+        epochs = df_acc.groupby('iteration')
+        epochs['se_forward_avg'].mean()
+        res = []
+        save_flag = []
+        for epoch in epochs:
+            sub_df = epoch[1]
+            n_ep = sub_df['iteration'].iloc[0]
+            mse_forward = np.mean(sub_df['se_forward_avg'])
+            corr = pearsonr(sub_df['epistemic'], sub_df['se_forward_avg'])[0]
+            selected_pred = sub_df[sub_df['uncertainty_flag']]
+            mse_forward_selected = np.mean(selected_pred['se_forward_avg'])
 
-bayesian_model_types = ["bbb", "lrt"]
-activation_types = ["relu", "softplus"]
-models_path = MODELS_PATH
-distributions = ['in', 'out']
-
-import os
-import torch
-import numpy as np
-import itertools
-from tabulate import tabulate
-
-def compute_results_inference(testset, models_path, distributions, bayesian_model_types, activation_types, sample_number_fid_kid=1000, size_sample=10, output_type='latex', decimals=2):
-
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    modes = list(itertools.product(bayesian_model_types, activation_types))
-    forward_models = ['_'.join(couple) for couple in modes]
-    forward_models.append('non bayesian')
-
-    if output_type == 'latex':
-        # Each element in the table list is a row in the generated table
-        inter = '$\pm$'
-
-    results = []
-    for forward in forward_models:
-        for distribution in distributions:
-            print(f"Computing inference with forward : {forward}")
-            if forward == 'non bayesian':
-                forward_path = os.path.join(models_path, 'frequentist_forward_resampled/model_lenet.pth')
-
-            forward_path = os.path.join(models_path, f'bayesian_forward_resampled/model_lenet_{forward}.pth')
-            gan_path = os.path.join(models_path, f'generative_resampled/best_generator_{distribution}_distribution.pth')
-            if (os.path.isfile(forward_path)) & (os.path.isfile(forward_path)):
-                forward_model = torch.load(forward_path, map_location=device).eval()
-                generator_model = torch.load(gan_path, map_location=device).eval()
-                fid_in_rand, fid_in_pol, kid_in_rand, kid_in_pol = monte_carlo_inference_fid_kid('in', generator_model, forward_model, testset, sample_number_fid_kid = sample_number_fid_kid, size_sample=size_sample)
-
-                if output_type == 'latex':
-                    fid_in_rand = f"{np.around(fid_in_rand[0],decimals=decimals)}{inter}{np.around(fid_in_rand[1],decimals=decimals)}"
-                    kid_in_rand = f"{np.around(kid_in_rand[0],decimals=decimals)}{inter}{np.around(kid_in_rand[1],decimals=decimals)}"
-                    fid_in_pol = f"{np.around(fid_in_pol[0],decimals=decimals)}{inter}{np.around(fid_in_pol[1],decimals=decimals)}"
-                    kid_in_pol = f"{np.around(kid_in_pol[0],decimals=decimals)}{inter}{np.around(kid_in_pol[1],decimals=decimals)}"
-
-                results.append([forward, distribution, fid_in_rand, fid_in_pol, kid_in_rand, kid_in_pol])
-
+            if selected_pred['save_flag'].iloc[0]:
+                save_flag.append(True)
             else:
-                print('WARNING: no model was found')
+                save_flag.append(False)
 
-    if output_type == 'latex':
-        headers = ["Model", "Distribution", "fid$_r$", "fid$_p$", "kid$_r$", "kid$_p$"]
-        return tabulate(results, headers, tablefmt='latex_raw')
+            res.append([n_ep, corr, mse_forward, mse_forward_selected])
 
-    else:
-        return results 
+        df_res = pd.DataFrame(res, columns=['iteration', 'corr', 'mse_forward', 'mse_forward_selected'])
+        print(df_res)
+        plt.figure(figsize=(10,5), dpi=200)
+        if dist == 'out':
+            plt.ylim(top=1.5)
+            plt.ylim(bottom=-0.3)
+        if dist == 'in':
+            plt.ylim(top=0.6)
+            plt.ylim(bottom=-0)
+
+        sns.lineplot(x='iteration', y='value', hue='variable', 
+                     data=pd.melt(df_res, ['iteration']))
+        for index, flag in enumerate(save_flag):
+            if flag:
+                plt.plot(df_res.loc[index,'iteration'], df_res.loc[index, 'mse_forward'], 'o', color='red')
+        plt.show()
 
 import src.config as cfg
 import os
