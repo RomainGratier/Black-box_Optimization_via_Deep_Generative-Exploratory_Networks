@@ -1,6 +1,6 @@
 # --------------------- PATHES ---------------------
 experiment = 'max_mnist'
-dcgan = True
+dcgan = False
 data_folder = 'Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/data/'
 main_model_path = '/content/drive/My Drive/master_thesis/'
 forward_path = 'forward'
@@ -23,9 +23,9 @@ else:
 
 # --------------------- WASSERSTEIN ---------------------
 if (experiment=='min_mnist') | (experiment=='max_mnist'):
-    lambda_gp = 0.1
+    lambda_gp = 10
     n_critic = 2
-elif experiment =='rotation_dataset':
+elif experiment =='rotation_dataset': # Used clipping gradient with 0.01
     lambda_gp = 1
     n_critic = 1
 

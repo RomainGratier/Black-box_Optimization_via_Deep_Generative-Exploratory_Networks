@@ -41,6 +41,7 @@ FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
 max_size = 2000
+uncertainty_policy = 'aleatoric'
 
 def save_numpy_arr(path, arr):
     np.save(path, arr)
@@ -77,17 +78,19 @@ def predict_forward_model(forward, gen_images, bayesian=True):
         if gen_images.shape[0] > 5000:
             gen_images = np.array_split(gen_images.cpu().detach(), len(gen_images.cpu().detach()) // max_size)
             pred_chunk = []
-            uncertainty_chunk = []
+            epistemic_chunk = []
+            aleatoric_chunk = []
             for i, gen_images_batch in enumerate(gen_images):
                 pred, epi, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(gen_images_batch.to(device), size=32), device)
                 pred_chunk.append(pred)
-                uncertainty_chunk.append(epi)
+                epistemic_chunk.append(epi)
+                aleatoric_chunk.append(aleatoric)
             
-            return np.concatenate(pred_chunk), np.concatenate(uncertainty_chunk)
+            return np.concatenate(pred_chunk), np.concatenate(uncertainty_chunk), np.concatenate(aleatoric_chunk)
         
         else:
             y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(gen_images, size=32), device)
-            return y_pred, epistemic
+            return y_pred, epistemic, aleatoric
     
     else:
         if gen_images.shape[0] > 5000:
@@ -191,7 +194,7 @@ def monte_carlo_inference_mse_batch(distribution, generator, forward, testset, b
 
     # ------------ Compute forward predictions ------------
     if bayesian:
-        y_pred, epistemic = predict_forward_model(forward, images_generated_rand, bayesian=bayesian)
+        y_pred, epistemic, aleatoric = predict_forward_model(forward, images_generated_rand, bayesian=bayesian)
     else:
         y_pred = predict_forward_model(forward, images_generated_rand, bayesian=bayesian)
 
@@ -212,9 +215,12 @@ def monte_carlo_inference_mse_batch(distribution, generator, forward, testset, b
 
     if bayesian:
         # ------------ Compute forward predictions ------------
-        y_pred, epistemic = predict_forward_model(forward, images_generated, bayesian=bayesian)
+        y_pred, epistemic, aleatoric = predict_forward_model(forward, images_generated, bayesian=bayesian)
         # ------------ Uncertainty policy ------------
-        index_certain = uncertainty_selection(epistemic.squeeze())
+        if uncertainty_policy == 'epistemic':
+            index_certain = uncertainty_selection(epistemic.squeeze())
+        elif uncertainty_policy == 'aleatoric':
+            index_certain = uncertainty_selection(aleatoric.squeeze())
         images_generated_sampled = images_generated[index_certain]
         y_pred = y_pred[index_certain]
 
@@ -279,9 +285,13 @@ def monte_carlo_inference_fid_kid_batch(distribution, generator, forward, testse
 
     # ------------ Compute policy measures ------------
     if bayesian:
-        y_pred, epistemic = predict_forward_model(forward, images_generated, bayesian=True)
+        y_pred, epistemic, aleatoric = predict_forward_model(forward, images_generated, bayesian=True)
         # ------------ Uncertainty policy ------------
-        index_certain = uncertainty_selection(epistemic.squeeze())
+        if uncertainty_policy == 'epistemic':
+            index_certain = uncertainty_selection(epistemic.squeeze())
+        elif uncertainty_policy == 'aleatoric':
+            index_certain = uncertainty_selection(aleatoric.squeeze())
+        
         images_generated_sampled = images_generated[index_certain]
     else:
         # ------------ random sample ------------
@@ -326,11 +336,15 @@ def monte_carlo_inference_qualitative(distribution, forward_type, generator, for
 
     # ------------ Compute policy measures ------------
     if bayesian:
-        y_pred, epistemic = predict_forward_model(forward, images_generated, bayesian=bayesian)
+        y_pred, epistemic, aleatoric = predict_forward_model(forward, images_generated, bayesian=bayesian)
         # ------------ Uncertainty policy ------------
         if random_certainty:
             # ------------ Uncertainty policy ------------
-            index_certain = uncertainty_selection(epistemic.squeeze())
+            if uncertainty_policy == 'epistemic':
+                index_certain = uncertainty_selection(epistemic.squeeze())
+            elif uncertainty_policy == 'aleatoric':
+                index_certain = uncertainty_selection(aleatoric.squeeze())
+            
             y_pred = y_pred[index_certain]
             images_generated = images_generated[index_certain]
             conditions = conditions[index_certain]
@@ -369,7 +383,7 @@ def plots_qualitative_results(distribution, forward_type, images_generated, cond
     labels = testset.y_data[random_id]
 
     if bayesian:
-        real_pred, epistemic = predict_forward_model(forward, F.interpolate(real_imgs.to(device), size=32), bayesian=bayesian)
+        real_pred, epistemic, aleatoric = predict_forward_model(forward, F.interpolate(real_imgs.to(device), size=32), bayesian=bayesian)
     else:
         real_pred = predict_forward_model(forward, F.interpolate(real_imgs.to(device), size=32), bayesian=bayesian)
     

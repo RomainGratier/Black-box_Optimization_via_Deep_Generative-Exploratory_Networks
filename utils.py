@@ -47,16 +47,18 @@ def plot_bayesian(df_acc, title, dist):
         corr_aleatoric = pearsonr(sub_df['aleatoric'], sub_df['se_forward_avg'])[0]
         selected_pred = sub_df[sub_df['uncertainty_flag']]
         mse_forward_selected = np.mean(selected_pred['se_forward_avg'])
+        mean_epistemic = np.mean(sub_df['epistemic'])
+        mean_aleatoric = np.mean(sub_df['aleatoric'])
 
         if selected_pred['save_flag'].iloc[0]:
             save_flag.append(True)
         else:
             save_flag.append(False)
 
-        res.append([n_ep, corr_epistemic, corr_aleatoric, mse_forward, mse_forward_selected])
+        res.append([n_ep, mse_forward, mse_forward_selected, corr_epistemic, corr_aleatoric, mean_aleatoric, mean_epistemic])
 
-    df_res = pd.DataFrame(res, columns=['iteration', 'epistemic correlation', 'aleatoric correlation', 'mse forward', 'mse forward selected'])
-    print(df_res)
+    df_res = pd.DataFrame(res, columns=['iteration', 'mse forward', 'mse forward selected', 'epistemic correlation', 'aleatoric correlation', 'aleatoric', 'epistemic'])
+
     plt.figure(figsize=(10,5), dpi=200)
     if dist == 'out':
         plt.ylim(top=1.5)
@@ -71,6 +73,16 @@ def plot_bayesian(df_acc, title, dist):
         if flag:
             plt.plot(df_res.loc[index,'iteration'], df_res.loc[index, 'mse forward'], 'o', color='red')
     plt.title(title)
+    plt.show()
+
+    plt.figure(figsize=(10,5), dpi=200)
+    sns.lineplot(x='iteration', y='value', hue='variable', 
+                 data=pd.melt(df_res[['iteration', 'epistemic']], ['iteration']))
+    plt.show()
+
+    plt.figure(figsize=(10,5), dpi=200)
+    sns.lineplot(x='iteration', y='value', hue='variable', 
+                 data=pd.melt(df_res[['iteration', 'aleatoric']], ['iteration']))
     plt.show()
 
 def plot_frequentist(df_acc, title, dist):
