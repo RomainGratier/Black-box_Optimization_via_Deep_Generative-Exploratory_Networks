@@ -21,8 +21,10 @@ class ModuleWrapper(nn.Module):
         for module in self.modules():
             if hasattr(module, 'kl_loss'):
                 kl = kl + module.kl_loss()
+            if hasattr(module, 'forward_var'):
+                x_var = module.forward_var()
 
-        return x, kl
+        return x, x_var, kl
 
 
 class FlattenLayer(ModuleWrapper):

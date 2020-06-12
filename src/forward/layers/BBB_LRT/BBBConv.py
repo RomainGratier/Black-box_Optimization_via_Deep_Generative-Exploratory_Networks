@@ -69,9 +69,9 @@ class BBBConv2d(ModuleWrapper):
 
         act_mu = F.conv2d(
             x, self.W_mu, self.bias_mu, self.stride, self.padding, self.dilation, self.groups)
-        act_var = 1e-16 + F.conv2d(
+        self.act_var = 1e-16 + F.conv2d(
             x ** 2, self.W_sigma ** 2, bias_var, self.stride, self.padding, self.dilation, self.groups)
-        act_std = torch.sqrt(act_var)
+        act_std = torch.sqrt(self.act_varact_var)
 
         if self.training or sample:
             eps = torch.empty(act_mu.size()).normal_(0, 1).to(self.device)
@@ -84,3 +84,6 @@ class BBBConv2d(ModuleWrapper):
         if self.use_bias:
             kl += KL_DIV(self.prior_mu, self.prior_sigma, self.bias_mu, self.bias_sigma)
         return kl
+    
+    def forward_var(self):
+        return self.act_var

@@ -52,7 +52,7 @@ def train_model(net, optimizer, criterion, trainloader, num_ens=1, beta_type=0.1
 
         kl = 0.0
         for j in range(num_ens):
-            net_out, _kl = net(inputs)
+            net_out, net_out_var, _kl = net(inputs)
             kl += _kl
         
         kl = kl / num_ens
@@ -90,7 +90,7 @@ def validate_model(net, criterion, validloader, num_ens=1, beta_type=0.1, epoch=
         #outputs = torch.zeros(inputs.shape[0], net.num_classes, num_ens).to(device)
         kl = 0.0
         for j in range(num_ens):
-            net_out, _kl = net(inputs)
+            net_out, net_out_var, _kl = net(inputs)
             kl += _kl
 
         beta = get_beta(i-1, len(validloader), beta_type, epoch, num_epochs)
@@ -125,7 +125,7 @@ def test_model(net, criterion, testinloader, testoutloader, iteration=None, num_
 
         kl = 0.0
         for j in range(num_ens):
-            net_out, _kl = net(inputs)
+            net_out, net_out_var, _kl = net(inputs)
             kl += _kl
 
         beta = get_beta(i-1, len(testinloader), beta_type, epoch, num_epochs)
@@ -156,7 +156,7 @@ def test_model(net, criterion, testinloader, testoutloader, iteration=None, num_
         #outputs = torch.zeros(inputs.shape[0], net.num_classes, num_ens).to(device)
         kl = 0.0
         for j in range(num_ens):
-            net_out, _kl = net(inputs)
+            net_out, net_out_var, _kl = net(inputs)
             kl += _kl
 
         beta = get_beta(i-1, len(testoutloader), beta_type, epoch, num_epochs)

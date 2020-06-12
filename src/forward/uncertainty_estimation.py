@@ -13,33 +13,33 @@ from tqdm import tqdm
 
 def get_uncertainty_per_batch(model, batch, device, T=15, normalized=False):
     batch_predictions = []
-    net_outs = []
+    net_outs_mu = []
+    net_outs_var = []
     batches = batch.unsqueeze(0).repeat(T, 1, 1, 1, 1)
     preds = []
     epistemics = []
     aleatorics = []
     
     for i in range(T):  # for T batches
-        net_out, _ = model(batches[i].to(device))
-        net_outs.append(net_out)
-        batch_predictions.append(net_out)
+        net_out_mu, net_out_var, - = model(batches[i].to(device))
+        net_outs_mu.append(net_out_mu)
+        net_outs_var.append(net_out_var)
     
     for sample in range(batch.shape[0]):
         # for each sample in a batch
-        pred = torch.cat([a_batch[sample].unsqueeze(0) for a_batch in net_outs], dim=0)
+        pred = torch.cat([a_batch[sample].unsqueeze(0) for a_batch in net_outs_mu], dim=0)
         pred = torch.mean(pred, dim=0)
         preds.append(pred)
 
-        p_hat = torch.cat([a_batch[sample].unsqueeze(0) for a_batch in batch_predictions], dim=0).detach().cpu().numpy()
+        p_hat = torch.cat([a_batch[sample].unsqueeze(0) for a_batch in net_outs_mu], dim=0).detach().cpu().numpy()
+        p_hat_var = torch.cat([a_batch[sample].unsqueeze(0) for a_batch in net_outs_var], dim=0).detach().cpu().numpy()
         p_bar = np.mean(p_hat, axis=0)
 
-        temp = p_hat - np.expand_dims(p_bar, 0)
-        epistemic = np.dot(temp.T, temp)
-        epistemic = np.sum(epistemic)/T
+        temp = np.sqare(p_hat - np.expand_dims(p_bar, 0))
+        epistemic = np.sum(epistemic)/(T-1)
         epistemics.append(epistemic)
-  
-        aleatoric = np.abs(np.diag(p_bar) - (np.dot(p_hat.T, p_hat) / T)) # np.diag(p_bar) - (np.dot(p_hat.T, p_hat) / T)
-        aleatoric = np.diag(aleatoric)
+
+        aleatoric = np.sum(p_hat_var)/T
         aleatorics.append(aleatoric)
         
     epistemic = np.vstack(epistemics)  # (batch_size, dim)

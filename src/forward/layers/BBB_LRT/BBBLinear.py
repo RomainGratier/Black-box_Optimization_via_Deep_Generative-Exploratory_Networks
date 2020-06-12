@@ -62,8 +62,8 @@ class BBBLinear(ModuleWrapper):
             self.bias_sigma = bias_var = None
 
         act_mu = F.linear(x, self.W_mu, self.bias_mu)
-        act_var = 1e-16 + F.linear(x ** 2, self.W_sigma ** 2, bias_var)
-        act_std = torch.sqrt(act_var)
+        self.act_var = 1e-16 + F.linear(x ** 2, self.W_sigma ** 2, bias_var)
+        act_std = torch.sqrt(self.act_var)
 
         if self.training or sample:
             eps = torch.empty(act_mu.size()).normal_(0, 1).to(self.device)
@@ -76,3 +76,6 @@ class BBBLinear(ModuleWrapper):
         if self.use_bias:
             kl += KL_DIV(self.prior_mu, self.prior_sigma, self.bias_mu, self.bias_sigma)
         return kl
+    
+    def forward_var(self):
+        return self.act_var

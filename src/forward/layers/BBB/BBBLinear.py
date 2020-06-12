@@ -61,12 +61,16 @@ class BBBLinear(ModuleWrapper):
                 bias_eps = torch.empty(self.bias_mu.size()).normal_(0, 1).to(self.device)
                 self.bias_sigma = torch.log1p(torch.exp(self.bias_rho))
                 bias = self.bias_mu + bias_eps * self.bias_sigma
+                bias_var = self.bias_sigma ** 2
             else:
                 bias = None
+                bias_var = None
+
+            self.act_var = 1e-16 + F.linear(input ** 2, self.W_sigma ** 2, bias_var)
         else:
             weight = self.W_mu
             bias = self.bias_mu if self.use_bias else None
-
+            
         return F.linear(input, weight, bias)
 
     def kl_loss(self):
@@ -75,3 +79,5 @@ class BBBLinear(ModuleWrapper):
             kl += KL_DIV(self.prior_mu, self.prior_sigma, self.bias_mu, self.bias_sigma)
         return kl
 
+    def forward_var(self):
+        return self.act_var

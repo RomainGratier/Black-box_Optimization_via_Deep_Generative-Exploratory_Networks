@@ -249,6 +249,7 @@ def monte_carlo_inference_mse_sampling(distribution, generator, forward, testset
     
     ms_rand = []; ms_pol = []; mr_rand = []; mr_pol = [];
     for i in range(size_sample):
+        print(f'Computed sample {i+1}/{size_sample}')
         stat_ms_glob, stat_ms_pol, stat_mr_glob, stat_mr_pol = monte_carlo_inference_mse_batch(distribution, 
                                                                                                generator, 
                                                                                                forward,
@@ -307,6 +308,7 @@ def monte_carlo_inference_fid_kid_sampling(distribution, generator, forward, tes
     
     fid_pol = []; fid_rand = []; kid_pol = []; kid_rand = [];
     for i in range(size_sample):
+        print(f'Computed sample {i+1}/{size_sample}')
         fid_value_gen_rand, fid_value_gen_pol, kid_value_gen_rand, kid_value_gen_pol = monte_carlo_inference_fid_kid_batch(distribution, 
                                                                                                                             generator, 
                                                                                                                             forward, 
