@@ -174,10 +174,10 @@ def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, i
         show(grid_in, title, batches_done, 'in')
 
         measure_batch = compute_thickness_ground_truth(gen_imgs_in.cpu().detach().squeeze(1))
-        thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
+        thickness_in = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
 
         label_target = np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
-        se_generator_in = se(label_target, thickness)
+        se_generator_in = se(label_target, thickness_in)
 
         # ---------------------- Out distribution sample ----------------------
         condition_out = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
@@ -188,10 +188,10 @@ def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, i
         show(grid_out, title, batches_done, 'out')
 
         measure_batch = compute_thickness_ground_truth(gen_imgs_out.cpu().detach().squeeze(1))
-        thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
+        thickness_out = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
 
         label_target = np.array([num for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
-        se_generator_out = se(label_target, thickness)
+        se_generator_out = se(label_target, thickness_out)
 
     elif cfg.experiment == 'min_mnist':
 
@@ -204,10 +204,10 @@ def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, i
         show(grid_in, title, batches_done, 'in')
 
         measure_batch = compute_thickness_ground_truth(gen_imgs_in.cpu().detach().squeeze(1))
-        thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
+        thickness_in = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
 
         label_target = np.array([num for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
-        se_generator_in = se(label_target, thickness)
+        se_generator_in = se(label_target, thickness_in)
 
         # ---------------------- Out distribution sample ----------------------
         condition_out = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
@@ -218,15 +218,16 @@ def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, i
         show(grid_out, title, batches_done, 'out')
 
         measure_batch = compute_thickness_ground_truth(gen_imgs_out.cpu().detach().squeeze(1))
-        thickness = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
+        thickness_out = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
 
         label_target = np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
-        se_generator_out = se(label_target, thickness)
+        se_generator_out = se(label_target, thickness_out)
 
     fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size)
 
     print()
-    print(f"The thickness distribution =\n{thickness}")
+    print(f"The thickness in distribution =\n{thickness_in}")
+    print(f"The thickness out distribution =\n{thickness_out}")
     print(f"Average MSE In dist = {np.mean(se_generator_in)} \ Average MSE Out dist = {np.mean(se_generator_out)}")
     print()
     print(f"FID score in distribution : mean = {np.around(fid_value_in_distribution[0], decimals=4)} \ std = {np.around(fid_value_in_distribution[1], decimals=4)}")

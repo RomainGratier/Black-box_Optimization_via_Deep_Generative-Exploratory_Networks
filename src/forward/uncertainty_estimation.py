@@ -20,8 +20,8 @@ def get_uncertainty_per_batch(model, batch, device, T=15, normalized=False):
     epistemics = []
     aleatorics = []
     
-    for i in range(T):  # for T batches
-        net_out_mu, net_out_var, - = model(batches[i].to(device))
+    for i in range(T):
+        net_out_mu, net_out_var, _ = model(batches[i].to(device))
         net_outs_mu.append(net_out_mu)
         net_outs_var.append(net_out_var)
     
@@ -35,8 +35,8 @@ def get_uncertainty_per_batch(model, batch, device, T=15, normalized=False):
         p_hat_var = torch.cat([a_batch[sample].unsqueeze(0) for a_batch in net_outs_var], dim=0).detach().cpu().numpy()
         p_bar = np.mean(p_hat, axis=0)
 
-        temp = np.sqare(p_hat - np.expand_dims(p_bar, 0))
-        epistemic = np.sum(epistemic)/(T-1)
+        temp = np.square(p_hat - np.expand_dims(p_bar, 0))
+        epistemic = np.sum(temp)/(T-1)
         epistemics.append(epistemic)
 
         aleatoric = np.sum(p_hat_var)/T

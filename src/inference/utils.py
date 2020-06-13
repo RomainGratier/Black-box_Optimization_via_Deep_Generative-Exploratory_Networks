@@ -41,7 +41,7 @@ FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
 max_size = 2000
-uncertainty_policy = 'aleatoric'
+uncertainty_policy = 'epistemic'
 
 def save_numpy_arr(path, arr):
     np.save(path, arr)
