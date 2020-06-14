@@ -397,7 +397,7 @@ def train_gan_model():
     if cfg.experiment == 'rotation':
         stop_check = 'epoch'
     else:
-        stop_check = 'fid'
+        stop_check = 'kid'
     epoch_start = 0
     ckp_path = os.path.join(cfg.models_path,'checkpoints/gan')
     print(ckp_path)
@@ -519,6 +519,12 @@ def train_gan_model():
                 if (test_in!=best_res_in)|(test_out!=best_res_out):
                     df_acc_gen['flag'] = True
 
+            elif stop_check == 'kid':
+                best_res_in = save_model_check('in', df['kid_in'].values, best_res_in, path_generator, generator)
+                best_res_out = save_model_check('out', df['kid_out'].values, best_res_out, path_generator, generator)
+                if (test_in!=best_res_in)|(test_out!=best_res_out):
+                    df_acc_gen['flag'] = True
+
             elif stop_check == 'epoch':
                 print(f'Model is saved')
                 if cuda:
@@ -605,7 +611,7 @@ def train_wgan_model():
     if cfg.experiment == 'rotation':
         stop_check = 'epoch'
     else:
-        stop_check = 'fid'
+        stop_check = 'kid'
     epoch_start = 0
     ckp_path = os.path.join(cfg.models_path,'checkpoints/gan')
     print(ckp_path)
@@ -675,17 +681,17 @@ def train_wgan_model():
             validity_fake = discriminator(fake_imgs.detach(), labels_discriminator)
 
             # Gradient penalty
-            #gradient_penalty = compute_gradient_penalty(discriminator, real_imgs.data, fake_imgs.data, labels_discriminator.data)
+            gradient_penalty = compute_gradient_penalty(discriminator, real_imgs.data, fake_imgs.data, labels_discriminator.data)
 
             # Adversarial loss
-            d_loss = -torch.mean(validity_real) + torch.mean(validity_fake) #+ lambda_gp * gradient_penalty
+            d_loss = -torch.mean(validity_real) + torch.mean(validity_fake) + lambda_gp * gradient_penalty
 
             d_loss.backward()
             optimizer_D.step()
             
-            # Weight clipping
+            '''# Weight clipping
             for p in discriminator.parameters():
-                p.data.clamp_(-0.01, 0.01)
+                p.data.clamp_(-0.01, 0.01)'''
 
             d_loss_check.append(d_loss.item())
 
@@ -721,6 +727,12 @@ def train_wgan_model():
             if stop_check == 'fid':
                 best_res_in = save_model_check('in', df['fid_in'].values, best_res_in, path_generator, generator)
                 best_res_out = save_model_check('out', df['fid_out'].values, best_res_out, path_generator, generator)
+                if (test_in!=best_res_in)|(test_out!=best_res_out):
+                    df_acc_gen['flag'] = True
+
+            elif stop_check == 'kid':
+                best_res_in = save_model_check('in', df['kid_in'].values, best_res_in, path_generator, generator)
+                best_res_out = save_model_check('out', df['kid_out'].values, best_res_out, path_generator, generator)
                 if (test_in!=best_res_in)|(test_out!=best_res_out):
                     df_acc_gen['flag'] = True
 
