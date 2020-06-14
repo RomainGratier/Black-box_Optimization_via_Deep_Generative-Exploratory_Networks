@@ -94,3 +94,17 @@ class ThreeConvThreeFC(nn.Module):
         x = self.features(x)
         x = self.classifier(x)
         return x
+
+class FC(nn.Module):
+    def __init__(self, num_classes, inputs=3):
+        super(FC, self).__init__()
+        self.fc1   = nn.Linear(inputs, 256)
+        self.fc2   = nn.Linear(256, 256)
+        self.fc3   = nn.Linear(256, num_classes)
+
+    def forward(self, x):
+        out = out.view(x.shape[0], -1)
+        out = F.relu(self.fc1(out))
+        out = F.relu(self.fc2(out))
+        out = self.fc3(out)
+        return(out)

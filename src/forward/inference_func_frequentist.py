@@ -129,7 +129,7 @@ def test_model(net, criterion, testinloader, testoutloader, iteration=None, num_
     return df_acc_in, df_acc_out
 
 
-def run_frequentist(net_type='lenet'):
+def run_frequentist(net_type='FC'):
     
     ckpt_dir = os.path.join(cfg_glob.models_path, cfg_glob.forward_path)
 

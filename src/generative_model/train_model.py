@@ -158,11 +158,7 @@ def compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_ou
 
     return fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution
 
-def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, sample_size):
-    """Saves a grid of generated digits ranging from 0 to n_classes"""
-    # Sample noise
-    z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim))))
-    
+def compute_eval_in(z, n_row, batches_done, generator):
     if cfg.experiment == 'max_mnist':
 
         # ---------------------- In distribution sample ----------------------
@@ -178,6 +174,29 @@ def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, i
 
         label_target = np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
         se_generator_in = se(label_target, thickness_in)
+
+    elif cfg.experiment == 'min_mnist':
+
+        # ---------------------- In distribution sample ----------------------
+        condition_in = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
+        gen_imgs_in = generate_sample_from_z_condition(generator, z, condition_in)
+
+        grid_in = torchvision.utils.make_grid(gen_imgs_in.data, nrow=n_row)
+        title = [round(num, 2) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)]
+        show(grid_in, title, batches_done, 'in')
+
+        measure_batch = compute_thickness_ground_truth(gen_imgs_in.cpu().detach().squeeze(1))
+        thickness_in = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
+
+        label_target_in = np.array([num for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
+        se_generator_in = se(label_target_in, thickness_in)
+
+    return thickness_in, se_generator_in
+
+
+def compute_eval_out(z, n_row, batches_done, generator):
+
+    if cfg.experiment == 'max_mnist':
 
         # ---------------------- Out distribution sample ----------------------
         condition_out = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
@@ -195,23 +214,19 @@ def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, i
 
     elif cfg.experiment == 'min_mnist':
 
-        # ---------------------- In distribution sample ----------------------
-        condition_in = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
-        gen_imgs_in = generate_sample_from_z_condition(generator, z, condition_in)
-
-        grid_in = torchvision.utils.make_grid(gen_imgs_in.data, nrow=n_row)
-        title = [round(num, 2) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)]
-        show(grid_in, title, batches_done, 'in')
-
-        measure_batch = compute_thickness_ground_truth(gen_imgs_in.cpu().detach().squeeze(1))
-        thickness_in = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
-
-        label_target = np.array([num for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
-        se_generator_in = se(label_target, thickness_in)
-
         # ---------------------- Out distribution sample ----------------------
         condition_out = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
         gen_imgs_out = generate_sample_from_z_condition(generator, z, condition_out)
+
+        import matplotlib.pyplot as plt
+        for i in range(gen_imgs_out.shape[0]):
+            if i<10:
+                print(condition_out[i])
+                plt.imshow(gen_imgs_out[i,0].detach().cpu().numpy())
+                plt.show()
+
+        cond = np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)
+        gen_imgs = generate_sample_from_z_condition(generator, z[:10], cond)
 
         grid_out = torchvision.utils.make_grid(gen_imgs_out.data, nrow=n_row)
         title = [round(num, 2) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)]
@@ -220,15 +235,44 @@ def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, i
         measure_batch = compute_thickness_ground_truth(gen_imgs_out.cpu().detach().squeeze(1))
         thickness_out = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
 
-        label_target = np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
-        se_generator_out = se(label_target, thickness_out)
+        label_target_out = np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
+        se_generator_out = se(label_target_out, thickness_out)
+
+    return thickness_out, se_generator_out
+
+def compute_eval(z, n_row, batches_done, generator):
+
+    # ---------------------- Out distribution sample ----------------------
+    condition_out = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)])
+    gen_imgs_out = generate_sample_from_z_condition(generator, z, condition_out)
+
+    grid_out = torchvision.utils.make_grid(gen_imgs_out.data, nrow=n_row)
+    title = [round(num, 2) for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)]
+    show(grid_out, title, batches_done, 'full')
+
+    measure_batch = compute_thickness_ground_truth(gen_imgs_out.cpu().detach().squeeze(1))
+    thickness_out = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
+
+    label_target = np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)])
+    se_generator_out = se(label_target, thickness_out)
+
+    return thickness_out, se_generator_out
+
+def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, sample_size):
+    """Saves a grid of generated digits ranging from 0 to n_classes"""
+    # Sample noise
+    z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim))))
+    
+    thickness, se_generator = compute_eval(z, n_row, batches_done, generator)
+    #thickness_in, se_generator_in = compute_eval_in(z, n_row, batches_done, generator)
+    #thickness_out, se_generator_out = compute_eval_out(z, n_row, batches_done, generator)
 
     fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size)
 
     print()
-    print(f"The thickness in distribution =\n{thickness_in}")
-    print(f"The thickness out distribution =\n{thickness_out}")
-    print(f"Average MSE In dist = {np.mean(se_generator_in)} \ Average MSE Out dist = {np.mean(se_generator_out)}")
+    print(f"The thickness distribution =\n{thickness}")
+    print(f"Average MSE dist = {np.mean(se_generator)}")
+    #print(f"Average MSE In dist = {np.mean(se_generator_in)} \ Average MSE Out dist = {np.mean(se_generator_out)}")
     print()
     print(f"FID score in distribution : mean = {np.around(fid_value_in_distribution[0], decimals=4)} \ std = {np.around(fid_value_in_distribution[1], decimals=4)}")
     print(f"FID score out distribution : mean = {np.around(fid_value_out_distribution[0], decimals=4)} \ std = {np.around(fid_value_out_distribution[1], decimals=4)}")
@@ -236,7 +280,7 @@ def sample_image_mnist(n_row, batches_done, real_dataset_in, real_dataset_out, i
     print(f"KID score in distribution : mean = {np.around(kid_value_in_distribution[0], decimals=4)} \ std = {np.around(kid_value_in_distribution[1], decimals=4)}")
     print(f"KID score out distribution : mean = {np.around(kid_value_out_distribution[0], decimals=4)} \ std = {np.around(kid_value_out_distribution[1], decimals=4)}")
 
-    return se_generator_in, se_generator_out, fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution
+    return se_generator, se_generator, fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution
 
 def sample_image_rotation(n_row, batches_done, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, generator, sample_size):
     """Saves a grid of generated digits ranging from 0 to n_classes"""
@@ -397,7 +441,7 @@ def train_gan_model():
     if cfg.experiment == 'rotation':
         stop_check = 'epoch'
     else:
-        stop_check = 'kid'
+        stop_check = 'fid'
     epoch_start = 0
     ckp_path = os.path.join(cfg.models_path,'checkpoints/gan')
     print(ckp_path)
@@ -611,7 +655,7 @@ def train_wgan_model():
     if cfg.experiment == 'rotation':
         stop_check = 'epoch'
     else:
-        stop_check = 'kid'
+        stop_check = 'fid'
     epoch_start = 0
     ckp_path = os.path.join(cfg.models_path,'checkpoints/gan')
     print(ckp_path)
@@ -711,7 +755,10 @@ def train_wgan_model():
 
                 g_loss_check.append(g_loss.item())
 
-        if epoch % 1 == 0:
+        if epoch == 0:
+            continue
+
+        elif epoch % 2 == 0:
 
             print(
               "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"

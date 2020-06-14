@@ -86,7 +86,7 @@ def predict_forward_model(forward, gen_images, bayesian=True):
                 epistemic_chunk.append(epi)
                 aleatoric_chunk.append(aleatoric)
             
-            return np.concatenate(pred_chunk), np.concatenate(uncertainty_chunk), np.concatenate(aleatoric_chunk)
+            return np.concatenate(pred_chunk), np.concatenate(epistemic_chunk), np.concatenate(aleatoric_chunk)
         
         else:
             y_pred, epistemic, aleatoric = get_uncertainty_per_batch(forward, F.interpolate(gen_images, size=32), device)
@@ -146,7 +146,7 @@ def get_main_data(distribution, size_full, testset):
                 z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
 
             df_test_in = pd.DataFrame(testset.y_data, columns=['label'])
-            index_distribution = df_test_in[(df_test_in['label'] > cfg_data.limit_dataset) & df_test_in['label'] <= cfg_data.max_dataset].index
+            index_distribution = df_test_in[(df_test_in['label'] >= cfg_data.limit_dataset) & (df_test_in['label'] <= cfg_data.max_dataset)].index
             print(f'size of in distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
 
@@ -172,7 +172,7 @@ def get_main_data(distribution, size_full, testset):
                 z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
 
             df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
-            index_distribution = df_test_out[df_test_out['label'] <= cfg_data.limit_dataset].index
+            index_distribution = df_test_out[df_test_out['label'] < cfg_data.limit_dataset].index
             print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
             real_dataset = deepcopy(testset.x_data)
     
@@ -326,6 +326,82 @@ def monte_carlo_inference_fid_kid_sampling(distribution, generator, forward, tes
     
     return stat_fid_rand, stat_fid_pol, stat_kid_rand, stat_kid_pol
 
+def check_predictions_bayesian(distribution, y_pred, epistemic, aleatoric, conditions, images_generated):
+    # Erase in distribution sample
+    if distribution == 'in':
+        if cfg.experiment == 'min_mnist':
+            index_verified = np.argwhere(y_pred > cfg_data.limit_dataset).squeeze(1)
+            print(y_pred.shape)
+            y_pred = y_pred[index_verified]
+            print(y_pred.shape)
+            epistemic = epistemic[index_verified]
+            aleatoric = aleatoric[index_verified]
+            conditions = conditions[index_verified]
+            images_generated = images_generated[index_verified]
+
+        elif (cfg.experiment == 'max_mnist') & (cfg.experiment == 'rotation_dataset'):
+            index_verified = np.argwhere(y_pred < cfg_data.limit_dataset).squeeze(1)
+
+            y_pred = y_pred[index_verified]
+            epistemic = epistemic[index_verified]
+            aleatoric = aleatoric[index_verified]
+            conditions = conditions[index_verified]
+            images_generated = images_generated[index_verified]
+
+    elif distribution == 'out':
+        if cfg.experiment == 'min_mnist':
+            index_verified = np.argwhere(y_pred < cfg_data.limit_dataset).squeeze(1)
+            print(y_pred.shape)
+            y_pred = y_pred[index_verified]
+            print(y_pred.shape)
+            epistemic = epistemic[index_verified]
+            aleatoric = aleatoric[index_verified]
+            conditions = conditions[index_verified]
+            images_generated = images_generated[index_verified]
+
+        elif (cfg.experiment == 'max_mnist') & (cfg.experiment == 'rotation_dataset'):
+            index_verified = np.argwhere(y_pred > cfg_data.limit_dataset).squeeze(1)
+
+            y_pred = y_pred[index_verified]
+            epistemic = epistemic[index_verified]
+            aleatoric = aleatoric[index_verified]
+            conditions = conditions[index_verified]
+            images_generated = images_generated[index_verified]
+
+    return y_pred, epistemic, aleatoric, conditions, images_generated
+
+def check_predictions_frequentist(distribution, y_pred, conditions, images_generated):
+    # Erase in distribution sample
+    if distribution == 'in':
+        if cfg.experiment == 'min_mnist':
+            index_verified = np.argwhere(y_pred > cfg_data.limit_dataset).squeeze(1)
+            y_pred = y_pred[index_verified]
+            conditions = conditions[index_verified]
+            images_generated = images_generated[index_verified]
+
+        elif (cfg.experiment == 'max_mnist') & (cfg.experiment == 'rotation_dataset'):
+            index_verified = np.argwhere(y_pred < cfg_data.limit_dataset).squeeze(1)
+
+            y_pred = y_pred[index_verified]
+            conditions = conditions[index_verified]
+            images_generated = images_generated[index_verified]
+
+    elif distribution == 'out':
+        if cfg.experiment == 'min_mnist':
+            index_verified = np.argwhere(y_pred < cfg_data.limit_dataset).squeeze(1)
+            y_pred = y_pred[index_verified]
+            conditions = conditions[index_verified]
+            images_generated = images_generated[index_verified]
+
+        elif (cfg.experiment == 'max_mnist') & (cfg.experiment == 'rotation_dataset'):
+            index_verified = np.argwhere(y_pred > cfg_data.limit_dataset).squeeze(1)
+
+            y_pred = y_pred[index_verified]
+            conditions = conditions[index_verified]
+            images_generated = images_generated[index_verified]
+
+    return y_pred, conditions, images_generated
+
 def monte_carlo_inference_qualitative(distribution, forward_type, generator, forward, testset, bayesian=True, sample_number=2000, random_certainty=True):
     
     size_full = int(sample_number * 1/cfginf.quantile_rate_uncertainty_policy)
@@ -339,6 +415,10 @@ def monte_carlo_inference_qualitative(distribution, forward_type, generator, for
     # ------------ Compute policy measures ------------
     if bayesian:
         y_pred, epistemic, aleatoric = predict_forward_model(forward, images_generated, bayesian=bayesian)
+
+        # Check predictions
+        y_pred, epistemic, aleatoric, conditions, images_generated = check_predictions_bayesian(distribution, y_pred, epistemic, aleatoric, conditions, images_generated)
+
         # ------------ Uncertainty policy ------------
         if random_certainty:
             # ------------ Uncertainty policy ------------
@@ -363,8 +443,17 @@ def monte_carlo_inference_qualitative(distribution, forward_type, generator, for
 
     else:
         y_pred = predict_forward_model(forward, images_generated, bayesian=bayesian)
+        
+        # Check predictions
+        print(y_pred.shape)
+        y_pred, conditions, images_generated = check_predictions_frequentist(distribution, y_pred, conditions, images_generated)
+        print(y_pred.shape)
         # ------------ random sample ------------
-        random_index = random.sample(np.arange(images_generated.shape[0]).tolist(), sample_number)
+        try:
+            random_index = random.sample(np.arange(images_generated.shape[0]).tolist(), sample_number)
+        except:
+            random_index = random.sample(np.arange(images_generated.shape[0]).tolist(), int(sample_number/1.5))
+
         y_pred = y_pred[random_index]
         images_generated = images_generated[random_index]
         conditions = conditions[random_index]
