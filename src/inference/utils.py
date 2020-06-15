@@ -218,9 +218,9 @@ def monte_carlo_inference_mse_batch(distribution, generator, forward, testset, b
         y_pred, epistemic, aleatoric = predict_forward_model(forward, images_generated, bayesian=bayesian)
         # ------------ Uncertainty policy ------------
         if uncertainty_policy == 'epistemic':
-            index_certain = uncertainty_selection(epistemic.squeeze())
+            index_certain, _ = uncertainty_selection(epistemic.squeeze())
         elif uncertainty_policy == 'aleatoric':
-            index_certain = uncertainty_selection(aleatoric.squeeze())
+            index_certain, _ = uncertainty_selection(aleatoric.squeeze())
         images_generated_sampled = images_generated[index_certain]
         y_pred = y_pred[index_certain]
 
@@ -289,9 +289,9 @@ def monte_carlo_inference_fid_kid_batch(distribution, generator, forward, testse
         y_pred, epistemic, aleatoric = predict_forward_model(forward, images_generated, bayesian=True)
         # ------------ Uncertainty policy ------------
         if uncertainty_policy == 'epistemic':
-            index_certain = uncertainty_selection(epistemic.squeeze())
+            index_certain, _ = uncertainty_selection(epistemic.squeeze())
         elif uncertainty_policy == 'aleatoric':
-            index_certain = uncertainty_selection(aleatoric.squeeze())
+            index_certain, _ = uncertainty_selection(aleatoric.squeeze())
         
         images_generated_sampled = images_generated[index_certain]
     else:
@@ -423,9 +423,9 @@ def monte_carlo_inference_qualitative(distribution, forward_type, generator, for
         if random_certainty:
             # ------------ Uncertainty policy ------------
             if uncertainty_policy == 'epistemic':
-                index_certain = uncertainty_selection(epistemic.squeeze())
+                index_certai, _ : = uncertainty_selection(epistemic.squeeze())
             elif uncertainty_policy == 'aleatoric':
-                index_certain = uncertainty_selection(aleatoric.squeeze())
+                index_certain, _ = uncertainty_selection(aleatoric.squeeze())
             
             y_pred = y_pred[index_certain]
             images_generated = images_generated[index_certain]
@@ -509,4 +509,125 @@ def plots_qualitative_results(distribution, forward_type, images_generated, cond
                     col.set_title(f"Fwd={np.round(float(forward_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j]]),1)}
     
     plt.suptitle(f"{distribution} distribution with {forward_type} forward model", fontsize=6)
+    plt.show()
+
+def plot_target_images(target, forward_type, generator, forward, testset, bayesian=True, sample_number=2000, num_selected=8, random_certainty=True):
+    
+    size_full = int(sample_number * 1/cfginf.quantile_rate_uncertainty_policy)
+    
+    # ------------ Get data ------------
+    if cfg.dcgan:
+        conditions = np.random.uniform(target - 0.1*cfg_data.max_dataset , target + 0.1*cfg_data.max_dataset, (size_full, 1, 1, 1))
+        z = get_truncated_normal((size_full, cfgan.latent_dim, 1, 1), quant=cfginf.quantile_rate_z_gen)
+    else:
+        conditions = np.random.uniform(target - 0.1*cfg_data.max_dataset  , target + 0.1*cfg_data.max_dataset , size_full)
+        z = get_truncated_normal((size_full, cfgan.latent_dim), quant=cfginf.quantile_rate_z_gen)
+
+    df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
+    index_distribution = df_test_out[(df_test_out['label'] > target - 0.05 *cfg_data.max_dataset) & (df_test_out['label'] < target + 0.05 *cfg_data.max_dataset)].index
+    print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
+    real_dataset = deepcopy(testset.x_data)
+
+    
+    # ------------ Generate sample from z and y target ------------
+    images_generated = generate_sample_from_GAN(conditions, z, generator)
+
+    # ------------ Compute policy measures ------------
+    if bayesian:
+        y_pred, epistemic, aleatoric = predict_forward_model(forward, images_generated, bayesian=bayesian)
+
+        # Check predictions
+        y_pred, epistemic, aleatoric, conditions, images_generated = check_predictions_bayesian(distribution, y_pred, epistemic, aleatoric, conditions, images_generated)
+
+        # ------------ Uncertainty policy ------------
+        if uncertainty_policy == 'epistemic':
+            index_certai, _ : = uncertainty_selection(epistemic.squeeze())
+        elif uncertainty_policy == 'aleatoric':
+            index_certain, _ = uncertainty_selection(aleatoric.squeeze())
+            
+        y_pred = y_pred[index_certain]
+        images_generated = images_generated[index_certain]
+        conditions = conditions[index_certain]
+        epistemic = epistemic[index_certain]
+        forward_pred = np.array([y_pred, epistemic.squeeze(1)]).T
+
+    else:
+        y_pred = predict_forward_model(forward, images_generated, bayesian=bayesian)
+        
+        # Check predictions
+        y_pred, conditions, images_generated = check_predictions_frequentist(distribution, y_pred, conditions, images_generated)
+        # ------------ random sample ------------
+        try:
+            random_index = random.sample(np.arange(images_generated.shape[0]).tolist(), sample_number)
+        except:
+            random_index = random.sample(np.arange(images_generated.shape[0]).tolist(), int(sample_number/1.5))
+
+        y_pred = y_pred[random_index]
+        images_generated = images_generated[random_index]
+        conditions = conditions[random_index]
+        forward_pred = np.array(y_pred).T
+        
+    se_preds = se(y_pred, target)
+    
+    # Selested predictions
+    index_best = np.argsort(se_preds)
+    
+    se_preds = se_preds[index_best]
+    images_generated = images_generated[index_best]
+    conditions = conditions[index_best]
+    forward_pred = forward_pred[index_best]
+
+    
+    plot_best_acc_pred(target, forward_type, images_generated, conditions, forward_pred, real_dataset, index_distribution, forward, se_preds, bayesian=True, nrow=4, ncol=8)
+    
+def plot_best_acc_pred(target, forward_type, images_generated, conditions, forward_pred, testset, index_distribution, forward, se_preds, bayesian=True, nrow=4, ncol=8):
+
+    # Gan img selection
+    images_generated = images_generated[:ncol*nrow].squeeze(1).detach().cpu()
+    conditions = conditions[:ncol*nrow]
+    forward_pred = forward_pred[:ncol*nrow]
+
+    # Real img selection
+    random_id = random.sample(index_distribution.tolist(), ncol*nrow)
+    real_imgs = testset.x_data[random_id]
+    labels = testset.y_data[random_id]
+
+    if bayesian:
+        real_pred, epistemic, aleatoric = predict_forward_model(forward, F.interpolate(real_imgs.to(device), size=32), bayesian=bayesian)
+    else:
+        real_pred = predict_forward_model(forward, F.interpolate(real_imgs.to(device), size=32), bayesian=bayesian)
+    
+    real_imgs = real_imgs.squeeze()
+
+    fig, ax = plt.subplots(nrows=nrow, ncols=ncol, figsize=(8,4), dpi=300)
+    
+    for i, row in enumerate(ax):
+        if i < 2:
+            imgs = images_generated
+        else:
+            imgs = real_imgs
+        
+        for j, col in enumerate(row):
+            if i%2 == 0:
+                k = 0
+            else:
+                k = ncol -1
+            if i < 2:
+                image = imgs[j + k]
+                col.imshow(image)
+                col.axis('off')
+                if bayesian:
+                    col.set_title(f"Fwd={np.round(float(forward_pred[j + k][0]),1)} / Cond={np.round(float(conditions[j + k]),1)} / epi={np.round(float(forward_pred[j + k][1]),4)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j + k]]),1)} 
+                else:
+                    col.set_title(f"Fwd={np.round(float(forward_pred[j + k]),1)} / Cond={np.round(float(conditions[j + k]),1)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j + k]]),1)} 
+            else:
+                image = imgs[j + k]
+                col.imshow(image)
+                col.axis('off')
+                if bayesian:
+                    col.set_title(f"Fwd={np.round(float(real_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)} / epi={np.round(float(epistemic[j + k]),4)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j + k]]),1)} 
+                else:
+                    col.set_title(f"Fwd={np.round(float(forward_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j]]),1)}
+    
+    plt.suptitle(f"Target value : {target} | {forward_type} forward model | mse = {round(np.sum(se_preds[:ncol*nrow])/ncol*nrow, 2)}", fontsize=6)
     plt.show()
