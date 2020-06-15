@@ -9,7 +9,7 @@ import src.config as cfg
 
 from src.inference.utils import monte_carlo_inference_mse_batch, monte_carlo_inference_fid_kid_sampling, monte_carlo_inference_qualitative
 
-def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_kid', 'l1_l2'], distributions=['in', 'out'], bayesian_model_types=["bbb", "lrt"], activation_types=["relu", "softplus"], output_type='latex', decimals=2):
+def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_kid', 'l1_l2'], distributions=['in', 'out'], bayesian_model_types=["lrt", "bbb"], activation_types=["softplus", "relu"], output_type='latex', decimals=2):
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f'The pipeline is currently running on {device}')
