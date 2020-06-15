@@ -445,9 +445,7 @@ def monte_carlo_inference_qualitative(distribution, forward_type, generator, for
         y_pred = predict_forward_model(forward, images_generated, bayesian=bayesian)
         
         # Check predictions
-        print(y_pred.shape)
         y_pred, conditions, images_generated = check_predictions_frequentist(distribution, y_pred, conditions, images_generated)
-        print(y_pred.shape)
         # ------------ random sample ------------
         try:
             random_index = random.sample(np.arange(images_generated.shape[0]).tolist(), sample_number)

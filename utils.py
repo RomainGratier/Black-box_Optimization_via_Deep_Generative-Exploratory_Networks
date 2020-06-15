@@ -22,6 +22,40 @@ def visualize_gan_training(acc_gen, sample_interval, batch_size):
     plt.xlabel('iterations')
     plt.legend()
     plt.title("Accuracy without reweighting strategy")
+    
+import src.config as cfg
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from copy import deepcopy
+sns.set()
+
+def plot_fc(df):
+    plt.figure(figsize=(5,4), dpi=300)
+    sns.lineplot(x='iteration', y='value', hue='variable', 
+                data=pd.melt(df, ['iteration']))
+
+def plot_gan_results():
+    path_res = os.path.join(cfg.models_path, cfg.gan_path)
+    df = pd.read_csv(os.path.join(path_res, f'results_gan.csv'))
+    df = df.dropna(axis=1)
+    df_ls = []
+    if 'fid_in' in df.columns:
+        df_fid = df[['iteration', 'fid_in', 'fid_out']]
+        df_ls.append(df_fid)
+    if 'kid_in' in df.columns:
+        df_kid = df[['iteration', 'kid_in', 'kid_out']]
+        df_ls.append(df_kid)
+    if 'mse_in' in df.columns:
+        #df_mse = df[['iteration', 'mse_in', 'mse_out']]
+        df_mse = df[['iteration', 'mse_in']]
+        df_mse.columns = ['iteration', 'mse']
+        df_ls.append(df_mse)
+    for df in df_ls:
+        plot_fc(df)
+
+plot_gan_results()
 
 import os
 import pandas as pd

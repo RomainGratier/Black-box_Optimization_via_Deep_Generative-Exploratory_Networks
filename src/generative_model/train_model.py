@@ -90,7 +90,7 @@ def show(img, condition, batches_done, distribution):
 
 def create_gif_training(path_generator, frame_duration=0.5):
     image_path_folders = os.path.join(cfg.models_path, cfg.gan_path)
-    for distribution in ['in', 'out']:
+    for distribution in ['full']:#['in', 'out']:
         image_folder = os.path.join(image_path_folders, f'images_{distribution}')
         filenames = sorted(glob(image_folder+'/*.png'), key=os.path.getctime)
         with imageio.get_writer(os.path.join(path_generator, f'gan_training_iterations_{distribution}.gif'), mode='I', duration=frame_duration) as writer:
@@ -218,13 +218,6 @@ def compute_eval_out(z, n_row, batches_done, generator):
         condition_out = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
         gen_imgs_out = generate_sample_from_z_condition(generator, z, condition_out)
 
-        import matplotlib.pyplot as plt
-        for i in range(gen_imgs_out.shape[0]):
-            if i<10:
-                print(condition_out[i])
-                plt.imshow(gen_imgs_out[i,0].detach().cpu().numpy())
-                plt.show()
-
         cond = np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)
         gen_imgs = generate_sample_from_z_condition(generator, z[:10], cond)
 
@@ -287,22 +280,8 @@ def sample_image_rotation(n_row, batches_done, real_dataset_in, real_dataset_out
 
     # Sample noise
     z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, cfgan.latent_dim))))
-
-    # ---------------------- In distribution sample ----------------------
-    condition_in = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)])
-    gen_imgs_in = generate_sample_from_z_condition(generator, z, condition_in)
-
-    grid_in = torchvision.utils.make_grid(gen_imgs_in.data, nrow=n_row)
-    title = [round(num, 2) for num in np.linspace(cfg_data.min_dataset, cfg_data.limit_dataset, 10, endpoint=True)]
-    show(grid_in, title, batches_done, 'in')
-
-    # ---------------------- Out distribution sample ----------------------
-    condition_out = np.array([num for _ in range(n_row) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)])
-    gen_imgs_out = generate_sample_from_z_condition(generator, z, condition_out)
-
-    grid_out = torchvision.utils.make_grid(gen_imgs_out.data, nrow=n_row)
-    title = [round(num, 2) for num in np.linspace(cfg_data.limit_dataset, cfg_data.max_dataset, 10, endpoint=True)]
-    show(grid_out, title, batches_done, 'out')
+    
+    thickness, se_generator = compute_eval(z, n_row, batches_done, generator)
 
     fid_value_in_distribution, kid_value_in_distribution, fid_value_out_distribution, kid_value_out_distribution  = compute_fid_kid_for_mnist(generator, n_row, real_dataset_in, real_dataset_out, index_in_distribution, index_out_distribution, sample_size)
 
@@ -655,7 +634,7 @@ def train_wgan_model():
     if cfg.experiment == 'rotation':
         stop_check = 'epoch'
     else:
-        stop_check = 'fid'
+        stop_check = 'epoch'
     epoch_start = 0
     ckp_path = os.path.join(cfg.models_path,'checkpoints/gan')
     print(ckp_path)
@@ -755,10 +734,7 @@ def train_wgan_model():
 
                 g_loss_check.append(g_loss.item())
 
-        if epoch == 0:
-            continue
-
-        elif epoch % 2 == 0:
+        if epoch % 2 == 0:
 
             print(
               "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"

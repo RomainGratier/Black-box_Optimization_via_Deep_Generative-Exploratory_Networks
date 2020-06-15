@@ -24,7 +24,7 @@ else:
 # --------------------- WASSERSTEIN ---------------------
 if (experiment=='min_mnist') | (experiment=='max_mnist'):
     lambda_gp = 10
-    n_critic = 2
+    n_critic = 5
 elif experiment =='rotation_dataset': # Used clipping gradient with 0.01
     lambda_gp = 1
     n_critic = 1
