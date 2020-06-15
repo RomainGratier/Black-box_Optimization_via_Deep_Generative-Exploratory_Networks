@@ -89,9 +89,9 @@ def plot_bayesian(df_acc, title, dist):
         else:
             save_flag.append(False)
 
-        res.append([n_ep, mse_forward, mse_forward_selected, corr_epistemic, corr_aleatoric, mean_aleatoric, mean_epistemic])
+        res.append([n_ep, mse_forward, mse_forward_selected, corr_epistemic, corr_aleatoric])
 
-    df_res = pd.DataFrame(res, columns=['iteration', 'mse forward', 'mse forward selected', 'epistemic correlation', 'aleatoric correlation', 'aleatoric', 'epistemic'])
+    df_res = pd.DataFrame(res, columns=['iteration', 'mse forward', 'mse forward selected', 'epistemic correlation', 'aleatoric correlation'])
 
     plt.figure(figsize=(10,5), dpi=200)
     if dist == 'out':
@@ -107,16 +107,6 @@ def plot_bayesian(df_acc, title, dist):
         if flag:
             plt.plot(df_res.loc[index,'iteration'], df_res.loc[index, 'mse forward'], 'o', color='red')
     plt.title(title)
-    plt.show()
-
-    plt.figure(figsize=(10,5), dpi=200)
-    sns.lineplot(x='iteration', y='value', hue='variable', 
-                 data=pd.melt(df_res[['iteration', 'epistemic']], ['iteration']))
-    plt.show()
-
-    plt.figure(figsize=(10,5), dpi=200)
-    sns.lineplot(x='iteration', y='value', hue='variable', 
-                 data=pd.melt(df_res[['iteration', 'aleatoric']], ['iteration']))
     plt.show()
 
 def plot_frequentist(df_acc, title, dist):
@@ -161,26 +151,30 @@ def plot_forward_results():
             dist='out'
         
         # Non Bayesian
-        if (path.split('/')[-1] == 'results_in_lenet.csv') | (path.split('/')[-1] == 'results_out_lenet.csv'):
-            title = f'{distribution} results for non bayesian LeNet'
+        if (path.split('/')[-1] == 'results_in_lenet.csv') | (path.split('/')[-1] == 'results_out_lenet.csv') | (path.split('/')[-1] == 'results_in_fc.csv') | (path.split('/')[-1] == 'results_out_fc.csv'):
+            title = f"{distribution} results for {path.split('/')[-1].split('.')[0]}"
             plot_frequentist(pd.read_csv(path), title, dist)
         
         # Bayesian
         elif (path.split('/')[-1] == 'results_in_lenet_lrt_softplus.csv') | (path.split('/')[-1] == 'results_out_lenet_lrt_softplus.csv'):
-            title = f'{distribution} results for bayesian LeNet LRT SOFTPLUS'
-            plot_bayesian(pd.read_csv(path), title, dist)
+            df = pd.read_csv(path)
+            title = f"{distribution} | Bayesian LeNet LRT SoftPplus | Epistemic mean={round(df['epistemic'].mean(), 3)}   Aleatoric mean={round(df['aleatoric'].mean(), 3)}"
+            plot_bayesian(df, title, dist)
             
         elif (path.split('/')[-1] == 'results_in_lenet_lrt_relu.csv') | (path.split('/')[-1] == 'results_out_lenet_lrt_relu.csv'):
-            title = f'{distribution} results for bayesian LeNet LRT RELU' 
-            plot_bayesian(pd.read_csv(path), title, dist)
+            df = pd.read_csv(path)
+            title = f"{distribution} | Bayesian LeNet LRT RELU | Epistemic mean={round(df['epistemic'].mean(), 3)}   Aleatoric mean={round(df['aleatoric'].mean(), 3)}"
+            plot_bayesian(df, title, dist)
         
         elif (path.split('/')[-1] == 'results_in_lenet_bbb_relu.csv') | (path.split('/')[-1] == 'results_out_lenet_bbb_relu.csv'):
-            title = f'{distribution} results for bayesian LeNet BBB RELU'
-            plot_bayesian(pd.read_csv(path), title, dist)
+            df = pd.read_csv(path)
+            title = f"{distribution} | Bayesian LeNet BBB RELU | Epistemic mean={round(df['epistemic'].mean(), 3)}   Aleatoric mean={round(df['aleatoric'].mean(), 3)}"
+            plot_bayesian(df, title, dist)
 
         elif (path.split('/')[-1] == 'results_in_lenet_bbb_softplus.csv') | (path.split('/')[-1] == 'results_out_lenet_bbb_softplus.csv'):
-            title = f'{distribution} results for bayesian LeNet BBB SOFTPLUS'
-            plot_bayesian(pd.read_csv(path), title, dist)
+            df = pd.read_csv(path)
+            title = f"{distribution} | Bayesian LeNet BBB SoftPplus | Epistemic mean={round(df['epistemic'].mean(), 3)}   Aleatoric mean={round(df['aleatoric'].mean(), 3)}"
+            plot_bayesian(df, title, dist)
 
 plot_forward_results()
 

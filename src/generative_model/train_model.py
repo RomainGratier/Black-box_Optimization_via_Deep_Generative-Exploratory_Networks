@@ -420,7 +420,7 @@ def train_gan_model():
     if cfg.experiment == 'rotation':
         stop_check = 'epoch'
     else:
-        stop_check = 'fid'
+        stop_check = 'epoch'
     epoch_start = 0
     ckp_path = os.path.join(cfg.models_path,'checkpoints/gan')
     print(ckp_path)
@@ -519,10 +519,7 @@ def train_gan_model():
 
             d_loss_check.append(d_loss.item())
 
-        if epoch == 0:
-            pass
-
-        elif epoch % 1 == 0:
+        if epoch % 2 == 0:
 
             print(
               "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
