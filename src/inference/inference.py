@@ -58,7 +58,7 @@ def compute_quantitative_and_qualitative_inference(metrics=['qualitative', 'fid_
                 gan_path = os.path.join(cfg.models_path, cfg.gan_path, f'best_generator_{distribution}_distribution.pth')
                 if forward_type == 'non bayesian':
                     bayesian = False
-                    forward_path = os.path.join(cfg.models_path, 'forward/model_lenet.pth')
+                    forward_path = os.path.join(cfg.models_path, 'forward/model_fc.pth')
                 else:
                     bayesian = True
                     forward_path = os.path.join(cfg.models_path, f'forward/model_lenet_{forward_type}.pth')
