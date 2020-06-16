@@ -31,29 +31,27 @@ import seaborn as sns
 from copy import deepcopy
 sns.set()
 
+size_ax = 8
 def plot_fc(df):
-    plt.figure(figsize=(5,4), dpi=300)
+    f, ax = plt.subplots(figsize=(5,4), dpi=300)
+    ax.set(yscale="log")
     sns.lineplot(x='iteration', y='value', hue='variable', 
                 data=pd.melt(df, ['iteration']))
+    
+    plt.legend(prop={'size': 8})
+    ax.tick_params(axis='x', labelsize=size_ax)
+    ax.tick_params(axis='y', labelsize=size_ax)
+    plt.ylabel('', fontsize=16)
 
 def plot_gan_results():
     path_res = os.path.join(cfg.models_path, cfg.gan_path)
     df = pd.read_csv(os.path.join(path_res, f'results_gan.csv'))
     df = df.dropna(axis=1)
-    df_ls = []
-    if 'fid_in' in df.columns:
-        df_fid = df[['iteration', 'fid_in', 'fid_out']]
-        df_ls.append(df_fid)
-    if 'kid_in' in df.columns:
-        df_kid = df[['iteration', 'kid_in', 'kid_out']]
-        df_ls.append(df_kid)
-    if 'mse_in' in df.columns:
-        #df_mse = df[['iteration', 'mse_in', 'mse_out']]
-        df_mse = df[['iteration', 'mse_in']]
-        df_mse.columns = ['iteration', 'mse']
-        df_ls.append(df_mse)
-    for df in df_ls:
-        plot_fc(df)
+    df = df[['iteration', 'fid_in', 'fid_out', 'kid_in', 'kid_out', 'mse_in']]
+    df.loc[df['kid_in'] < 0, 'kid_in'] = 0.0001
+    df.loc[df['kid_out'] < 0, 'kid_out'] = 0.0001
+    df.columns = ['iteration', 'fid in', 'fid out', 'kid in', 'kid out', 'mse']
+    plot_fc(df)
 
 plot_gan_results()
 

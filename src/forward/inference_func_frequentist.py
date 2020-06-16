@@ -12,7 +12,7 @@ from torch.optim import Adam, lr_scheduler
 
 import src.config_frequentist as cfg
 import src.config as cfg_glob
-from src.forward.cnn_models import AlexNet, LeNet, ThreeConvThreeFC
+from src.forward.cnn_models import AlexNet, LeNet, ThreeConvThreeFC, FC
 from src.data import getDataset, getDataloader
 from src.metrics import se
 from src.utils import save_ckp, load_ckp_forward
