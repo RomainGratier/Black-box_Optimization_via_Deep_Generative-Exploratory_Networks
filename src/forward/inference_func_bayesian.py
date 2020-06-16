@@ -236,16 +236,16 @@ def run_bayesian(net_type='lenet', verbose=False):
         lr_sched.step(valid_loss)
 
         # ------------ Uncertainty policy ------------
-        index_certain_in = uncertainty_selection(df_acc_in['epistemic'].values)
+        index_certain_in, _ = uncertainty_selection(df_acc_in['epistemic'].values)
         flag_vec_in = np.full(df_acc_in.shape[0], False)
         flag_vec_in[index_certain_in] = True
         df_acc_in['uncertainty_flag'] = flag_vec_in
-        
-        index_certain_out = uncertainty_selection(df_acc_out['epistemic'].values)
+  
+        index_certain_out, _ = uncertainty_selection(df_acc_out['epistemic'].values)
         flag_vec_out = np.full(df_acc_out.shape[0], False)
         flag_vec_out[index_certain_out] = True
         df_acc_out['uncertainty_flag'] = flag_vec_out
-        
+
         # ------------ Validation flag ------------
         df_acc_out['save_flag'] = False
         df_acc_in['save_flag'] = False
