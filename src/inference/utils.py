@@ -423,7 +423,7 @@ def monte_carlo_inference_qualitative(distribution, forward_type, generator, for
         if random_certainty:
             # ------------ Uncertainty policy ------------
             if uncertainty_policy == 'epistemic':
-                index_certai, _ : = uncertainty_selection(epistemic.squeeze())
+                index_certain, _ = uncertainty_selection(epistemic.squeeze())
             elif uncertainty_policy == 'aleatoric':
                 index_certain, _ = uncertainty_selection(aleatoric.squeeze())
             
@@ -511,7 +511,7 @@ def plots_qualitative_results(distribution, forward_type, images_generated, cond
     plt.suptitle(f"{distribution} distribution with {forward_type} forward model", fontsize=6)
     plt.show()
 
-def plot_target_images(target, forward_type, generator, forward, testset, bayesian=True, sample_number=2000, num_selected=8, random_certainty=True):
+def monte_carlo_inference_target_images(target, forward_type, generator, forward, testset, bayesian=True, sample_number=2000):
     
     size_full = int(sample_number * 1/cfginf.quantile_rate_uncertainty_policy)
     
@@ -526,9 +526,8 @@ def plot_target_images(target, forward_type, generator, forward, testset, bayesi
     df_test_out = pd.DataFrame(testset.y_data, columns=['label'])
     index_distribution = df_test_out[(df_test_out['label'] > target - 0.05 *cfg_data.max_dataset) & (df_test_out['label'] < target + 0.05 *cfg_data.max_dataset)].index
     print(f'size of out distribution data for fid/kid : {len(index_distribution)}')
-    real_dataset = deepcopy(testset.x_data)
+    real_dataset = deepcopy(testset)
 
-    
     # ------------ Generate sample from z and y target ------------
     images_generated = generate_sample_from_GAN(conditions, z, generator)
 
@@ -536,12 +535,9 @@ def plot_target_images(target, forward_type, generator, forward, testset, bayesi
     if bayesian:
         y_pred, epistemic, aleatoric = predict_forward_model(forward, images_generated, bayesian=bayesian)
 
-        # Check predictions
-        y_pred, epistemic, aleatoric, conditions, images_generated = check_predictions_bayesian(distribution, y_pred, epistemic, aleatoric, conditions, images_generated)
-
         # ------------ Uncertainty policy ------------
         if uncertainty_policy == 'epistemic':
-            index_certai, _ : = uncertainty_selection(epistemic.squeeze())
+            index_certain, _ = uncertainty_selection(epistemic.squeeze())
         elif uncertainty_policy == 'aleatoric':
             index_certain, _ = uncertainty_selection(aleatoric.squeeze())
             
@@ -554,8 +550,6 @@ def plot_target_images(target, forward_type, generator, forward, testset, bayesi
     else:
         y_pred = predict_forward_model(forward, images_generated, bayesian=bayesian)
         
-        # Check predictions
-        y_pred, conditions, images_generated = check_predictions_frequentist(distribution, y_pred, conditions, images_generated)
         # ------------ random sample ------------
         try:
             random_index = random.sample(np.arange(images_generated.shape[0]).tolist(), sample_number)
@@ -578,7 +572,7 @@ def plot_target_images(target, forward_type, generator, forward, testset, bayesi
     forward_pred = forward_pred[index_best]
 
     
-    plot_best_acc_pred(target, forward_type, images_generated, conditions, forward_pred, real_dataset, index_distribution, forward, se_preds, bayesian=True, nrow=4, ncol=8)
+    plot_best_acc_pred(target, forward_type, images_generated, conditions, forward_pred, real_dataset, index_distribution, forward, se_preds, bayesian=bayesian, nrow=4, ncol=8)
     
 def plot_best_acc_pred(target, forward_type, images_generated, conditions, forward_pred, testset, index_distribution, forward, se_preds, bayesian=True, nrow=4, ncol=8):
 
@@ -629,5 +623,5 @@ def plot_best_acc_pred(target, forward_type, images_generated, conditions, forwa
                 else:
                     col.set_title(f"Fwd={np.round(float(forward_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j]]),1)}
     
-    plt.suptitle(f"Target value : {target} | {forward_type} forward model | mse = {round(np.sum(se_preds[:ncol*nrow])/ncol*nrow, 2)}", fontsize=6)
+    plt.suptitle(f"Target value : {target} | {forward_type} forward model ", fontsize=6) #| mse = {round(np.sum(se_preds[:ncol*nrow])/ncol*nrow, 2)}", fontsize=6)
     plt.show()

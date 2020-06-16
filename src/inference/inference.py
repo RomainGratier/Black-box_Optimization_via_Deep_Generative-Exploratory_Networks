@@ -7,7 +7,7 @@ from tabulate import tabulate
 from src.data import MNISTDataset, RotationDataset
 import src.config as cfg
 
-from src.inference.utils import monte_carlo_inference_mse_batch, monte_carlo_inference_fid_kid_sampling, monte_carlo_inference_qualitative, plot_best_acc_pred
+from src.inference.utils import monte_carlo_inference_mse_batch, monte_carlo_inference_fid_kid_sampling, monte_carlo_inference_qualitative, monte_carlo_inference_target_images
 
 def compute_quantitative_and_qualitative_inference(target, metrics=['optimization', 'qualitative', 'fid_kid', 'l1_l2'], distributions=['in', 'out'], bayesian_model_types=["lrt", "bbb"], activation_types=["softplus", "relu"], output_type='latex', decimals=2):
     
@@ -94,12 +94,12 @@ def compute_quantitative_and_qualitative_inference(target, metrics=['optimizatio
                             monte_carlo_inference_qualitative(distribution, forward_type, generator_model, forward_model, testset, sample_number=2000, bayesian=bayesian, random_certainty=False)
                     
                     elif metric_type=='optimization':
-                        plot_best_acc_pred(target, forward_type, generator_model, forward_model, testset, sample_number=2000, bayesian=bayesian, random_certainty=False)
+                        monte_carlo_inference_target_images(target, forward_type, generator_model, forward_model, testset, bayesian=bayesian, sample_number=10000)
     
                 else:
                     print('WARNING: no model was found')
         
-        if metric_type == 'qualitative':
+        if (metric_type == 'qualitative') | (metric_type == 'optimization'):
             continue
 
         if output_type == 'latex':
