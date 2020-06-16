@@ -243,7 +243,7 @@ def monte_carlo_inference_mse_batch(distribution, generator, forward, testset, b
         return stat_ms_glob, stat_ms_pol, stat_mr_glob, stat_mr_pol
 
     else:
-        return stat_ms_glob, stat_mr_glob, [100.0, 100.0], [100.0, 100.0]
+        return stat_ms_glob, [100.0, 100.0], stat_mr_glob, [100.0, 100.0]
 
 def monte_carlo_inference_mse_sampling(distribution, generator, forward, testset, bayesian=True, sample_number=2000, size_sample=10):
     
