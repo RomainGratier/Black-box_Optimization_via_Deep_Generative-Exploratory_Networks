@@ -506,7 +506,7 @@ def plots_qualitative_results(distribution, forward_type, images_generated, cond
                 if bayesian:
                     col.set_title(f"Fwd={np.round(float(real_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)} / epi={np.round(float(epistemic[j + k]),4)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j + k]]),1)} 
                 else:
-                    col.set_title(f"Fwd={np.round(float(forward_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j]]),1)}
+                    col.set_title(f"Fwd={np.round(float(real_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j]]),1)}
     
     plt.suptitle(f"{distribution} distribution with {forward_type} forward model", fontsize=6)
     plt.show()
@@ -621,7 +621,7 @@ def plot_best_acc_pred(target, forward_type, images_generated, conditions, forwa
                 if bayesian:
                     col.set_title(f"Fwd={np.round(float(real_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)} / epi={np.round(float(epistemic[j + k]),4)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j + k]]),1)} 
                 else:
-                    col.set_title(f"Fwd={np.round(float(forward_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j]]),1)}
+                    col.set_title(f"Fwd={np.round(float(real_pred[j + k]),1)} / Label={np.round(float(labels[j + k]),1)}", fontsize=3) #/ true={np.round(float(morpho_pred[n_top_index[j]]),1)}
     
     plt.suptitle(f"Target value : {target} | {forward_type} forward model ", fontsize=6) #| mse = {round(np.sum(se_preds[:ncol*nrow])/ncol*nrow, 2)}", fontsize=6)
     plt.show()
