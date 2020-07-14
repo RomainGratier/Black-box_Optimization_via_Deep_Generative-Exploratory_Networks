@@ -80,7 +80,7 @@ def show(img, condition, batches_done, distribution):
     if cfg.experiment == 'rotation_dataset':
         plt.title(f'{title_str}', fontsize=18.5)
     elif (cfg.experiment == 'min_mnist')|(cfg.experiment == 'max_mnist'):
-        plt.title(f'{title_str}', fontsize=22.5)
+        plt.title(f'{title_str}', fontsize=21.5)
     plt.xlabel(f"Batch number {batches_done}", fontsize=25)
     plt.xticks([])
     plt.yticks([])
