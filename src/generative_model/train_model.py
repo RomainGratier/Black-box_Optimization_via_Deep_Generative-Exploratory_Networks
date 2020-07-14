@@ -240,11 +240,14 @@ def compute_eval(z, n_row, batches_done, generator):
     gen_imgs_out = generate_sample_from_z_condition(generator, z, condition_out)
 
     grid_out = torchvision.utils.make_grid(gen_imgs_out.data, nrow=n_row)
-    title = [round(num, 2) for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)]
-    show(grid_out, title, batches_done, 'full')
+    #title = [round(num, 2) for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)]
+    #show(grid_out, title, batches_done, 'full')
 
     measure_batch = compute_thickness_ground_truth(gen_imgs_out.cpu().detach().squeeze(1))
     thickness_out = measure_batch.values.reshape((n_row, n_row)).mean(axis=0)
+    
+    title = [round(num, 2) for num in thickness_out]
+    show(grid_out, title, batches_done, 'full')
 
     label_target = np.array([num for num in np.linspace(cfg_data.min_dataset, cfg_data.max_dataset, 10, endpoint=True)])
     se_generator_out = se(label_target, thickness_out)
