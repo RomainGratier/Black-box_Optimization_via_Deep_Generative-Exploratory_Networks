@@ -435,7 +435,7 @@ def train_gan_model():
         if resume == 'yes':
             generator, discriminator, optimizer_G, optimizer_D, epoch_start, df_acc_gen, best_res_in, best_res_out = load_ckp_gan(ckp_path, generator, discriminator, optimizer_G, optimizer_D)
 
-    for epoch in range(epoch_start, cfgan.n_epochs):
+    for epoch in range(epoch_start, cfgan.n_epochs+1):
         d_loss_check = []
         g_loss_check = []
 
@@ -646,7 +646,7 @@ def train_wgan_model():
         if resume == 'yes':
             generator, discriminator, optimizer_G, optimizer_D, epoch_start, df_acc_gen, best_res_in, best_res_out = load_ckp_gan(ckp_path, generator, discriminator, optimizer_G, optimizer_D)
 
-    for epoch in range(epoch_start, cfgan.n_epochs):
+    for epoch in range(epoch_start, cfgan.n_epochs+1):
         d_loss_check = []
         g_loss_check = []
 
