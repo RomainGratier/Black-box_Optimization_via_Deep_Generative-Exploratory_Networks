@@ -20,7 +20,11 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 from torch.nn import functional as F
-import kornia.geometry as geometry
+
+try:
+    import kornia.geometry as geometry
+except:
+    print("No module kornia was found!")
 
 from src.data.utils import load_idx, load_compress_numpy, gaussian_kernal
 
