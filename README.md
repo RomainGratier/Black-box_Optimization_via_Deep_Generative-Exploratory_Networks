@@ -71,6 +71,8 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 Special thanks the to writers of the paper available on arxiv : https://arxiv.org/pdf/1912.13464.pdf. Their contribution motivates this project.
 
+An other special thanks the to writers of the paper available on arxiv ( https://arxiv.org/pdf/1901.02731.pdf ) and their github repository to allow us to use accurate Bayesian neural networks.
+
 Bravo to the work done on https://github.com/dccastro/Morpho-MNIST that allows us to find an interesting dataset and established groundtruth measurements for our generated data
 
 Bravo also to https://github.com/eriklindernoren/PyTorch-GAN to share the pytorch implementation of usefull GANs
