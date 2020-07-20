@@ -1,52 +1,50 @@
 Black-box Optimization via Deep Generative-Exploratory Networks
 ==============================
 
-Deep neural networks have garnered tremendous excitement in recent years thanks to their superior learning capacity in the presence of abundant data resources. However, collecting an exhaustive dataset covering all possible scenarios is often slow, expensive, and even impractical. 
-
-**The goal** of this project is to devise a new **learning framework** that can learn from a finite dataset and noisy feedback of data properties **to discover novel samples** of particular interest. We used generative adversarial networks to search through the dataset for new sample and a forward model to decide what sample is a potential candidate.
+In this project, we assess a new framework called UMIN on a data-driven optimization problem. Such a problem happens recurrently in real life and can quickly become difficult to model when the input has a high dimensionality as images for instance. From the architecture of aircraft to the design of proteins, a great number of different techniques have already been explored. Based on former solutions, this work introduces a brand new Bayesian approach that updates previous frameworks. Former model architectures use generative adversarial networks on one side and a forward model on the other side to improve the accuracy of the results. However, employing a Bayesian forward network allows us to leverage its uncertainty estimates to enhance the accuracy of the results and also to reduce unrealistic samples output by the generator. By creating new experiments on a modern MNIST dataset and by reproducing former works taken as baseline, we show that the framework introduces in this work outperforms the previous method. The whole code is available at the following url: [PurpleBooth](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks).
 
 We used well known metrics from the generative model community as the **FID**(Fréchet Inception Distance), **KID**(Kernel Inception Distance) and **MSE**(mean squared error) scores to justify our results.
 
 ------------
 
-    ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train`
-    ├── README.md          <- The top-level README for developers using this project.
-    ├── data               <- Data collected from MNIST 
+    ├── README.md                           <- The top-level README for developers using this project.
+    ├── data                                <- Data collected from MNIST 
     │
-    ├── models             <- Trained and serialized models, model predictions, or model summaries
+    ├── models                              <- incepetion models to compute fid/kid scores
     │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
+    ├── MNIST_generation                    <- Scripts to augment original MNIST dataset.
     │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
+    ├── fig                                 <- Distribution figures from augmented MNIST dataset.
     │
-    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures        <- Generated graphics and figures to be used in reporting
+    ├── requirements.txt                    <- The requirements file for reproducing the analysis environment, e.g.
+    │                                           generated with `pip freeze > requirements.txt`
     │
-    ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-    │                         generated with `pip freeze > requirements.txt`
-    │
-    ├── setup.py           <- makes project pip installable (pip install -e .) so src can be imported
-    ├── src                <- Source code for use in this project.
-    │   ├── __init__.py    <- Makes src a Python module
+    ├── setup.py                            <- makes project pip installable (pip install -e .) so src can be imported
+    ├── utils.py                            <- Plot functions repository
+    ├── UMIN                                <- Source code for use in this project.
+    │   ├── __init__.py                     <- Makes src a Python module
     │   │
-    │   ├── data           <- Scripts to download or generate data
+    │   ├── data                            <- Scripts to download or generate data
     │   │   └── make_dataset.py
     │   │
-    │   ├── metrics        <- Source of different metrics  
+    │   ├── metrics                         <- Source of different metrics  
     │   │   └── metrics.py
     │   │
-    │   ├── models         <- Scripts to train models and then use load models and trained them
-    │   │   │                 
-    │   │   ├── models.py
+    │   ├── generative_model                <- Generators training scripts
     │   │   └── train_model.py
+    |   |
+    │   ├── forward_model                   <- forward models training scripts
+    │   │   ├── inference_func_bayesian.py
+    |   |   |
+    |   |   └── inference_func_frequentist.py
+    |   |
+    │   ├── uncertainty_policy              <- Uncertainty selection function
+    │   │   └── policy.py
     │   │
-    │   └── Inference      <- Script to run the model inference
+    │   └── Inference                       <- Script to run the model inference
     │       └── inference.py
     │
-    └── tox.ini            <- tox file with settings for running tox; see tox.testrun.org
+    └── tox.ini                             <- tox file with settings for running tox; see tox.testrun.org
 
 
 --------
@@ -60,8 +58,6 @@ Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c6
 * **Romain Gratier de Saint-Louis** [PurpleBooth](https://github.com/RomainGratier)
 * **Yuejiang Liu** - *VITA Lab EPFL* - [PurpleBooth](https://github.com/YuejiangLIU)
 * **Alexandre Alahi** - *VITA Lab EPFL* 
-
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
 
 ## License
 
