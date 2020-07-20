@@ -50,9 +50,12 @@ We used well-known metrics from the generative model community as the **FID**(Fr
 --------
 
 ## Dataset
-A new augmented MNIST dataset was used to assess the framework quality. This dataset is build using the **MNIST_generation** scripts but one can also use the dataset created and available in the folder **data**. This dataset allows us to have an image of a digit with different characteristics labeled. The figure below shows those features and their distribution within the dataset original_thic_resample.
+A new augmented MNIST dataset was used to assess the framework quality. This dataset is build using the **MNIST_generation** scripts but one can also use the dataset created and available in the folder **data**. This dataset allows us to have an image of a digit with different characteristics labeled. The figure below shows those features and their distribution within the dataset original_thic_resample and the real MNIST.
 
-- Figure
+<p align="center">
+    <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/original_thic_resample.png" alt="Snow" style="width:100%" width="300" height="300" title="Augmented MNIST" >
+    <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/original.png" alt="Forest" style="width:100%" width="300" height="300" title="Original MNIST">
+</p>
 
 ## Experiences
 We created two similar experiences to assess our model quality. Using our augmented MNIST dataset we can create a model that will try to optimize the stroke width of a digit. During the first experiment, the stroke width of a digit is increased compared to our previous knowledge about our data. Hence, the UMIN will be trained on digit with strokes width between 0 and 6 pixels [pxl] and it will try to create digits with higher stroke width. During the second experiment, the stroke width of the digits will be minimized. Hence, UMIN will be trained on digit with strokes width between 2.5 and 8 pixels [pxl] and it will try to create digits with lower stroke width.
@@ -60,30 +63,44 @@ We created two similar experiences to assess our model quality. Using our augmen
 ## Generator training
 The following figure displays samples from the true distribution from an augmented MNIST dataset.
 
-Real samples:
-- figure
-
-Maximization task:
-- figure
-
-Minimization task:
-- figure
+**Real samples:**
+<p align="center">
+  <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/gan_training_iterations_full_wgan_max.gif" width="300" height="300" alt="Sublime's custom image" title="Maximization"/>
+  <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/real_mnist.png?raw=true" width="300" height="300" alt="Sublime's custom image" title="Real samples"/>
+  <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/gan_training_iterations_full_wgan_min.gif" width="300" height="300" alt="Sublime's custom image" title="Minimization"/>
+</p>
 
 ## Quantitative Results
 Here are displayed our results in terms of prediction precision with the mean squared error and mean relative error.
-- figure
+
+**MSE/MRE**
+
+<p align="center">
+  <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/mse.png?raw=true" alt="Sublime's custom image" title="Real samples"/>
+</p>
 
 The next table exhibit the quantitative assessment of the data quality using the frêchet inception distance (FID) and the kernel inception distance (KID).
-- figure
+
+**FID/KID**
+
+<p align="center">
+  <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/fid.png?raw=true" alt="Sublime's custom image" title="Real samples"/>
+</p>
 
 ## Qualitative Results
 To assess our results. It is interesting to compare the best sample selected by our inference function and the worst samples discarded by our inference function. The first two rows display the generated samples and the last two rows exhibit real samples with the targeted width stroke.
 
-Best samples:
-- figure
+**Best samples:**
 
-Worst samples:
-- figure
+<p align="center">
+  <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/wgan_min_qualitative_bayesian.png?raw=true" alt="Sublime's custom image" title="Real samples"/>
+</p>
+
+**Worst samples:**
+
+<p align="center">
+  <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/wgan_min_qualitative_bayesian_worse.png?raw=true" alt="Sublime's custom image" title="Real samples"/>
+</p>
 
 ## Contributing
 
