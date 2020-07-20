@@ -1,9 +1,9 @@
 Black-box Optimization via Deep Generative-Exploratory Networks
 ==============================
 
-In this project, we assess a new framework called UMIN on a data-driven optimization problem. Such a problem happens recurrently in real life and can quickly become difficult to model when the input has a high dimensionality as images for instance. From the architecture of aircraft to the design of proteins, a great number of different techniques have already been explored. Based on former solutions, this work introduces a brand new Bayesian approach that updates previous frameworks. Former model architectures use generative adversarial networks on one side and a forward model on the other side to improve the accuracy of the results. However, employing a Bayesian forward network allows us to leverage its uncertainty estimates to enhance the accuracy of the results and also to reduce unrealistic samples output by the generator. By creating new experiments on a modern MNIST dataset and by reproducing former works taken as baseline, we show that the framework introduces in this work outperforms the previous method. The whole code is available at the following url: [PurpleBooth](https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks).
+In this project, we assess a new framework called UMIN on a data-driven optimization problem. Such a problem happens recurrently in real life and can quickly become difficult to model when the input has a high dimensionality as images for instance. From the architecture of aircraft to the design of proteins, a great number of different techniques have already been explored. Based on former solutions, this work introduces a brand new Bayesian approach that updates previous frameworks. Former model architectures use generative adversarial networks on one side and a forward model on the other side to improve the accuracy of the results. However, employing a Bayesian forward network allows us to leverage its uncertainty estimates to enhance the accuracy of the results and also to reduce unrealistic samples output by the generator. By creating new experiments on a modern MNIST dataset and by reproducing former works taken as baseline, we show that the framework introduces in this work outperforms the previous method.
 
-We used well known metrics from the generative model community as the **FID**(Fréchet Inception Distance), **KID**(Kernel Inception Distance) and **MSE**(mean squared error) scores to justify our results.
+We used well-known metrics from the generative model community as the **FID**(Fréchet Inception Distance), **KID**(Kernel Inception Distance), and **MSE**(mean squared error) scores to justify our results.
 
 ------------
 
@@ -49,6 +49,42 @@ We used well known metrics from the generative model community as the **FID**(Fr
 
 --------
 
+## Dataset
+A new augmented MNIST dataset was used to assess the framework quality. This dataset is build using the **MNIST_generation** scripts but one can also use the dataset created and available in the folder **data**. This dataset allows us to have an image of a digit with different characteristics labeled. The figure below shows those features and their distribution within the dataset original_thic_resample.
+
+- Figure
+
+## Experiences
+We created two similar experiences to assess our model quality. Using our augmented MNIST dataset we can create a model that will try to optimize the stroke width of a digit. During the first experiment, the stroke width of a digit is increased compared to our previous knowledge about our data. Hence, the UMIN will be trained on digit with strokes width between 0 and 6 pixels [pxl] and it will try to create digits with higher stroke width. During the second experiment, the stroke width of the digits will be minimized. Hence, UMIN will be trained on digit with strokes width between 2.5 and 8 pixels [pxl] and it will try to create digits with lower stroke width.
+
+## Generator training
+The following figure displays samples from the true distribution from an augmented MNIST dataset.
+
+Real samples:
+- figure
+
+Maximization task:
+- figure
+
+Minimization task:
+- figure
+
+## Quantitative Results
+Here are displayed our results in terms of prediction precision with the mean squared error and mean relative error.
+- figure
+
+The next table exhibit the quantitative assessment of the data quality using the frêchet inception distance (FID) and the kernel inception distance (KID).
+- figure
+
+## Qualitative Results
+To assess our results. It is interesting to compare the best sample selected by our inference function and the worst samples discarded by our inference function. The first two rows display the generated samples and the last two rows exhibit real samples with the targeted width stroke.
+
+Best samples:
+- figure
+
+Worst samples:
+- figure
+
 ## Contributing
 
 Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us. 
@@ -57,7 +93,7 @@ Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c6
 
 * **Romain Gratier de Saint-Louis** [PurpleBooth](https://github.com/RomainGratier)
 * **Yuejiang Liu** - *VITA Lab EPFL* - [PurpleBooth](https://github.com/YuejiangLIU)
-* **Alexandre Alahi** - *VITA Lab EPFL* 
+* **Alexandre Alahi** - *VITA Lab EPFL*
 
 ## License
 
@@ -65,12 +101,12 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Acknowledgments
 
-Special thanks the to writers of the paper available on arxiv : https://arxiv.org/pdf/1912.13464.pdf. Their contribution motivates this project.
+Special thanks to the writers of the paper available on arxiv: https://arxiv.org/pdf/1912.13464.pdf. Their contribution motivates this project.
 
-An other special thanks the to writers of the paper available on arxiv ( https://arxiv.org/pdf/1901.02731.pdf ) and their github repository to allow us to use accurate Bayesian neural networks.
+Another special thanks to writers of the paper available on arxiv ( https://arxiv.org/pdf/1901.02731.pdf ) and their github repository to allow us to use accurate Bayesian neural networks.
 
-Bravo to the work done on https://github.com/dccastro/Morpho-MNIST that allows us to find an interesting dataset and established groundtruth measurements for our generated data
+Bravo to the work done on https://github.com/dccastro/Morpho-MNIST that allows us to find an interesting dataset and established ground-truth measurements for our generated data
 
-Bravo also to https://github.com/eriklindernoren/PyTorch-GAN to share the pytorch implementation of usefull GANs
+Bravo also to https://github.com/eriklindernoren/PyTorch-GAN to share the PyTorch implementation of useful GANs
 
 And Bravo to https://github.com/abdulfatir/gan-metrics-pytorch.git that implemented a great FID score for MNIST dataset
