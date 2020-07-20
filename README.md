@@ -53,6 +53,9 @@ We used well-known metrics from the generative model community as the **FID**(Fr
 A new augmented MNIST dataset was used to assess the framework quality. This dataset is build using the **MNIST_generation** scripts but one can also use the dataset created and available in the folder **data**. This dataset allows us to have an image of a digit with different characteristics labeled. The figure below shows those features and their distribution within the dataset original_thic_resample and the real MNIST.
 
 <p align="center">
+    <b>Augmented MNIST &emsp; &emsp; &emsp; | &emsp; &emsp; &emsp; Original MNIST</b>
+</p>
+<p align="center">
     <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/original_thic_resample.png" alt="Snow" style="width:100%" width="300" height="300" title="Augmented MNIST" >
     <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/original.png" alt="Forest" style="width:100%" width="300" height="300" title="Original MNIST">
 </p>
@@ -64,6 +67,10 @@ We created two similar experiences to assess our model quality. Using our augmen
 The following figure displays samples from the true distribution from an augmented MNIST dataset.
 
 **Real samples:**
+
+<p align="center">
+    <b>Augmented Maximization &emsp; &emsp; &emsp; &emsp; | &emsp; &emsp; &emsp; &emsp; Real samples &emsp; &emsp; &emsp; &emsp; | &emsp; &emsp; &emsp; &emsp; Minimization &emsp; &emsp; &emsp; &emsp; &ensp;</b>
+</p>
 <p align="center">
   <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/gan_training_iterations_full_wgan_max.gif" width="300" height="300" alt="Sublime's custom image" title="Maximization"/>
   <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/real_mnist.png?raw=true" width="300" height="300" alt="Sublime's custom image" title="Real samples"/>
@@ -73,16 +80,19 @@ The following figure displays samples from the true distribution from an augment
 ## Quantitative Results
 Here are displayed our results in terms of prediction precision with the mean squared error and mean relative error.
 
-**MSE/MRE**
-
+<p align="center">
+    <b>MSE/MRE</b>
+</p>
 <p align="center">
   <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/mse.png?raw=true" alt="Sublime's custom image" title="Real samples"/>
+  <em>Real samples</em>
 </p>
 
 The next table exhibit the quantitative assessment of the data quality using the frêchet inception distance (FID) and the kernel inception distance (KID).
 
-**FID/KID**
-
+<p align="center">
+    <b>FID/KID</b>
+</p>
 <p align="center">
   <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/fid.png?raw=true" alt="Sublime's custom image" title="Real samples"/>
 </p>
@@ -90,14 +100,16 @@ The next table exhibit the quantitative assessment of the data quality using the
 ## Qualitative Results
 To assess our results. It is interesting to compare the best sample selected by our inference function and the worst samples discarded by our inference function. The first two rows display the generated samples and the last two rows exhibit real samples with the targeted width stroke.
 
-**Best samples:**
-
+<p align="center">
+    <b>Best samples</b>
+</p>
 <p align="center">
   <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/wgan_min_qualitative_bayesian.png?raw=true" alt="Sublime's custom image" title="Real samples"/>
 </p>
 
-**Worst samples:**
-
+<p align="center">
+    <b>Worst samples</b>
+</p>
 <p align="center">
   <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/wgan_min_qualitative_bayesian_worse.png?raw=true" alt="Sublime's custom image" title="Real samples"/>
 </p>
