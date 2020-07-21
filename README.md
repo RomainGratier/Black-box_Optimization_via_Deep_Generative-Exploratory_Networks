@@ -21,7 +21,7 @@ We used well-known metrics from the generative model community as the **FID**(Fr
     │
     ├── setup.py                            <- makes project pip installable (pip install -e .) so src can be imported
     ├── utils.py                            <- Plot functions repository
-    ├── UMIN                                <- Source code for use in this project.
+    ├── src                                 <- Source code for use in this project.
     │   ├── __init__.py                     <- Makes src a Python module
     │   │
     │   ├── data                            <- Scripts to download or generate data
@@ -48,6 +48,72 @@ We used well-known metrics from the generative model community as the **FID**(Fr
 
 
 --------
+
+## Getting Started
+
+If you have a google account by simple click on the following links you'll be able to run the experiments on Google Colab 
+
+Experiments :
+
+* The maximization experiment is presented here on Colab ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)https://colab.research.google.com/drive/1Gg8Iz8SEzYr6NcEqcZvwJgkh2Mm1UYqQ?usp=sharing
+
+* The minimization experiment is available here on Colab ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)https://colab.research.google.com/drive/1LbHNNQ3IUFSMcxD1pa7pIkBW49RuI_vi?usp=sharing
+
+
+### Prerequisites
+
+```
+Python 3.6.9 and older
+Torch 1.4.0
+```
+
+### Installing
+
+* If you are fine to use it with colab, you can open the link above and the various dependencies should be already satisfied.
+
+* If you want to be able to use the source code and deploy it on your local machine. You will need to clone the following github version (date : 08.04.2020)
+
+```
+git clone https://github.com/dccastro/Morpho-MNIST.git
+cp -r Morpho-MNIST/morphomnist morphomnist
+
+git clone https://github.com/abdulfatir/gan-metrics-pytorch.git
+cp -r gan-metrics-pytorch/models models
+
+git clone https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks.git
+cp -r Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/src src
+```
+
+## Example of codes
+
+Explain how to run the automated tests for this system
+
+### Create dataset
+
+You can load the morphomnist dataset as a pytorch dataset using the following commands
+
+```
+from src.data import MNISTDataset
+dataset = MNISTDataset('train', 'thickness')
+```
+
+### Load models and their training loop
+
+You can either load the models and play with them following the notebook or just load the training loop to train them.
+
+```
+from src.models import Generator, Discriminator, ForwardModel
+from src.models import train_forward_model(), train_gan_model()
+```
+
+### Inference experiments
+
+You can do inference experiments when the two models are trained
+
+```
+from src.inference import monte_carlo_inference
+inf_best_5, mean_sample_measure_5, fid_gen_5 = monte_carlo_inference(5, generator, forward, trainset, testset, sample_number = 800)
+```
 
 ## Dataset
 A new augmented MNIST dataset was used to assess the framework quality. This dataset is build using the **MNIST_generation** scripts but one can also use the dataset created and available in the folder **data**. This dataset allows us to have an image of a digit with different characteristics labeled. The figure below shows those features and their distribution within the dataset original_thic_resample and the real MNIST.
