@@ -139,7 +139,7 @@ The following figure displays samples from the true distribution from an augment
 </p>
 <p align="center">
   <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/gan_training_iterations_full_wgan_max.gif" width="280" height="280" alt="Sublime's custom image" title="Maximization"/>
-  <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/real_mnist.png?raw=true" width="280" height="280" alt="Sublime's custom image" title="Real samples"/>
+  <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/real_mnist.png?raw=true" width="250" height="250" alt="Sublime's custom image" title="Real samples"/>
   <img src="https://github.com/RomainGratier/Black-box_Optimization_via_Deep_Generative-Exploratory_Networks/blob/master/references/gan_training_iterations_full_wgan_min.gif" width="280" height="280" alt="Sublime's custom image" title="Minimization"/>
 </p>
 
